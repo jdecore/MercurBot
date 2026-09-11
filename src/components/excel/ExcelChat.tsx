@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { useDashboard } from '../../state/DashboardContext'
 import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as cancelTts, isSpeaking } from '../../lib/tts'
 import type { MascotaMood } from '../../types/mascota'
-import type { FilterOperator, ChartConfig } from '../../data/types'
 import { ragClient } from '../../lib/ragClient'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
 
@@ -11,32 +9,11 @@ function setMascotaMood(m: MascotaMood) {
   window.dispatchEvent(new CustomEvent('copixi:mascota-mood', { detail: m }))
 }
 
-const VALID_OPS: FilterOperator[] = ['equals', 'contains', 'gt', 'lt', 'between']
-const CHART_TYPES: ChartConfig['chartType'][] = ['line', 'bar', 'area', 'pie']
-const CHART_COLORS = ['#ff6b00', '#166534', '#0a0a0a', '#c27803', '#64748b', '#0e9f6e', '#ff8c2f', '#1f2937']
-
-const EXCEL_SUGGESTIONS = [
-  '¿Cómo hago un BUSCARV / XLOOKUP?',
-  'Fórmula para sumar con condiciones (SUMAR.SI)',
-  'Crear tabla dinámica paso a paso',
-  'Eliminar duplicados en Excel',
-  '¿Cómo calcular el promedio ponderado?',
+const DEFAULT_SUGGESTIONS = [
+  '¿Qué puedes hacer por mí?',
+  'Subí un PDF, ¿por dónde empiezo?',
+  '¿Cómo citas las fuentes de mis preguntas?',
 ]
-
-type ParsedAction = Record<string, unknown> & { action: string }
-
-function parseAction(text: string): ParsedAction | null {
-  const idx = text.lastIndexOf('{')
-  if (idx === -1) return null
-  const candidate = text.slice(idx)
-  try {
-    const obj = JSON.parse(candidate) as ParsedAction
-    if (obj && typeof obj.action === 'string') return obj
-  } catch {
-    /* not JSON */
-  }
-  return null
-}
 
 // Strip the trailing JSON action block (e.g. {"action":"setFilter",...}) so it
 // isn't shown to the user.
@@ -154,54 +131,9 @@ type ChatMsg = {
   searchMode?: RagPipelineMode
 }
 
-function MiniChart({ config, data }: { config: { chartType: string; x: string; y: string; title?: string }; data: { name: string; value: number }[] }) {
-  if (!data || data.length === 0) return null
-  return (
-    <div className="mini-chart-card" aria-label={`Mini gráfica de ${config.title ?? config.y}`}>
-      <div className="mini-chart-title">
-        <i className="pixelart-icons-font-chart" aria-hidden />
-        <span>{config.title ?? `${config.y} por ${config.x}`}</span>
-      </div>
-      <div className="mini-chart-body">
-        <ResponsiveContainer width="100%" height={140}>
-          {config.chartType === 'pie' ? (
-            <PieChart>
-              <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label>
-                {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          ) : config.chartType === 'line' ? (
-            <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#ff6b00" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          ) : (
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#ff6b00" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
-      </div>
-    </div>
-  )
-}
-
 export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void }) {
-  const {
-    rawRows, columns, addFilter, clearFilters, setActiveChart,
-    byProduct, byCity, byCategory, metrics, filters, suggestedQuestions,
-    autoCharts, fileInfo, pdfDoc,
-  } = useDashboard()
+  const { pdfDoc } = useDashboard()
 
-  const hasData = !!rawRows
   const [input, setInput] = useState('')
   const [muted, setMutedState] = useState(getMuted())
   const [ttsSpeaking, setTtsSpeaking] = useState(isSpeaking())
@@ -241,63 +173,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, loading])
-
-  // Token-efficient compressed context
-  const context = useMemo(() => {
-    if (!hasData) return { hasData: false }
-    return {
-      hasData: true,
-      file: fileInfo?.name ?? 'excel_data.xlsx',
-      rowCount: rawRows!.length,
-      columns: columns.map((c) => ({ name: c.name, type: c.type, distinctCount: c.distinctCount })),
-      metrics: {
-        totalSales: metrics?.totalSales ?? 0,
-        avgSales: metrics?.avgSales ?? 0,
-        totalUnits: metrics?.totalUnits ?? 0,
-        totalCustomers: metrics?.totalCustomers ?? 0,
-      },
-      topProducts: (byProduct ?? []).slice(0, 3),
-      salesByCity: (byCity ?? []).slice(0, 3),
-      salesByCategory: (byCategory ?? []).slice(0, 3),
-      currentFilters: filters,
-    }
-  }, [hasData, rawRows, columns, metrics, byProduct, byCity, byCategory, filters, fileInfo])
-
-  const contextRef = useRef(context)
-  useEffect(() => { contextRef.current = context }, [context])
-
-  const allowedColumns = useMemo(() => columns.map((c) => c.name), [columns])
-
-  function dispatchAction(a: ParsedAction) {
-    if (a.action === 'setFilter') {
-      const column = String(a.column ?? '')
-      const operator = String(a.operator ?? '')
-      const value = String(a.value ?? '')
-      const value2 = a.value2 !== undefined ? String(a.value2) : undefined
-      if (!allowedColumns.includes(column)) return
-      if (!VALID_OPS.includes(operator as FilterOperator)) return
-      if (!value) return
-      addFilter({ column, operator: operator as FilterOperator, value, value2 })
-    } else if (a.action === 'clearFilters') {
-      clearFilters()
-    } else if (a.action === 'setChart') {
-      const chartType = String(a.chartType ?? '')
-      const x = String(a.x ?? '')
-      const y = String(a.y ?? '')
-      if (!CHART_TYPES.includes(chartType as ChartConfig['chartType'])) return
-      if (!allowedColumns.includes(x) || !allowedColumns.includes(y)) return
-      setActiveChart({ chartType: chartType as ChartConfig['chartType'], x, y })
-    } else if (a.action === 'setDateRange') {
-      const from = String(a.from ?? '')
-      const to = String(a.to ?? '')
-      const dateCol = columns.find((c) => c.type === 'date')?.name ?? columns.find((c) => /date|time|fecha|day/i.test(c.name))?.name
-      if (!dateCol) return
-      if (Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to))) return
-      clearFilters()
-      addFilter({ column: dateCol, operator: 'gt', value: from })
-      addFilter({ column: dateCol, operator: 'lt', value: to })
-    }
-  }
 
   async function runQuery(text: string) {
     if (loading) return
@@ -349,7 +224,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             matchType: h.matchType,
           })),
         }
-      : contextRef.current
+      : { hasData: false }
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -414,9 +289,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
       setStatus('done')
       setMascotaMood('exito')
-      const action = parseAction(acc)
-      if (action) dispatchAction(action)
-      if (!getMuted() && acc) speak(acc.slice(0, 300))
+      if (!getMuted() && acc) speak(cleanAI(acc).slice(0, 300))
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Error desconocido'
       setError(msg)
@@ -476,32 +349,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
   const cleanedAi = useMemo(() => (lastAiMsg ? cleanAI(lastAiMsg.content) : ''), [lastAiMsg])
 
-  const activeMiniChart = useMemo(() => {
-    if (autoCharts && autoCharts.length > 0 && hasData) {
-      return autoCharts[0]
-    }
-    return null
-  }, [autoCharts, hasData])
-
-  const suggestions = useMemo(() => {
-    if (pdfDoc) {
-      return [
-        `¿De qué trata el documento ${pdfDoc.filename}?`,
-        '¿Cuáles son las conclusiones o puntos principales?',
-        'Resume el documento en 3 puntos clave',
-        '¿Qué fechas, cifras o métricas menciona?',
-      ]
-    }
-    if (hasData) {
-      return suggestedQuestions.length > 0 ? suggestedQuestions.slice(0, 4) : [
-        '¿Cuál es el total y promedio?',
-        'Top 3 productos más vendidos',
-        'Ventas por ciudad',
-        'Fórmula SUMAR.SI para este archivo',
-      ]
-    }
-    return EXCEL_SUGGESTIONS
-  }, [pdfDoc, hasData, suggestedQuestions])
+  const suggestions = useMemo(() => DEFAULT_SUGGESTIONS, [])
 
   return (
     <div className="excel-chat-container" aria-label="compexi Chat">
@@ -512,7 +360,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             <div className="speech-bubble-avatar-title">
               <span className="dot-pulse" aria-hidden />
               <strong>compe</strong>
-              <span className="badge-expert">Data &amp; Excel AI</span>
+              <span className="badge-expert">PDF AI Analyst</span>
             </div>
             <div className="speech-bubble-status">
               {ttsSpeaking && !muted && (
@@ -547,7 +395,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 <span className="skeleton-dot" />
                 <span className="skeleton-dot" />
                 <span className="skeleton-dot" />
-                <span>Analizando tus datos…</span>
+                <span>Analizando tu documento…</span>
               </div>
             ) : error ? (
               <div className="speech-bubble-error-box" role="alert">
@@ -594,12 +442,12 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             ) : (
               <div className="speech-bubble-welcome">
                 <div className="welcome-header-line">
-                  <p>¡Hola! Soy <strong>compe</strong>, tu analista de datos y asistente de documentos.</p>
+                  <p>¡Hola! Soy <strong>compe</strong>, tu analista de documentos PDF.</p>
                   {isTtsSupported() && (
                     <button
                       type="button"
                       className="btn-hear-welcome"
-                      onClick={() => speak('¡Hola! Soy compe, tu analista de datos. Arrastra tu archivo PDF, Excel o CSV para comenzar.')}
+                      onClick={() => speak('¡Hola! Soy compe, tu analista de documentos. Arrastra tu archivo PDF para comenzar.')}
                       title="Escuchar saludo"
                       aria-label="Escuchar saludo"
                     >
@@ -611,28 +459,20 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   <p className="subtext">
                     He leído y vectorizado <strong>{pdfDoc.filename}</strong> ({pdfDoc.totalPages} páginas · {pdfDoc.chunks.length} fragmentos). Pregúntame cualquier detalle del documento.
                   </p>
-                ) : hasData ? (
-                  <p className="subtext">
-                    He cargado <strong>{fileInfo?.name}</strong> con {rawRows?.length ?? 0} filas. Pregúntame lo que quieras o pide fórmulas y gráficos.
-                  </p>
                 ) : (
                   <div className="welcome-dropzone" onClick={onOpenFilePicker} role="button" tabIndex={0}>
                     <div className="dropzone-icon-ring">
                       <i className="pixelart-icons-font-folder" aria-hidden />
                     </div>
                     <div className="dropzone-text">
-                      <strong className="dropzone-title">Arrastra y suelta tu archivo aquí</strong>
-                      <span className="dropzone-hint">Soporta PDF (<strong>.pdf</strong>), Excel (<strong>.xlsx, .xls</strong>) o <strong>CSV / TSV</strong> · o haz clic para explorar</span>
+                      <strong className="dropzone-title">Arrastra y suelta tu PDF aquí</strong>
+                      <span className="dropzone-hint">Solo documentos <strong>PDF (.pdf)</strong> · o haz clic para explorar</span>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Embedded contextual mini chart */}
-            {hasData && activeMiniChart && cleanedAi && !error && (
-              <MiniChart config={activeMiniChart.config} data={activeMiniChart.data as any} />
-            )}
           </div>
         </div>
       </div>
@@ -661,7 +501,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               type="button"
               className="btn btn-secondary small"
               onClick={onOpenFilePicker}
-              title="Cargar otro archivo Excel o CSV"
+              title="Cargar otro documento PDF"
             >
               <i className="pixelart-icons-font-upload" aria-hidden /> Cambiar archivo
             </button>
@@ -726,8 +566,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               type="button"
               className="dock-attach-btn"
               onClick={onOpenFilePicker}
-              title="Adjuntar archivo Excel o CSV (.xlsx, .xls, .csv, .tsv)"
-              aria-label="Subir archivo"
+              title="Subir documento PDF (.pdf)"
+              aria-label="Subir PDF"
             >
               <i className="pixelart-icons-font-upload" aria-hidden />
             </button>
@@ -736,7 +576,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             className="excel-text-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={hasData ? 'Pregunta sobre tus datos o pide fórmulas de Excel…' : 'Pregúntame cualquier fórmula o truco de Excel…'}
+            placeholder={pdfDoc ? 'Pregunta sobre tu documento…' : 'Sube un PDF y pregúntame lo que quieras…'}
             aria-label="Escribe tu consulta"
             disabled={loading}
           />

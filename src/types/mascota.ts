@@ -89,7 +89,7 @@ export const ROBOT_UNITS: Record<RobotUnitId, RobotMetadata> = {
     primaryColor: '#F59E0B',
     accentColor: '#FBBF24',
     habitatName: 'Centro de Control & Telemetría',
-    tagline: 'Automatización de visualizaciones Recharts, filtros dinámicos y pivots.',
+    tagline: 'Automatización de visualizaciones, filtros dinámicos y pivots.',
   },
   vektor: {
     id: 'vektor',

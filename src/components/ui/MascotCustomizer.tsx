@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Blobatar } from '@blobatar/react'
 import { DEFAULT_BLOBATAR_NAME } from '../../lib/storage'
+import { ROBOT_UNITS, type RobotUnitId } from '../../types/mascota'
 
 export type MascotFace = 'robot' | 'blobatar'
 
 interface MascotCustomizerProps {
   face: MascotFace
+  robot: RobotUnitId
   name: string
-  onChange: (face: MascotFace, name: string) => void
+  onChange: (face: MascotFace, robot: RobotUnitId, name: string) => void
 }
 
 const MAX_NAME = 24
@@ -17,16 +19,14 @@ function sanitize(raw: string): string {
 }
 
 /**
- * Personalización de la mascota: cara de robot del ecosistema o avatar
- * Blobatar determinista (mismo nombre = mismo avatar), persistido en
- * preferencias locales (sin backend, §8/§31).
+ * Personalización del robot único: elige una de las 7 unidades del
+ * ecosistema o un avatar Blobatar determinista (mismo nombre = mismo
+ * avatar). Todo persiste en preferencias locales (sin backend, §8/§31).
  */
-export function MascotCustomizer({ face, name, onChange }: MascotCustomizerProps) {
+export function MascotCustomizer({ face, robot, name, onChange }: MascotCustomizerProps) {
   const [draft, setDraft] = useState(name)
 
-  const applyFace = (f: MascotFace) => onChange(f, sanitize(face === 'blobatar' ? draft || name : name))
-
-  const applyName = () => onChange(face, sanitize(draft))
+  const applyName = () => onChange(face, robot, sanitize(draft))
 
   return (
     <div className="mascot-customizer" role="group" aria-label="Personalizar mascota">
@@ -38,7 +38,7 @@ export function MascotCustomizer({ face, name, onChange }: MascotCustomizerProps
             role="radio"
             aria-checked={face === 'robot'}
             className={`face-btn ${face === 'robot' ? 'active' : ''}`}
-            onClick={() => applyFace('robot')}
+            onClick={() => onChange('robot', robot, sanitize(draft || name))}
           >
             🤖 Robot
           </button>
@@ -47,12 +47,40 @@ export function MascotCustomizer({ face, name, onChange }: MascotCustomizerProps
             role="radio"
             aria-checked={face === 'blobatar'}
             className={`face-btn ${face === 'blobatar' ? 'active' : ''}`}
-            onClick={() => applyFace('blobatar')}
+            onClick={() => onChange('blobatar', robot, sanitize(draft || name))}
           >
             🫧 Mi avatar
           </button>
         </div>
       </div>
+
+      {face === 'robot' && (
+        <div className="mascot-customizer-row">
+          <span className="mascot-customizer-label">Unidad:</span>
+          <div className="mascot-unit-picker" role="radiogroup" aria-label="Unidad del robot">
+            {(Object.keys(ROBOT_UNITS) as RobotUnitId[]).map((id) => {
+              const meta = ROBOT_UNITS[id]
+              const selected = robot === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  title={`${meta.name} — ${meta.domain}`}
+                  aria-label={`${meta.name}, ${meta.domain}`}
+                  className={`unit-btn ${selected ? 'active' : ''}`}
+                  style={{ ['--unit-color' as string]: meta.primaryColor } as React.CSSProperties}
+                  onClick={() => onChange('robot', id, sanitize(draft || name))}
+                >
+                  <span className="unit-dot" aria-hidden />
+                  {meta.name}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {face === 'blobatar' && (
         <div className="mascot-customizer-row">

@@ -1,73 +1,65 @@
-# Copixi — Tu Analista de Datos con IA
+# Copixi — Tu Analista de Documentos PDF con IA
 
-**Sube un CSV/Excel/PDF → obtén KPIs, gráficos y tendencias en 30 segundos → pregúntale en lenguaje natural y el dashboard se actualiza solo.**
+**Sube un PDF → se vectoriza en tu navegador en segundos → pregunta lo que quieras y responde con citas verificables `[Pág. N]`.**
 
-> AI-native analytics product, frontend-first. Sin servidores propios, sin subir datos sensibles, costo de IA mínimo.
+> AI-native PDF analyst, frontend-first. Sin servidores propios, sin subir documentos sensibles, costo de IA mínimo.
 
 ---
 
 ## Por qué Copixi ayuda a tu empresa
 
-Copixi convierte datos que tu equipo ya tiene (CSV de ventas, reportes en Excel/PDF) en decisiones, **sin contratar un analista ni montar infraestructura**.
+Copixi convierte los PDFs que tu equipo ya tiene (manuales, guías, reportes, contratos) en respuestas verificables, **sin subir el documento a ningún servidor**.
 
 | Lo que entrega | Valor de negocio |
 |---|---|
-| **Frontend-first** — todo el cálculo corre en el navegador | **0$ de infraestructura.** Despliegas en Vercel en 2 minutos, escala sin servidores ni DB. |
-| **Privacidad por diseño** — el dato nunca sale del navegador; la IA solo recibe contexto agregado | Cumple con clientes sensibles a datos. Sin riesgo de fuga ni compliance caro. |
-| **IA token-eficiente** — Gemini/OpenRouter solo con resumen agregado, nunca 10k filas | Costo de IA marginal. Free tier viable en producción. |
-| **Conversión inmediata** — demo sin registro, valor en <30s | Tus usuarios/no-analistas llegan al "wow" sin fricción ni onboarding. |
-| **Decisiones accionables** — la IA no solo responde, *ejecuta* (filtra, grafica, compara) | De la pregunta al insight en un paso. No alucina cifras: valida contra tus columnas reales. |
-| **Multiformato** — CSV, Excel, PDF y Word con un solo upload | Tu equipo usa sus archivos reales, no pierde tiempo re-formateando. |
+| **Frontend-first** — extracción e indexado corren en el navegador | **0$ de infraestructura.** Despliegas en Vercel en 2 minutos, sin servidores ni DB. |
+| **Privacidad por diseño** — el PDF nunca sale del navegador; la IA solo recibe 3 fragmentos | Cumple con clientes sensibles a datos. Sin riesgo de fuga ni compliance caro. |
+| **RAG local híbrido** — Top 15 vectorial + Top 15 léxico → RRF → Top 3, todo en el dispositivo | Costo de IA marginal. Free tier viable en producción. |
+| **Citas verificables** — cada dato responde con `[Pág. N]` expandible al fragmento fuente | Confianza: nada de alucinaciones, todo trazable a la página. |
+| **Conversión inmediata** — sin registro, sube un PDF y pregunta | Tus usuarios llegan al "wow" sin fricción ni onboarding. |
+| **Mascota personalizable** — 7 unidades de robot o avatar Blobatar con tu nombre | Producto memorable sin costo de diseño. |
 
-**Resultado:** análisis que antes tomaba días de un analista queda listo en minutos, en cualquier navegador, con costo casi nulo.
+**Resultado:** responder preguntas sobre un documento de 50 páginas toma segundos, en cualquier navegador, con costo casi nulo.
 
 ---
 
 ## Qué es
 
-Un **AI Data Analyst** diseñado como app de análisis con IA en el centro, no un chatbot pegado a un dashboard.
+Un **analista de documentos con IA**: subes un PDF y conversas con él, con cada respuesta anclada a su página.
 
-1. Carga CSV/Excel/PDF/Word (drag & drop, 15 MB) o prueba el demo
-2. Perfilado automático (tipos, nulos, valores distintos, min/max)
-3. KPIs + gráficos con propósito (tendencia, ranking por ciudad/categoría, producto)
-4. Filtra, busca, ordena, compara, detecta anomalías (z-score + IQR)
-5. Pregunta en lenguaje natural → la IA emite una acción validada → el dashboard muta
-6. Exporta CSV/JSON/PNG, reporte `.md`, comparte por URL, guarda análisis
-7. Personaliza la mascota: cara de robot del ecosistema o avatar Blobatar con tu nombre (persistido en localStorage, sin cuenta)
-
-Demo: `public/demo.csv` (180 filas: `date,product,category,city,sales,units,customers`).
+1. Carga un PDF (drag & drop, 30 MB) — solo PDF, sin otros formatos
+2. Extracción de páginas + indexado local (MiniSearch inmediato, vectores MiniLM en Web Worker con OPFS)
+3. Pregunta en lenguaje natural → respuesta en streaming con citas `[Pág. N]` expandibles (fragmento + modo híbrida/léxica)
+4. Mascota con voz (TTS nativo) y cara personalizable: 7 robots o tu avatar Blobatar
 
 ---
 
 ## Arquitectura (técnica)
 
 ```
-User → React → Browser Data Engine (parser + engine puro)
-     → Dashboard (KPIs/charts/filters) → AI Chat (cliente SSE propio)
-     → /api/chat (Vercel Function mínima) → Gemini / OpenRouter → JSON validado
-     → DashboardContext (estado único, acciones validadas)
+User → React → PDF extractor (pdfjs, páginas + chunks)
+     → RAG local (MiniSearch + MiniLM en Web Worker, OPFS)
+     → ExcelChat (cliente SSE propio) → /api/chat (Vercel Function mínima)
+     → Gemini / OpenRouter → streaming con citas [Pág. N] verificables
 ```
 
-Todo lo determinista (parseo, filtrado, agregación, estadística, anomalías) es local y puro.
+Todo lo determinista (extracción, chunking, embeddings, fusión RRF) es local y puro.
 
 ### Browser Data Engine — `src/data/` (funciones heredadas)
 ```
-parser.ts / universalParser.ts   Papa Parse + extractores Excel/PDF/Word
-profiler.ts            type inference, distinct, nulls, min/max
-statistics.ts          sum/avg/median/std/percentiles, computeMetrics
-transformations.ts     filter/sort/groupBy
-anomalyDetection.ts    z-score / IQR
-chartAdapter.ts        toTimeSeries + toBarData (auto-detección de columnas)
+extractors/pdf.ts      extracción de páginas + chunks con metadato de página
+universalParser.ts     validación solo-PDF (30 MB) + orquestación
+profiler.ts / statistics.ts / transformations.ts / anomalyDetection.ts / chartAdapter.ts
+                       motor tabular conservado como engine puro (sin UI activa en PDF-only)
 ```
 
 ### Capa de IA — chat propio + RAG local
-- **Frontend:** `ExcelChat.tsx` — cliente de chat propio y ligero (fetch + SSE `text-delta` a `/api/chat`, sin SDK externo). Ante cada consulta corre el pipeline RAG, inyecta contexto agregado + fragmentos con página, y parsea un bloque JSON de acción al final de la respuesta.
-- **Acciones validadas** (whitelist de columnas + `isValidFilter`, nunca `eval`): `setFilter`, `clearFilters`, `setChart`, `setDateRange`.
-- **Backend único:** `api/chat.ts` — SDK oficial `@google/generative-ai` (Gemini) primario y fallback OpenRouter, 3 modos (chat SSE, `summary`, `extract`), rate-limit 20/min, `GEMINI_API_KEY` solo en server. Nunca envía filas crudas.
+- **Frontend:** `ExcelChat.tsx` — cliente de chat propio y ligero (fetch + SSE `text-delta` a `/api/chat`, sin SDK externo). Ante cada consulta corre el pipeline RAG e inyecta los fragmentos con página.
+- **Backend único:** `api/chat.ts` — SDK oficial `@google/generative-ai` (Gemini) primario y fallback OpenRouter, 3 modos (chat SSE, `summary`, `extract`), rate-limit 20/min, `GEMINI_API_KEY` solo en server. Nunca recibe el documento, solo 3 fragmentos.
 - **Pipeline de búsqueda RAG (Fase 14):** `src/lib/ragPipeline.ts` (`runRagPipeline`): modo híbrido Top 15 vectorial + Top 15 MiniSearch → fusión RRF (k=60) → Top 3 (lógica en `src/workers/rag.worker.ts`; embeddings MiniLM `Xenova/all-MiniLM-L6-v2` en Web Worker con persistencia OPFS); fallback Top 3 MiniSearch directo (`ragClient.searchMainThread` + watchdog con conmutación). `api/chat.ts` topea a 3 fragmentos de ≤1200 chars con formato `[Fragmento i | Pág. N]` e instruye citar `[Pág. N]`; `ExcelChat.tsx` renderiza citas inline en el streaming + badges expandibles con snippet/matchType e indica el modo (híbrida vs. léxica).
 
 ### Estado y UI
-`src/state/DashboardContext.tsx` (fuente única `rawRows/filters/activeChart` → `useMemo` derivados). Componentes pequeños (≤300 líneas), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta naranja/negro/blanco estilo Excel), `manualChunks` (index ~90KB + recharts lazy).
+`src/state/DashboardContext.tsx` (fuente única: `pdfDoc`, filtros, resumen). Mascota única personalizable (260px, 7 unidades o Blobatar, TTS nativo), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta naranja/negro/blanco).
 
 ---
 
@@ -77,9 +69,9 @@ chartAdapter.ts        toTimeSeries + toBarData (auto-detección de columnas)
 |---|---|
 | Framework / Lenguaje | React 19 · TypeScript · Vite · pnpm |
 | Estilos / UI | Native CSS + tokens · Radix UI · Pixelarticons |
-| Charts / CSV | Recharts · Papa Parse · xlsx · pdfjs · mammoth |
-| IA | Gemini / OpenRouter vía `api/chat.ts` · `@xenova/transformers` + MiniSearch (RAG local híbrido + RRF) |
-| Avatar | Blobatar (`blobatar` + `@blobatar/react`, ~14 KB, MIT, cero dependencias, SVG determinista) |
+| PDF / RAG | pdfjs-dist · MiniSearch · @xenova/transformers (MiniLM) |
+| IA | Gemini / OpenRouter vía `api/chat.ts` · streaming SSE con citas |
+| Avatar | Blobatar (`blobatar` + `@blobatar/react`, ~14 KB, MIT, cero dependencias) |
 | Backend | Vercel Function única (`api/chat.ts`) |
 
 ---
@@ -88,7 +80,7 @@ chartAdapter.ts        toTimeSeries + toBarData (auto-detección de columnas)
 
 ```bash
 pnpm install
-pnpm dev      # http://localhost:5173 — Try demo data
+pnpm dev      # http://localhost:5173 — sube un PDF y pregunta
 pnpm build    # tsc -b + vite build
 ```
 
@@ -100,16 +92,16 @@ Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (serve
 
 ## Seguridad y Privacidad
 
-- *Your data stays in your browser.* Sin subida automática del dataset; la IA solo recibe contexto agregado (§8).
+- *Your document stays in your browser.* Sin subida del PDF; la IA solo recibe 3 fragmentos con página (§8).
 - Keys nunca en frontend ni logs. Rate-limit y validación de payload en la Function.
-- Acciones de IA validadas contra esquema + whitelist; rechazos logueados.
+- Solo se aceptan PDFs (30 MB); otros formatos se rechazan con mensaje accionable.
 
 ---
 
 ## Quality Gate (verificado)
-`pnpm build` ok · sin Tailwind/shadcn/lucide · solo Pixelarticons · sin `VITE_` secrets · sin backend tradicional (solo proxy mínimo) · CSV/Excel/PDF local · KPIs + charts + filtros validados · responsive + a11y AA · ErrorBoundary + empty states.
+`pnpm build` ok · sin Tailwind/shadcn/lucide · solo Pixelarticons · sin `VITE_` secrets · sin backend tradicional (solo proxy mínimo) · PDF 100% local · RAG híbrido + citas verificables · responsive + a11y AA · ErrorBoundary + empty states.
 
-Fases 0–15 completadas (ver `AGENTS.md` §42/§43).
+Fases 0–17 completadas (ver `AGENTS.md` §42/§43).
 
 ---
-*Construido con pnpm, CSS nativo, Radix, Recharts y chat SSE propio. Sin atajos. Sin humo. Solo producto.*
+*Construido con pnpm, CSS nativo, Radix, pdfjs y chat SSE propio. Sin atajos. Sin humo. Solo producto.*

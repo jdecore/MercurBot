@@ -4,6 +4,7 @@
  * data stays in browser (§8). When InsForge SDK is added, swap impl.
  */
 import type { Filter, ChartConfig } from '../data/types'
+import type { RobotUnitId } from '../types/mascota'
 
 export type SavedDataset = {
   id: string
@@ -29,6 +30,8 @@ export type Preferences = {
   anomalyMethod: 'zscore' | 'iqr'
   /** Cara de la mascota: robot del ecosistema o avatar personalizable (Blobatar). */
   mascotFace: 'robot' | 'blobatar'
+  /** Unidad del robot único personalizable (se conservan las 7 unidades). */
+  mascotRobot: RobotUnitId
   /** Nombre semilla del Blobatar (determinista: mismo nombre = mismo avatar). */
   blobatarName: string
 }
@@ -77,7 +80,7 @@ export function saveDataset(d: SavedDataset): void {
 
 // Preferences (anomaly threshold, method, mascot face)
 export const DEFAULT_BLOBATAR_NAME = 'compe'
-const DEFAULT_PREFS: Preferences = { anomalyThreshold: 2.5, anomalyMethod: 'zscore', mascotFace: 'robot', blobatarName: DEFAULT_BLOBATAR_NAME }
+const DEFAULT_PREFS: Preferences = { anomalyThreshold: 2.5, anomalyMethod: 'zscore', mascotFace: 'robot', mascotRobot: 'helix', blobatarName: DEFAULT_BLOBATAR_NAME }
 export function getPreferences(): Preferences {
   if (typeof localStorage === 'undefined') return DEFAULT_PREFS
   const stored = safeParse<Partial<Preferences>>(localStorage.getItem(KEY_PREFS), {})

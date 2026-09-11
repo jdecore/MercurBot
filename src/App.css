@@ -1,4 +1,4 @@
-/* Copixi — Excel Canvas Layout (Sin navbar tradicional, inmersivo) §19/§20 */
+/* Copixi — PDF Canvas Layout (Sin navbar tradicional, inmersivo) §19/§20 */
 .canvas-wrapper {
   min-height: 100svh;
   display: flex;
@@ -93,8 +93,10 @@
 
 .mascot-stage {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 6px;
   position: relative;
   margin-bottom: -10px;
   z-index: 10;

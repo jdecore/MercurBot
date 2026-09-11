@@ -636,6 +636,55 @@
   outline-offset: 1px;
 }
 
+/* Selector de unidad del robot único (conserva las 7 unidades) */
+.mascot-unit-picker {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 560px;
+}
+
+.unit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.unit-btn:hover {
+  color: var(--color-text);
+  border-color: var(--unit-color);
+}
+
+.unit-btn.active {
+  color: var(--color-text);
+  border-color: var(--unit-color);
+  background: color-mix(in srgb, var(--unit-color) 12%, var(--color-surface));
+}
+
+.unit-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.unit-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--unit-color);
+  flex: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   #mascota.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
     transform: none;
