@@ -527,3 +527,117 @@
   from { height: 2px; }
   to { height: 12px; }
 }
+
+/* =========================================================================
+   BLOBATAR FACE — avatar personalizable determinista (Fase 15)
+   La animación (respirar/parpadear) la provee blobatar/motion.css (CSS puro,
+   respeta prefers-reduced-motion). Aquí solo layout + customizer nativo.
+   ========================================================================= */
+
+#mascota.robot-eve.face-blobatar {
+  --unit-primary: #ff6b00;
+  --unit-accent: #ff8c2f;
+}
+
+.robot-container.blobatar-face {
+  justify-content: center;
+  filter: drop-shadow(0 8px 20px rgba(255, 107, 0, 0.22));
+  transition: transform 200ms ease;
+}
+
+#mascota.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
+  transform: scale(1.04);
+}
+
+/* Personalizador de mascota */
+.mascot-customizer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.mascot-customizer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.mascot-customizer-label {
+  color: var(--color-muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.mascot-face-toggle {
+  display: inline-flex;
+  gap: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.face-btn {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.face-btn:hover {
+  color: var(--color-text);
+}
+
+.face-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.face-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.mascot-avatar-preview {
+  display: inline-flex;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+}
+
+.mascot-name-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mascot-name-field input {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  max-width: 160px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.mascot-name-field input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mascota.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
+    transform: none;
+  }
+}

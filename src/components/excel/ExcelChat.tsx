@@ -4,6 +4,8 @@ import { useDashboard } from '../../state/DashboardContext'
 import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as cancelTts, isSpeaking } from '../../lib/tts'
 import type { MascotaMood } from '../../types/mascota'
 import type { FilterOperator, ChartConfig } from '../../data/types'
+import { ragClient } from '../../lib/ragClient'
+import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
 
 function setMascotaMood(m: MascotaMood) {
   window.dispatchEvent(new CustomEvent('copixi:mascota-mood', { detail: m }))
@@ -65,7 +67,29 @@ function renderInline(text: string): React.ReactNode[] {
   return nodes
 }
 
-// Render AI text as paragraphs / lists with inline formatting.
+// Render AI text as paragraphs / lists with inline formatting + citas [Pág. N] verificables.
+const PAGE_CITE_RE = /\[P[áa]g\.?\s*(\d+)\]|\[P[áa]gina\s*(\d+)\]|\[p\.\s*(\d+)\]/gi
+
+function renderInlineWithCites(text: string, keyPrefix: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = []
+  const re = new RegExp(PAGE_CITE_RE.source, 'gi')
+  let last = 0
+  let m: RegExpExecArray | null
+  let key = 0
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(...renderInline(text.slice(last, m.index)).map((n, i) => <span key={`${keyPrefix}-t${key}-${i}`}>{n}</span>))
+    const page = m[1] ?? m[2] ?? m[3] ?? '?'
+    nodes.push(
+      <span key={`${keyPrefix}-cite${key++}`} className="citation-badge citation-inline" title={`Fuente verificada: página ${page}`}>
+        [Pág. {page}]
+      </span>,
+    )
+    last = m.index + m[0].length
+  }
+  if (last < text.length) nodes.push(...renderInline(text.slice(last)).map((n, i) => <span key={`${keyPrefix}-u${key}-${i}`}>{n}</span>))
+  return nodes
+}
+
 function renderRichText(text: string): React.ReactNode {
   const lines = text.split('\n')
   const blocks: React.ReactNode[] = []
@@ -86,7 +110,7 @@ function renderRichText(text: string): React.ReactNode {
       blocks.push(
         <ul key={key++} className="ai-list">
           {items.map((it, idx) => (
-            <li key={idx}>{renderInline(it)}</li>
+            <li key={idx}>{renderInlineWithCites(it, `ul${key}-${idx}`)}</li>
           ))}
         </ul>,
       )
@@ -101,7 +125,7 @@ function renderRichText(text: string): React.ReactNode {
       blocks.push(
         <ol key={key++} className="ai-list">
           {items.map((it, idx) => (
-            <li key={idx}>{renderInline(it)}</li>
+            <li key={idx}>{renderInlineWithCites(it, `ol${key}-${idx}`)}</li>
           ))}
         </ol>,
       )
@@ -117,12 +141,18 @@ function renderRichText(text: string): React.ReactNode {
       para.push(lines[i])
       i++
     }
-    blocks.push(<p key={key++}>{renderInline(para.join(' '))}</p>)
+    blocks.push(<p key={key++}>{renderInlineWithCites(para.join(' '), `p${key}`)}</p>)
   }
   return <>{blocks}</>
 }
 
-type ChatMsg = { id: string; role: 'user' | 'assistant'; content: string }
+type ChatMsg = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  citations?: { pageNumber: number; snippet: string; matchType?: string }[]
+  searchMode?: RagPipelineMode
+}
 
 function MiniChart({ config, data }: { config: { chartType: string; x: string; y: string; title?: string }; data: { name: string; value: number }[] }) {
   if (!data || data.length === 0) return null
@@ -168,7 +198,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const {
     rawRows, columns, addFilter, clearFilters, setActiveChart,
     byProduct, byCity, byCategory, metrics, filters, suggestedQuestions,
-    autoCharts, fileInfo,
+    autoCharts, fileInfo, pdfDoc,
   } = useDashboard()
 
   const hasData = !!rawRows
@@ -284,6 +314,43 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     setMascotaMood('escuchando')
     setStatus('submitted')
 
+    // Fase 4 — Pipeline de búsqueda: híbrido (Top15 vec + Top15 léxico → RRF → Top3)
+    // o fallback léxico Top3 directo. Ver src/lib/ragPipeline.ts + rag.worker.ts.
+    let ragHits: RagPipelineHit[] = []
+    let searchMode: RagPipelineMode | undefined
+    if (pdfDoc || ragClient.getState().chunkCount > 0) {
+      setMascotaMood('pensando')
+      try {
+        const result = await runRagPipeline(trimmed, RAG_TOP_K)
+        ragHits = result.hits
+        searchMode = result.mode
+      } catch (ragErr) {
+        console.warn('[ExcelChat] Error en búsqueda RAG local:', ragErr)
+      }
+    }
+
+    const citations = ragHits.map((h) => ({
+      pageNumber: h.pageNumber,
+      snippet: String(h.text ?? '').slice(0, 200),
+      matchType: h.matchType,
+    }))
+
+    const payloadContext = (pdfDoc || ragHits.length > 0)
+      ? {
+          documentType: 'pdf',
+          filename: pdfDoc?.filename ?? ragHits[0]?.docName ?? 'documento.pdf',
+          totalPages: pdfDoc?.totalPages ?? Math.max(...ragHits.map((h) => h.pageNumber), 1),
+          searchMode,
+          ragHits: ragHits.map((h) => ({
+            pageNumber: h.pageNumber,
+            chunkIndex: h.chunkIndex,
+            text: h.text,
+            score: h.score,
+            matchType: h.matchType,
+          })),
+        }
+      : contextRef.current
+
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -291,7 +358,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: history, context: contextRef.current }),
+        body: JSON.stringify({ messages: history, context: payloadContext }),
         signal: controller.signal,
       })
 
@@ -328,7 +395,13 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string }
             if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
               acc += evt.delta
-              setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: acc } : m)))
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode }
+                    : m
+                )
+              )
             } else if (evt.type === 'error') {
               throw new Error(evt.message || 'Error del servidor')
             }
@@ -394,14 +467,14 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     setMutedState(v)
   }
 
-  const lastAiMessage = useMemo(() => {
+  const lastAiMsg = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'assistant' && messages[i].content) return messages[i].content
+      if (messages[i].role === 'assistant' && messages[i].content) return messages[i]
     }
     return null
   }, [messages])
 
-  const cleanedAi = useMemo(() => (lastAiMessage ? cleanAI(lastAiMessage) : ''), [lastAiMessage])
+  const cleanedAi = useMemo(() => (lastAiMsg ? cleanAI(lastAiMsg.content) : ''), [lastAiMsg])
 
   const activeMiniChart = useMemo(() => {
     if (autoCharts && autoCharts.length > 0 && hasData) {
@@ -410,12 +483,25 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     return null
   }, [autoCharts, hasData])
 
-  const suggestions = hasData ? (suggestedQuestions.length > 0 ? suggestedQuestions.slice(0, 4) : [
-    '¿Cuál es el total y promedio?',
-    'Top 3 productos más vendidos',
-    'Ventas por ciudad',
-    'Fórmula SUMAR.SI para este archivo',
-  ]) : EXCEL_SUGGESTIONS
+  const suggestions = useMemo(() => {
+    if (pdfDoc) {
+      return [
+        `¿De qué trata el documento ${pdfDoc.filename}?`,
+        '¿Cuáles son las conclusiones o puntos principales?',
+        'Resume el documento en 3 puntos clave',
+        '¿Qué fechas, cifras o métricas menciona?',
+      ]
+    }
+    if (hasData) {
+      return suggestedQuestions.length > 0 ? suggestedQuestions.slice(0, 4) : [
+        '¿Cuál es el total y promedio?',
+        'Top 3 productos más vendidos',
+        'Ventas por ciudad',
+        'Fórmula SUMAR.SI para este archivo',
+      ]
+    }
+    return EXCEL_SUGGESTIONS
+  }, [pdfDoc, hasData, suggestedQuestions])
 
   return (
     <div className="excel-chat-container" aria-label="compexi Chat">
@@ -488,16 +574,32 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             ) : cleanedAi ? (
               <div className="speech-bubble-text">
                 {renderRichText(cleanedAi)}
+                {lastAiMsg?.citations && lastAiMsg.citations.length > 0 && (
+                  <div className="ai-citations-row" aria-label="Fuentes del documento">
+                    <span className="citations-label">
+                      Fuentes{lastAiMsg.searchMode ? ` · ${lastAiMsg.searchMode === 'hybrid' ? 'híbrida (vectorial + léxica → RRF)' : 'léxica'}` : ''}:
+                    </span>
+                    {lastAiMsg.citations.map((c, idx) => (
+                      <details key={idx} className="citation-badge citation-details">
+                        <summary title={c.snippet}>📄 Pág. {c.pageNumber}</summary>
+                        <div className="citation-snippet">
+                          <q>{c.snippet}</q>
+                          {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="speech-bubble-welcome">
                 <div className="welcome-header-line">
-                  <p>¡Hola! Soy <strong>compe</strong>, tu analista de datos y experto en Excel.</p>
+                  <p>¡Hola! Soy <strong>compe</strong>, tu analista de datos y asistente de documentos.</p>
                   {isTtsSupported() && (
                     <button
                       type="button"
                       className="btn-hear-welcome"
-                      onClick={() => speak('¡Hola! Soy compe, tu analista de datos y experto en Excel. Arrastra tu archivo Excel o CSV para comenzar.')}
+                      onClick={() => speak('¡Hola! Soy compe, tu analista de datos. Arrastra tu archivo PDF, Excel o CSV para comenzar.')}
                       title="Escuchar saludo"
                       aria-label="Escuchar saludo"
                     >
@@ -505,7 +607,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     </button>
                   )}
                 </div>
-                {hasData ? (
+                {pdfDoc ? (
+                  <p className="subtext">
+                    He leído y vectorizado <strong>{pdfDoc.filename}</strong> ({pdfDoc.totalPages} páginas · {pdfDoc.chunks.length} fragmentos). Pregúntame cualquier detalle del documento.
+                  </p>
+                ) : hasData ? (
                   <p className="subtext">
                     He cargado <strong>{fileInfo?.name}</strong> con {rawRows?.length ?? 0} filas. Pregúntame lo que quieras o pide fórmulas y gráficos.
                   </p>
@@ -516,7 +622,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     </div>
                     <div className="dropzone-text">
                       <strong className="dropzone-title">Arrastra y suelta tu archivo aquí</strong>
-                      <span className="dropzone-hint">Soporta Excel (<strong>.xlsx, .xls</strong>) o <strong>CSV / TSV</strong> · o haz clic para explorar</span>
+                      <span className="dropzone-hint">Soporta PDF (<strong>.pdf</strong>), Excel (<strong>.xlsx, .xls</strong>) o <strong>CSV / TSV</strong> · o haz clic para explorar</span>
                     </div>
                   </div>
                 )}
@@ -571,6 +677,22 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               <div key={i} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
                 <div className="excel-msg-body">
                   {renderRichText(cleanAI(m.content))}
+                  {m.citations && m.citations.length > 0 && (
+                    <div className="ai-citations-row" aria-label="Fuentes del documento">
+                      <span className="citations-label">
+                        Fuentes{m.searchMode ? ` · ${m.searchMode === 'hybrid' ? 'híbrida (vectorial + léxica → RRF)' : 'léxica'}` : ''}:
+                      </span>
+                      {m.citations.map((c, idx) => (
+                        <details key={idx} className="citation-badge citation-details">
+                          <summary title={c.snippet}>📄 Pág. {c.pageNumber}</summary>
+                          <div className="citation-snippet">
+                            <q>{c.snippet}</q>
+                            {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )

@@ -10,12 +10,14 @@ import { ExportBar } from './components/dashboard/ExportBar'
 import { DataTable } from './components/data/DataTable'
 import { DataProfiler } from './components/data/DataProfiler'
 import { Mascota } from './components/ui/Mascota'
+import { MascotCustomizer, type MascotFace } from './components/ui/MascotCustomizer'
 import { ExcelChat } from './components/excel/ExcelChat'
 import { RobotEcosystemControls } from './components/dashboard/RobotEcosystemControls'
 import { speak } from './lib/tts'
-import { saveDataset } from './lib/storage'
-import type { MascotaMood } from './types/mascota'
-import { ROBOT_UNITS } from './types/mascota'
+import { saveDataset, getPreferences, savePreferences, DEFAULT_BLOBATAR_NAME } from './lib/storage'
+import { ROBOT_UNITS, type MascotaMood } from './types/mascota'
+import { ragClient } from './lib/ragClient'
+import { PdfProcessingCard, type PdfProcessingState } from './components/dashboard/PdfProcessingCard'
 
 const CHART_COLORS = ['#ff6b00', '#10b981', '#2563eb', '#8b5cf6', '#f59e0b', '#f43f5e', '#6366f1', '#64748b']
 
@@ -90,16 +92,38 @@ function MainDashboard() {
   const {
     rawRows, fileInfo, autoCharts,
     setDataset, error, setError, setLoading, generateSummary, filteredRows,
-    activeRobot,
+    activeRobot, pdfDoc, setPdfDoc,
   } = useDashboard()
 
   const [dragging, setDragging] = useState(false)
   const [dataOpen, setDataOpen] = useState(false)
   const [mascotaMood, setMascotaMood] = useState<MascotaMood>('neutro')
+  const [mascotaSubtitulo, setMascotaSubtitulo] = useState<string>('')
+  const [mascotFace, setMascotFace] = useState<MascotFace>(() => getPreferences().mascotFace)
+  const [blobatarName, setBlobatarName] = useState<string>(() => getPreferences().blobatarName)
+  const [pdfProcessing, setPdfProcessing] = useState<PdfProcessingState | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const hasData = Boolean(rawRows && rawRows.length > 0)
+  const hasDocument = Boolean(hasData || pdfDoc)
   const activeMeta = ROBOT_UNITS[activeRobot] || ROBOT_UNITS.helix
+
+  const cancelPdfProcessing = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    setPdfProcessing(null)
+    setLoading(false)
+    setMascotaMood('duda')
+    setMascotaSubtitulo('Lectura cancelada.')
+    speak('Lectura cancelada.')
+    setTimeout(() => {
+      setMascotaMood('neutro')
+      setMascotaSubtitulo('')
+    }, 4000)
+  }, [setLoading])
 
   const handleRows = useCallback((data: typeof filteredRows, name: string, size: number) => {
     setDataset(data, { name, size, rows: data.length, columns: Object.keys(data[0] ?? {}).length })
@@ -112,7 +136,73 @@ function MainDashboard() {
     const valid = validateAnyFile(file)
     if (!valid.valid) { setError(valid.error ?? 'Tipo de archivo no soportado'); return }
     setLoading(true); setError(null)
+
     try {
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        const controller = new AbortController()
+        abortControllerRef.current = controller
+
+        setMascotaMood('escaneando')
+        setMascotaSubtitulo(`Iniciando lectura de ${file.name}...`)
+        setPdfProcessing({
+          active: true,
+          filename: file.name,
+          percent: 5,
+          phase: 'reading',
+          statusText: 'Extrayendo páginas y estructura...',
+          canCancel: true,
+        })
+        speak(`Iniciando lectura del documento ${file.name}. Espérame un momento.`)
+
+        const parseResult = await parseAnyFile(file, {
+          signal: controller.signal,
+          timeoutMs: 60000,
+          onProgress: (p) => {
+            setMascotaMood('pensando')
+            setMascotaSubtitulo(`Leyendo pág. ${p.page} de ${p.totalPages}...`)
+            setPdfProcessing((prev) => prev ? {
+              ...prev,
+              percent: Math.min(50, Math.round(5 + (p.page / (p.totalPages || 1)) * 45)),
+              statusText: p.statusText,
+            } : null)
+          },
+        })
+
+        if (!('source' in parseResult) || parseResult.source !== 'pdf') throw new Error('Error al procesar PDF.')
+        const { pdfResult } = parseResult
+
+        // Vectorize / index via Web Worker RAG
+        setMascotaMood('pensando')
+        setMascotaSubtitulo(`Indexando ${pdfResult.chunks.length} conceptos clave...`)
+        setPdfProcessing((prev) => prev ? {
+          ...prev,
+          percent: 55,
+          phase: 'indexing',
+          statusText: `Indexando ${pdfResult.chunks.length} fragmentos en tu dispositivo...`,
+        } : null)
+
+        ragClient.setProgressListener((prog) => {
+          setPdfProcessing((prev) => prev ? {
+            ...prev,
+            percent: Math.round(50 + (prog.percent * 0.5)),
+            statusText: prog.message,
+          } : null)
+          setMascotaSubtitulo(prog.message)
+        })
+
+        await ragClient.indexDocument(pdfResult.docId, file.name, pdfResult.chunks)
+
+        // Ready!
+        setPdfDoc(pdfResult)
+        setMascotaMood('exito')
+        const readyMsg = `¡Listo! Ya leí todo el documento (${pdfResult.totalPages} págs · ${pdfResult.chunks.length} fragmentos). Pregúntame lo que necesites.`
+        setMascotaSubtitulo(readyMsg)
+        speak(`Documento ${file.name} procesado con éxito. Estoy listo para responder tus preguntas.`)
+        setPdfProcessing(null)
+        abortControllerRef.current = null
+        return
+      }
+
       const result = await parseAnyFile(file)
       if ('needsGemini' in result && result.needsGemini) {
         const res = await fetch('/api/chat', {
@@ -133,11 +223,16 @@ function MainDashboard() {
       handleRows(rows as unknown as typeof filteredRows, file.name, file.size)
       setTimeout(() => generateSummary(), 300)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse file')
+      setMascotaMood('duda')
+      setPdfProcessing(null)
+      abortControllerRef.current = null
+      const msg = err instanceof Error ? err.message : 'Failed to parse file'
+      setError(msg)
+      setMascotaSubtitulo(msg)
     } finally {
       setLoading(false)
     }
-  }, [handleRows, setError, setLoading, generateSummary])
+  }, [handleRows, setError, setLoading, generateSummary, setPdfDoc])
 
   const handleDemo = useCallback(async () => {
     setLoading(true); setError(null)
@@ -177,10 +272,10 @@ function MainDashboard() {
         </div>
 
         <div className="canvas-actions">
-          {hasData && (
-            <div className="dataset-pill" title={fileInfo?.name ?? 'Dataset cargado'}>
+          {hasDocument && (
+            <div className="dataset-pill" title={fileInfo?.name ?? 'Documento cargado'}>
               <i className="pixelart-icons-font-file" aria-hidden />
-              <span>{fileInfo?.name ?? 'Archivo'} ({fileInfo?.rows ?? 0} filas)</span>
+              <span>{fileInfo?.name ?? 'Archivo'} {pdfDoc ? `(${pdfDoc.totalPages} págs · ${pdfDoc.chunks.length} chunks)` : `(${fileInfo?.rows ?? 0} filas)`}</span>
             </div>
           )}
           <button
@@ -188,12 +283,12 @@ function MainDashboard() {
             className="btn btn-secondary small"
             onClick={() => inputRef.current?.click()}
           >
-            📂 Cargar Dataset
+            📂 Cargar Archivo
           </button>
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsx,.xls,.csv,.tsv,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            accept=".pdf,.xlsx,.xls,.csv,.tsv,text/csv,text/tab-separated-values,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) parseFile(f) }}
           />
@@ -211,12 +306,30 @@ function MainDashboard() {
           {/* Top Stage: Animated Robot Mascot con Visor y Hábitat Activo */}
           <div className="mascot-stage">
             <Mascota
-              variant={activeRobot}
+              variant={mascotFace === 'blobatar' ? 'blobatar' : activeRobot}
+              avatarName={blobatarName}
               mood={mascotaMood}
+              subtitulo={mascotaSubtitulo}
               size={180}
-              onClick={() => speak(hasData ? `Unidad ${activeMeta.name} lista. ${activeMeta.tagline}` : `¡Hola! Soy ${activeMeta.name}. ${activeMeta.tagline} Carga tu dataset para comenzar.`)}
+              onClick={() => speak(mascotFace === 'blobatar'
+                ? `¡Hola! Soy ${blobatarName || DEFAULT_BLOBATAR_NAME}, tu avatar analista. Carga tu archivo PDF o datos para comenzar.`
+                : hasDocument ? `Unidad ${activeMeta.name} lista. ${activeMeta.tagline}` : `¡Hola! Soy ${activeMeta.name}. ${activeMeta.tagline} Carga tu archivo PDF o datos para comenzar.`)}
+            />
+            <MascotCustomizer
+              face={mascotFace}
+              name={blobatarName}
+              onChange={(face, name) => {
+                setMascotFace(face)
+                setBlobatarName(name)
+                savePreferences({ ...getPreferences(), mascotFace: face, blobatarName: name })
+              }}
             />
           </div>
+
+          {/* Interactive PDF Processing Banner with Cancel */}
+          {pdfProcessing && (
+            <PdfProcessingCard state={pdfProcessing} onCancel={cancelPdfProcessing} />
+          )}
 
           {/* Selector de Modos (Pipeline Asistido vs Especialista) & Diagnóstico Helix */}
           <RobotEcosystemControls />

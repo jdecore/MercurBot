@@ -1,0 +1,220 @@
+import MiniSearch from 'minisearch'
+import type { PdfChunk } from '../data/extractors/pdf'
+import type { RagSearchResultItem } from '../workers/rag.worker'
+
+export type { RagSearchResultItem }
+
+export interface RagProgressCallback {
+  phase: string
+  percent: number
+  message: string
+  indexed?: number
+  total?: number
+}
+
+export interface RagClientState {
+  isIndexing: boolean
+  isReady: boolean
+  mode: 'hybrid' | 'lexical_only' | 'idle'
+  docName: string | null
+  chunkCount: number
+}
+
+class RagClient {
+  private worker: Worker | null = null
+  private mainThreadMiniSearch: MiniSearch<PdfChunk> | null = null
+  private mainThreadChunks = new Map<string, PdfChunk>()
+  private state: RagClientState = {
+    isIndexing: false,
+    isReady: false,
+    mode: 'idle',
+    docName: null,
+    chunkCount: 0,
+  }
+  private onProgressCb: ((progress: RagProgressCallback) => void) | null = null
+  private searchResolvers = new Map<string, (results: RagSearchResultItem[]) => void>()
+
+  constructor() {
+    this.initWorker()
+  }
+
+  private initWorker() {
+    if (typeof window === 'undefined') return
+
+    try {
+      this.worker = new Worker(
+        new URL('../workers/rag.worker.ts', import.meta.url),
+        { type: 'module' }
+      )
+
+      this.worker.onmessage = (e: MessageEvent) => {
+        const { type, payload } = e.data || {}
+        this.handleWorkerMessage(type, payload)
+      }
+
+      this.worker.onerror = (err) => {
+        console.warn('[RagClient] Worker error detected. Activando fallback principal.', err)
+        this.fallbackToMainThread()
+      }
+    } catch (err) {
+      console.warn('[RagClient] No se pudo instanciar Web Worker. Modo directo en hilo principal.', err)
+      this.fallbackToMainThread()
+    }
+  }
+
+  private fallbackToMainThread() {
+    this.state.mode = 'lexical_only'
+    if (this.worker) {
+      try { this.worker.terminate() } catch { /* ignore */ }
+      this.worker = null
+    }
+  }
+
+  private handleWorkerMessage(type: string, payload: any) {
+    switch (type) {
+      case 'PROGRESS':
+        this.onProgressCb?.(payload)
+        break
+
+      case 'STATUS':
+        if (payload.mode === 'lexical_only') {
+          this.state.mode = 'lexical_only'
+        }
+        break
+
+      case 'INDEX_COMPLETE':
+        this.state.isIndexing = false
+        this.state.isReady = true
+        this.state.mode = payload.mode
+        this.state.docName = payload.docName
+        this.state.chunkCount = payload.chunkCount
+        this.onProgressCb?.({
+          phase: 'complete',
+          percent: 100,
+          message: `Documento indexado (${payload.chunkCount} fragmentos). Modo: ${payload.mode}.`,
+        })
+        break
+
+      case 'SEARCH_RESULTS': {
+        const { query, results } = payload
+        const resolver = this.searchResolvers.get(query)
+        if (resolver) {
+          resolver(results)
+          this.searchResolvers.delete(query)
+        }
+        break
+      }
+
+      case 'ERROR':
+        console.error('[RagClient] Worker reportó error:', payload)
+        this.state.isIndexing = false
+        break
+    }
+  }
+
+  public setProgressListener(cb: (progress: RagProgressCallback) => void) {
+    this.onProgressCb = cb
+  }
+
+  public async indexDocument(docId: string, docName: string, chunks: PdfChunk[]): Promise<void> {
+    this.state.isIndexing = true
+    this.state.isReady = false
+    this.state.docName = docName
+    this.state.chunkCount = chunks.length
+
+    // Populate fallback Main Thread MiniSearch
+    this.mainThreadChunks.clear()
+    this.mainThreadMiniSearch = new MiniSearch<PdfChunk>({
+      fields: ['text'],
+      storeFields: ['id', 'docId', 'docName', 'pageNumber', 'chunkIndex', 'text', 'tokenCountEstimate'],
+      searchOptions: { boost: { text: 2 }, fuzzy: 0.2, prefix: true },
+    })
+    for (const chunk of chunks) {
+      this.mainThreadChunks.set(chunk.id, chunk)
+    }
+    this.mainThreadMiniSearch.addAll(chunks)
+
+    if (this.worker) {
+      this.worker.postMessage({
+        action: 'INDEX_DOCUMENT',
+        payload: { docId, docName, chunks },
+      })
+    } else {
+      // Main Thread immediate fallback
+      this.state.isIndexing = false
+      this.state.isReady = true
+      this.state.mode = 'lexical_only'
+      this.onProgressCb?.({
+        phase: 'complete',
+        percent: 100,
+        message: `Índice léxico listo en modo ligero (${chunks.length} fragmentos).`,
+      })
+    }
+  }
+
+  public async search(query: string, topK = 3, timeoutMs = 8000): Promise<RagSearchResultItem[]> {
+    if (!query.trim() || this.state.chunkCount === 0) return []
+
+    // If worker is running, attempt search with Watchdog timeout
+    if (this.worker) {
+      return new Promise<RagSearchResultItem[]>((resolve) => {
+        const timer = setTimeout(() => {
+          console.warn('[RagClient] Worker Watchdog timeout excedido. Conmutando a búsqueda léxica local.')
+          this.searchResolvers.delete(query)
+          resolve(this.searchMainThread(query, topK))
+        }, timeoutMs)
+
+        this.searchResolvers.set(query, (results) => {
+          clearTimeout(timer)
+          resolve(results)
+        })
+
+        this.worker!.postMessage({
+          action: 'SEARCH',
+          payload: { query, topK },
+        })
+      })
+    }
+
+    // Direct fallback
+    return this.searchMainThread(query, topK)
+  }
+
+  private searchMainThread(query: string, topK: number): RagSearchResultItem[] {
+    if (!this.mainThreadMiniSearch) return []
+    const hits = this.mainThreadMiniSearch.search(query).slice(0, topK)
+    return hits.map((h) => {
+      const chunk = this.mainThreadChunks.get(h.id)!
+      return {
+        id: chunk.id,
+        docId: chunk.docId,
+        docName: chunk.docName,
+        pageNumber: chunk.pageNumber,
+        chunkIndex: chunk.chunkIndex,
+        text: chunk.text,
+        score: h.score,
+        matchType: 'lexical',
+      }
+    })
+  }
+
+  public clear() {
+    this.state = {
+      isIndexing: false,
+      isReady: false,
+      mode: 'idle',
+      docName: null,
+      chunkCount: 0,
+    }
+    this.mainThreadMiniSearch = null
+    this.mainThreadChunks.clear()
+    this.worker?.postMessage({ action: 'CLEAR' })
+  }
+
+  public getState(): RagClientState {
+    return { ...this.state }
+  }
+}
+
+// Global Singleton instance for client access
+export const ragClient = new RagClient()

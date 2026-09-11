@@ -45,25 +45,47 @@ function getClientIp(req: any): string {
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite'
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'nvidia/nemotron-3.5-lightning:free'
 
-const EXCEL_SYSTEM = `Eres compe, un experto en Microsoft Excel y análisis de datos. Responde en español, de forma concisa y práctica.
+const EXCEL_SYSTEM = `Eres compe, un analista de datos e IA experto en documentos y hojas de cálculo. Responde en español, de forma concisa, educada y práctica.
 
 Especialidades:
-- Fórmulas (BUSCARV, XLOOKUP, SUMAR.SI, SI.CONJUNTO, ÍNDICE/COINCIDIR, texto, fecha, lógicas).
-- Tablas dinámicas, Power Query, segmentación de datos.
-- Gráficos, validación de datos, formato condicional.
-- Limpieza y modelado de datos, análisis exploratorio.
+- Comprensión y síntesis de documentos PDF, informes y reportes técnicos con citación precisa de páginas.
+- Fórmulas de Excel (BUSCARV, XLOOKUP, SUMAR.SI, SI.CONJUNTO, ÍNDICE/COINCIDIR, texto, fecha, lógicas).
+- Tablas dinámicas, gráficos, limpieza de datos y análisis exploratorio.
 
 Reglas:
-- Da pasos claros y, cuando aplique, la fórmula exacta lista para pegar.
-- Si el usuario pregunta sobre SU dataset cargado, usa el contexto agregado provisto (nunca filas crudas). Cita columnas y números reales del contexto.
-- Puedes incluir al final un bloque JSON de acción para modificar el dashboard, en este formato exacto (sin markdown):
-  {"action":"setFilter","column":"<nombre>","operator":"equals|contains|gt|lt|between","value":"<valor>"}
-  Otras acciones válidas: "clearFilters", "setChart" (chartType line|bar|area|pie, x, y), "setDateRange" (from, to).
-- Si no hay dataset cargado, responde como experto en Excel puro.
-- No inventes columnas que no estén en el contexto.`
+- Si el contexto proviene de un documento PDF con fragmentos recuperados por RAG, fundaméntate en ellos y cita las páginas correspondientes (ej. "según la página X...").
+- Si el usuario pregunta sobre un dataset tabular cargado, usa el contexto agregado provisto. Cita columnas y números reales del contexto.
+- Puedes incluir al final un bloque JSON de acción solo si hay datos tabulares para modificar el dashboard.
+- No inventes información ni datos que no figuren en los fragmentos provistos.`
 
 function buildContextBlock(context: unknown): string {
   if (!context || typeof context !== 'object') return ''
+  const ctx = context as Record<string, unknown>
+
+  // RAG Mode: Document / PDF with retrieved snippets (Fase 4: máx. 3 fragmentos con página)
+  if (Array.isArray(ctx.ragHits) && ctx.ragHits.length > 0) {
+    const docName = String(ctx.filename ?? 'documento.pdf')
+    const totalPages = ctx.totalPages ?? '?'
+    const MAX_CHARS_PER_HIT = 1200
+    const snippets = (ctx.ragHits as any[]).slice(0, 3)
+      .map((h: any, i: number) => {
+        const page = Number.isFinite(Number(h.pageNumber)) ? Number(h.pageNumber) : '?'
+        const raw = String(h.text ?? '').trim().replace(/\s+/g, ' ')
+        const text = raw.length > MAX_CHARS_PER_HIT ? `${raw.slice(0, MAX_CHARS_PER_HIT)}…` : raw
+        return `[Fragmento ${i + 1} | Pág. ${page}]:\n"${text}"`
+      })
+      .join('\n\n')
+
+    return `\n\n--- FUENTE DEL DOCUMENTO: "${docName}" (${totalPages} páginas) ---\n` +
+      `Los siguientes fragmentos fueron recuperados directamente del documento mediante búsqueda semántica local en el dispositivo del usuario:\n\n` +
+      `${snippets}\n\n` +
+      `INSTRUCCIONES PARA ESTA RESPUESTA:\n` +
+      `- Responde basándote estrictamente en los fragmentos anteriores.\n` +
+      `- Cita SIEMPRE el número de página con el formato [Pág. N] junto a cada dato relevante.\n` +
+      `- Si la pregunta del usuario no se puede responder con estos fragmentos, indícalo con total transparencia sin inventar información.`
+  }
+
+  // Tabular Dataset mode
   const json = JSON.stringify(context)
   if (json.length > 8000) return `\n\nContexto del dataset (resumido): ${json.slice(0, 8000)}`
   return `\n\nContexto agregado del dataset (sin filas crudas):\n${json}`

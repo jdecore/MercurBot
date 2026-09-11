@@ -8,6 +8,7 @@ import { toTimeSeries, toBarData, suggestCharts } from '../data/chartAdapter'
 import { ragSearch, type RagHit } from '../lib/rag'
 import { diagnoseDataset, applyCleaningOperations, type CleaningDiagnosis, type CleaningOperation, type CleaningResult } from '../data/cleaner'
 import type { RobotUnitId } from '../types/mascota'
+import type { PdfExtractResult } from '../data/extractors/pdf'
 
 export type AnalysisMode = 'pipeline' | 'specialist'
 export type PipelineStep = 'cleaning' | 'profiling' | 'patterns' | 'charts' | 'strategy'
@@ -70,6 +71,7 @@ type DashboardState = {
   pipelineStep: PipelineStep
   cleaningHistory: Row[][]
   lastCleaningResult: CleaningResult | null
+  pdfDoc: PdfExtractResult | null
 }
 
 type DashboardDerived = {
@@ -116,6 +118,7 @@ type DashboardActions = {
   setPipelineStep: (step: PipelineStep) => void
   applyCleaning: (ops: CleaningOperation[]) => CleaningResult
   undoCleaning: () => boolean
+  setPdfDoc: (doc: PdfExtractResult | null) => void
 }
 
 type DashboardContextValue = DashboardState & DashboardDerived & DashboardActions
@@ -160,6 +163,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [pipelineStep, setPipelineStep] = useState<PipelineStep>('cleaning')
   const [cleaningHistory, setCleaningHistory] = useState<Row[][]>([])
   const [lastCleaningResult, setLastCleaningResult] = useState<CleaningResult | null>(null)
+  const [pdfDoc, setPdfDocState] = useState<PdfExtractResult | null>(null)
 
   const profile = useMemo(() => (rawRows ? profileDataset(rawRows) : null), [rawRows])
   const columns = useMemo(() => profile?.columns ?? [], [profile])
@@ -307,6 +311,23 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setSummaryError(null)
     setCleaningHistory([])
     setLastCleaningResult(null)
+    setPdfDocState(null)
+  }, [])
+
+  const setPdfDoc = useCallback((doc: PdfExtractResult | null) => {
+    setPdfDocState(doc)
+    if (doc) {
+      setRawRows(null)
+      setFileInfo({
+        name: doc.filename,
+        size: 0,
+        rows: doc.chunks.length,
+        columns: doc.totalPages,
+      })
+      setSummary(`Documento PDF analizado: "${doc.filename}". ${doc.totalPages} páginas y ${doc.chunks.length} fragmentos semánticos disponibles para consulta RAG.`)
+      setSummaryStatus('ready')
+      setError(null)
+    }
   }, [])
 
   const addFilter = useCallback((f: Filter): boolean => {
@@ -415,6 +436,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     nullPercentages, dateRange, topCategories, suggestedQuestions,
     dateCol, primaryCat, catCols, numCols, salesCol, unitsCol, customersCol,
     analysisMode, activeRobot, pipelineStep, cleaningHistory, lastCleaningResult, cleaningDiagnosis,
+    pdfDoc, setPdfDoc,
     setDataset, clearDataset, addFilter, removeFilter, clearFilters, setActiveChart, setError, setLoading, setSort, setSearch,
     ragQuery, generateSummary, setSummary,
     setAnalysisMode, setActiveRobot, setPipelineStep, applyCleaning, undoCleaning,

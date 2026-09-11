@@ -27,6 +27,10 @@ export type SavedAnalysis = {
 export type Preferences = {
   anomalyThreshold: number
   anomalyMethod: 'zscore' | 'iqr'
+  /** Cara de la mascota: robot del ecosistema o avatar personalizable (Blobatar). */
+  mascotFace: 'robot' | 'blobatar'
+  /** Nombre semilla del Blobatar (determinista: mismo nombre = mismo avatar). */
+  blobatarName: string
 }
 
 const KEY_ANALYSES = 'copixi:saved_analyses'
@@ -71,11 +75,13 @@ export function saveDataset(d: SavedDataset): void {
   localStorage.setItem(KEY_DATASETS, JSON.stringify(list))
 }
 
-// Preferences (anomaly threshold, method)
-const DEFAULT_PREFS: Preferences = { anomalyThreshold: 2.5, anomalyMethod: 'zscore' }
+// Preferences (anomaly threshold, method, mascot face)
+export const DEFAULT_BLOBATAR_NAME = 'compe'
+const DEFAULT_PREFS: Preferences = { anomalyThreshold: 2.5, anomalyMethod: 'zscore', mascotFace: 'robot', blobatarName: DEFAULT_BLOBATAR_NAME }
 export function getPreferences(): Preferences {
   if (typeof localStorage === 'undefined') return DEFAULT_PREFS
-  return safeParse<Preferences>(localStorage.getItem(KEY_PREFS), DEFAULT_PREFS)
+  const stored = safeParse<Partial<Preferences>>(localStorage.getItem(KEY_PREFS), {})
+  return { ...DEFAULT_PREFS, ...stored }
 }
 export function savePreferences(p: Preferences): void {
   localStorage.setItem(KEY_PREFS, JSON.stringify(p))

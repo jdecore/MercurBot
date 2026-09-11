@@ -797,3 +797,168 @@
 @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; background: #e2e8f0; } * { scroll-behavior: auto !important; } }
 
+/* PDF RAG Progress Card */
+.pdf-progress-card {
+  margin: 12px auto;
+  max-width: 580px;
+  width: 90%;
+  background: #ffffff;
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.08);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 200ms ease-out;
+}
+.pdf-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pdf-progress-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+.pdf-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.pdf-filename {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+.pdf-pct {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+.pdf-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pdf-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, #ea580c 100%);
+  border-radius: 999px;
+  transition: width 250ms ease-out;
+}
+.pdf-progress-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pdf-status-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  animation: dotPulse 1.2s infinite alternate;
+}
+@keyframes dotPulse {
+  from { opacity: 0.4; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1.2); }
+}
+.pdf-cancel-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+/* AI Citations Row */
+.ai-citations-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(226, 232, 240, 0.8);
+}
+.citations-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.citation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  color: #ea580c;
+  font-size: 11px;
+  font-weight: 650;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: help;
+  transition: all 150ms ease;
+}
+.citation-badge:hover {
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+/* Fase 4 — citas inline [Pág. N] dentro del texto en streaming */
+.citation-inline {
+  cursor: default;
+  white-space: nowrap;
+}
+/* Citas expandibles verificables (details/summary con snippet + matchType) */
+.citation-details {
+  cursor: pointer;
+}
+.citation-details summary {
+  cursor: pointer;
+  list-style: none;
+}
+.citation-details summary::-webkit-details-marker {
+  display: none;
+}
+.citation-details[open] {
+  align-items: flex-start;
+  max-width: 100%;
+}
+.citation-snippet {
+  flex-basis: 100%;
+  font-weight: 400;
+  color: var(--color-text);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.citation-snippet q {
+  quotes: "“" "”";
+}
+.citation-match {
+  color: var(--color-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
