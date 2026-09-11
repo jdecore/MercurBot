@@ -3,6 +3,7 @@ import { useDashboard } from '../../state/DashboardContext'
 import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as cancelTts, isSpeaking } from '../../lib/tts'
 import type { MascotaMood } from '../../types/mascota'
 import { ragClient } from '../../lib/ragClient'
+import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg } from '../../lib/storage'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
 
 function setMascotaMood(m: MascotaMood) {
@@ -45,7 +46,47 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 // Render AI text as paragraphs / lists with inline formatting + citas [Pág. N] verificables.
+// Las citas son botones: abren el visor embebido en esa página (evento copixi:goto-page).
 const PAGE_CITE_RE = /\[P[áa]g\.?\s*(\d+)\]|\[P[áa]gina\s*(\d+)\]|\[p\.\s*(\d+)\]/gi
+
+function gotoPage(page: number) {
+  if (Number.isFinite(page) && page > 0) {
+    window.dispatchEvent(new CustomEvent('copixi:goto-page', { detail: page }))
+  }
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      return ok
+    } catch {
+      return false
+    }
+  }
+}
+
+function downloadMarkdown(filename: string, body: string) {
+  const blob = new Blob([body], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 4000)
+}
 
 function renderInlineWithCites(text: string, keyPrefix: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = []
@@ -56,10 +97,18 @@ function renderInlineWithCites(text: string, keyPrefix: string): React.ReactNode
   while ((m = re.exec(text))) {
     if (m.index > last) nodes.push(...renderInline(text.slice(last, m.index)).map((n, i) => <span key={`${keyPrefix}-t${key}-${i}`}>{n}</span>))
     const page = m[1] ?? m[2] ?? m[3] ?? '?'
+    const pageNum = Number.parseInt(String(page), 10)
     nodes.push(
-      <span key={`${keyPrefix}-cite${key++}`} className="citation-badge citation-inline" title={`Fuente verificada: página ${page}`}>
+      <button
+        key={`${keyPrefix}-cite${key++}`}
+        type="button"
+        className="citation-badge citation-inline"
+        title={`Ver página ${page} en el visor`}
+        aria-label={`Ver página ${page} en el visor`}
+        onClick={() => gotoPage(pageNum)}
+      >
         [Pág. {page}]
-      </span>,
+      </button>,
     )
     last = m.index + m[0].length
   }
@@ -77,6 +126,50 @@ function renderRichText(text: string): React.ReactNode {
     if (!line.trim()) {
       i++
       continue
+    }
+    // Bloque de código ``` (P1)
+    if (/^```/.test(line)) {
+      const code: string[] = []
+      i++
+      while (i < lines.length && !/^```/.test(lines[i])) {
+        code.push(lines[i])
+        i++
+      }
+      i++ // línea de cierre (o fin del texto)
+      blocks.push(
+        <pre key={key++} className="ai-code"><code>{code.join('\n')}</code></pre>,
+      )
+      continue
+    }
+    // Tabla Markdown | a | b | (P1: requiere fila separadora | --- |)
+    if (/^\|.*\|\s*$/.test(line)) {
+      const raw: string[] = []
+      let j = i
+      while (j < lines.length && /^\|.*\|\s*$/.test(lines[j])) {
+        raw.push(lines[j])
+        j++
+      }
+      const cells = raw.map((r) => r.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim()))
+      const isTable = cells.length >= 2 && cells[1].length > 0 && cells[1].every((c) => /^:?-+:?$/.test(c))
+      if (isTable) {
+        const [head, , ...rest] = cells
+        blocks.push(
+          <table key={key++} className="ai-table">
+            <thead>
+              <tr>{head.map((c, ci) => (<th key={ci}>{renderInline(c)}</th>))}</tr>
+            </thead>
+            {rest.length > 0 && (
+              <tbody>
+                {rest.map((r, ri) => (
+                  <tr key={ri}>{r.map((c, ci) => (<td key={ci}>{renderInline(c)}</td>))}</tr>
+                ))}
+              </tbody>
+            )}
+          </table>,
+        )
+        i = j
+        continue
+      }
     }
     if (/^[-*+]\s+/.test(line)) {
       const items: string[] = []
@@ -123,12 +216,32 @@ function renderRichText(text: string): React.ReactNode {
   return <>{blocks}</>
 }
 
-type ChatMsg = {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  citations?: { pageNumber: number; snippet: string; matchType?: string }[]
-  searchMode?: RagPipelineMode
+type ChatMsg = ChatHistoryMsg
+
+const FOLLOWUP_STOP = new Set([
+  'para', 'como', 'cómo', 'este', 'esta', 'esto', 'estos', 'estas', 'entre', 'sobre',
+  'desde', 'hasta', 'donde', 'dónde', 'cuando', 'cuándo', 'porque', 'página', 'páginas',
+  'documento', 'también', 'puede', 'pueden', 'tiene', 'tienen', 'hace', 'hacen', 'cada',
+  'todos', 'todas', 'ello', 'este', 'además', 'mismo', 'misma', 'gran', 'gran',
+])
+
+/**
+ * Follow-ups dinámicos (P1): propone profundizar en los 2 términos propios
+ * más frecuentes de la última respuesta. 100% local, sin LLM.
+ */
+function suggestFollowUps(text: string): string[] {
+  const freq = new Map<string, number>()
+  for (const m of text.matchAll(/[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{3,}/g)) {
+    const w = m[0].toLowerCase()
+    if (FOLLOWUP_STOP.has(w)) continue
+    freq.set(w, (freq.get(w) ?? 0) + 1)
+  }
+  const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([w]) => w)
+  const out: string[] = []
+  if (top[0]) out.push(`Profundiza en ${top[0]}`)
+  if (top[1]) out.push(`¿Qué más dice el documento sobre ${top[1]}?`)
+  if (out.length === 0) out.push('Dame un ejemplo concreto del documento')
+  return out.slice(0, 3)
 }
 
 export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void }) {
@@ -144,6 +257,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [status, setStatus] = useState<'idle' | 'submitted' | 'streaming' | 'done' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const lastQueryRef = useRef('')
 
@@ -173,6 +287,41 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, loading])
+
+  const docId = pdfDoc?.docId ?? null
+
+  // Historial por documento (P1): carga al cambiar de PDF…
+  useEffect(() => {
+    setMessages(docId ? getChatHistory(docId) : [])
+    setError(null)
+    setStatus('idle')
+    setChatLogOpen(false)
+    setCopiedId(null)
+  }, [docId])
+
+  // …y persiste al completar respuestas (localStorage, truncado en storage.ts).
+  useEffect(() => {
+    if (docId && messages.length > 0 && (status === 'done' || status === 'idle')) {
+      saveChatHistory(docId, messages)
+    }
+  }, [messages, docId, status])
+
+  async function handleCopy(id: string, text: string) {
+    const ok = await copyText(cleanAI(text))
+    if (ok) {
+      setCopiedId(id)
+      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 2000)
+    }
+  }
+
+  function handleDownloadMd(msg: ChatMsg) {
+    const idx = messages.findIndex((m) => m.id === msg.id)
+    const prevUser = [...messages.slice(0, idx)].reverse().find((m) => m.role === 'user')
+    const base = (pdfDoc?.filename ?? 'respuesta').replace(/\.pdf$/i, '') || 'respuesta'
+    const sources = (msg.citations ?? []).map((c) => `- Pág. ${c.pageNumber}: ${c.snippet}`).join('\n')
+    const body = `# ${base}\n\n${prevUser ? `**Pregunta:** ${prevUser.content}\n\n` : ''}**Respuesta:**\n\n${cleanAI(msg.content)}\n\n${sources ? `**Fuentes:**\n\n${sources}\n` : ''}`
+    downloadMarkdown(`${base}.md`, body)
+  }
 
   async function runQuery(text: string) {
     if (loading) return
@@ -291,6 +440,13 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       setMascotaMood('exito')
       if (!getMuted() && acc) speak(cleanAI(acc).slice(0, 300))
     } catch (e) {
+      // Detener es una acción del usuario, no un error: limpia sin alarmar.
+      if ((e instanceof DOMException && e.name === 'AbortError') || (e instanceof Error && e.name === 'AbortError')) {
+        setStatus('idle')
+        setMascotaMood('neutro')
+        setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
+        return
+      }
       const msg = e instanceof Error ? e.message : 'Error desconocido'
       setError(msg)
       setMascotaMood('enojado')
@@ -331,6 +487,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     setMessages([])
     setError(null)
     setStatus('idle')
+    setCopiedId(null)
+    if (docId) clearChatHistory(docId)
     setMascotaMood('neutro')
   }
 
@@ -350,6 +508,12 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const cleanedAi = useMemo(() => (lastAiMsg ? cleanAI(lastAiMsg.content) : ''), [lastAiMsg])
 
   const suggestions = useMemo(() => DEFAULT_SUGGESTIONS, [])
+
+  // Follow-ups dinámicos (P1): solo al terminar una respuesta, derivados de ella.
+  const followUps = useMemo(() => {
+    if (status !== 'done' || !lastAiMsg?.content || !pdfDoc) return []
+    return suggestFollowUps(cleanAI(lastAiMsg.content))
+  }, [status, lastAiMsg, pdfDoc])
 
   return (
     <div className="excel-chat-container" aria-label="compexi Chat">
@@ -407,12 +571,16 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   {error || 'No se pudo conectar con el servicio de IA.'}
                 </div>
                 <div className="error-help-hint">
-                  {error.includes('404') ? (
+                  {error.includes('429') || error.includes('Rate limit') ? (
+                    <span>Límite de peticiones alcanzado. Espera un minuto e inténtalo de nuevo.</span>
+                  ) : error.includes('404') ? (
                     <span>El endpoint <code>/api/chat</code> no está respondiendo en este entorno (si estás en <code>vite dev</code>, asegúrate de correr con Vercel CLI o configurar la API).</span>
-                  ) : error.includes('500') || error.includes('GEMINI_API_KEY') ? (
-                    <span>Falta configurar la variable de entorno <code>GEMINI_API_KEY</code> en tu servidor o Vercel.</span>
+                  ) : error.includes('500') || error.includes('GEMINI_API_KEY') || error.includes('502') ? (
+                    <span>El servicio de IA falló o falta configurar <code>GEMINI_API_KEY</code> en tu servidor o Vercel. Reintenta en unos segundos.</span>
+                  ) : error.includes('fetch') || error.includes('Failed to fetch') || error.includes('NetworkError') ? (
+                    <span>Sin conexión con el servidor. Revisa tu internet y que la app esté desplegada con <code>/api/chat</code> disponible.</span>
                   ) : (
-                    <span>Verifica tu conexión y tu clave de Gemini API.</span>
+                    <span>Reintenta la consulta. Si persiste, recarga la página y vuelve a subir el PDF.</span>
                   )}
                 </div>
                 <button type="button" className="btn btn-secondary small" onClick={regenerate} style={{ marginTop: 8 }}>
@@ -433,11 +601,29 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                         <div className="citation-snippet">
                           <q>{c.snippet}</q>
                           {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
+                          {' · '}
+                          <button
+                            type="button"
+                            className="citation-goto"
+                            onClick={() => gotoPage(c.pageNumber)}
+                            aria-label={`Ver página ${c.pageNumber} en el visor`}
+                          >
+                            Ver página →
+                          </button>
                         </div>
                       </details>
                     ))}
                   </div>
                 )}
+                <div className="ai-actions-row">
+                  <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label="Copiar respuesta">
+                    ⧉ Copiar
+                  </button>
+                  <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && handleDownloadMd(lastAiMsg)} aria-label="Descargar respuesta en Markdown">
+                    ⬇ .md
+                  </button>
+                  {lastAiMsg && copiedId === lastAiMsg.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
+                </div>
               </div>
             ) : (
               <div className="speech-bubble-welcome">
@@ -456,9 +642,18 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   )}
                 </div>
                 {pdfDoc ? (
-                  <p className="subtext">
-                    He leído y vectorizado <strong>{pdfDoc.filename}</strong> ({pdfDoc.totalPages} páginas · {pdfDoc.chunks.length} fragmentos). Pregúntame cualquier detalle del documento.
-                  </p>
+                  <>
+                    <p className="subtext">
+                      He leído y vectorizado <strong>{pdfDoc.filename}</strong> ({pdfDoc.totalPages} páginas · {pdfDoc.chunks.length} fragmentos). Pregúntame cualquier detalle del documento.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary small"
+                      onClick={() => window.dispatchEvent(new Event('copixi:open-viewer'))}
+                    >
+                      🔍 Buscar en el documento
+                    </button>
+                  </>
                 ) : (
                   <div className="welcome-dropzone" onClick={onOpenFilePicker} role="button" tabIndex={0}>
                     <div className="dropzone-icon-ring">
@@ -528,9 +723,26 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                           <div className="citation-snippet">
                             <q>{c.snippet}</q>
                             {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
+                            {' · '}
+                            <button
+                              type="button"
+                              className="citation-goto"
+                              onClick={() => gotoPage(c.pageNumber)}
+                              aria-label={`Ver página ${c.pageNumber} en el visor`}
+                            >
+                              Ver página →
+                            </button>
                           </div>
                         </details>
                       ))}
+                    </div>
+                  )}
+                  {m.role === 'assistant' && (
+                    <div className="ai-actions-row">
+                      <button type="button" className="ai-action-btn" onClick={() => void handleCopy(m.id, m.content)} aria-label="Copiar respuesta">
+                        ⧉ Copiar
+                      </button>
+                      {copiedId === m.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
                     </div>
                   )}
                 </div>
@@ -550,9 +762,9 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       )}
 
       <div className="excel-dock">
-        {suggestions.length > 0 && (
-          <div className="smart-suggestions" aria-label="Sugerencias rápidas">
-            {suggestions.map((q, i) => (
+        {(followUps.length > 0 ? followUps : suggestions).length > 0 && (
+          <div className="smart-suggestions" aria-label={followUps.length > 0 ? 'Preguntas de seguimiento' : 'Sugerencias rápidas'}>
+            {(followUps.length > 0 ? followUps : suggestions).map((q, i) => (
               <button key={i} type="button" className="suggestion-chip" onClick={() => ask(q)} disabled={loading}>
                 <span className="chip-sparkle" aria-hidden>✦</span> {q}
               </button>

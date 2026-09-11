@@ -29,8 +29,8 @@ Un **analista de documentos con IA**: subes un PDF y conversas con él, con cada
 
 1. Carga un PDF (drag & drop, 30 MB) — solo PDF, sin otros formatos
 2. Extracción de páginas + indexado local (MiniSearch inmediato, vectores MiniLM en Web Worker con OPFS)
-3. Pregunta en lenguaje natural → respuesta en streaming con citas `[Pág. N]` expandibles (fragmento + modo híbrida/léxica)
-4. Mascota con voz (TTS nativo) y cara personalizable: 7 robots o tu avatar Blobatar
+3. Pregunta en lenguaje natural → respuesta en streaming con citas `[Pág. N]` clicables: abren el visor embebido en esa página
+4. Copia la respuesta o descárgala en `.md`; biblioteca de recientes (OPFS) para re-abrir sin re-subir; buscar-en-documento por páginas; historial por documento + follow-ups dinámicos; mascota con voz y cara personalizable (colapsable con ⚙)
 
 ---
 
@@ -59,7 +59,7 @@ profiler.ts / statistics.ts / transformations.ts / anomalyDetection.ts / chartAd
 - **Pipeline de búsqueda RAG (Fase 14):** `src/lib/ragPipeline.ts` (`runRagPipeline`): modo híbrido Top 15 vectorial + Top 15 MiniSearch → fusión RRF (k=60) → Top 3 (lógica en `src/workers/rag.worker.ts`; embeddings MiniLM `Xenova/all-MiniLM-L6-v2` en Web Worker con persistencia OPFS); fallback Top 3 MiniSearch directo (`ragClient.searchMainThread` + watchdog con conmutación). `api/chat.ts` topea a 3 fragmentos de ≤1200 chars con formato `[Fragmento i | Pág. N]` e instruye citar `[Pág. N]`; `ExcelChat.tsx` renderiza citas inline en el streaming + badges expandibles con snippet/matchType e indica el modo (híbrida vs. léxica).
 
 ### Estado y UI
-`src/state/DashboardContext.tsx` (fuente única: `pdfDoc`, filtros, resumen). Mascota única personalizable (260px, 7 unidades o Blobatar, TTS nativo), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta naranja/negro/blanco).
+`src/state/DashboardContext.tsx` (fuente única: `pdfDoc`, filtros, resumen). Mascota única personalizable (260px, 7 unidades o Blobatar, TTS nativo, panel colapsable), modo oscuro automático (`prefers-color-scheme`, solo tokens), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta naranja/negro/blanco).
 
 ---
 
@@ -95,13 +95,14 @@ Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (serve
 - *Your document stays in your browser.* Sin subida del PDF; la IA solo recibe 3 fragmentos con página (§8).
 - Keys nunca en frontend ni logs. Rate-limit y validación de payload en la Function.
 - Solo se aceptan PDFs (30 MB); otros formatos se rechazan con mensaje accionable.
+- Errores que dirigen: PDF con contraseña, escaneado sin texto, límite de peticiones (429) y sin conexión explican causa + arreglo.
 
 ---
 
 ## Quality Gate (verificado)
 `pnpm build` ok · sin Tailwind/shadcn/lucide · solo Pixelarticons · sin `VITE_` secrets · sin backend tradicional (solo proxy mínimo) · PDF 100% local · RAG híbrido + citas verificables · responsive + a11y AA · ErrorBoundary + empty states.
 
-Fases 0–17 completadas (ver `AGENTS.md` §42/§43).
+Fases 0–20 completadas (ver `AGENTS.md` §42/§43).
 
 ---
 *Construido con pnpm, CSS nativo, Radix, pdfjs y chat SSE propio. Sin atajos. Sin humo. Solo producto.*

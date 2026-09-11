@@ -20,6 +20,12 @@ export interface RagClientState {
   chunkCount: number
 }
 
+export interface DocSearchHit {
+  pageNumber: number
+  snippet: string
+  chunkId: string
+}
+
 class RagClient {
   private worker: Worker | null = null
   private mainThreadMiniSearch: MiniSearch<PdfChunk> | null = null
@@ -196,6 +202,30 @@ class RagClient {
         matchType: 'lexical',
       }
     })
+  }
+
+  /**
+   * Búsqueda en el documento (P1): devuelve coincidencias léxicas ordenadas
+   * por página para navegar (click → visor). Síncrona e instantánea sobre el
+   * índice MiniSearch del hilo principal.
+   */
+  public searchPages(query: string, limit = 20): DocSearchHit[] {
+    const q = query.trim()
+    if (!q || !this.mainThreadMiniSearch) return []
+    const hits = this.mainThreadMiniSearch.search(q).slice(0, limit)
+    return hits
+      .map((h) => {
+        const chunk = this.mainThreadChunks.get(h.id)
+        if (!chunk) return null
+        const text = String(chunk.text ?? '').replace(/\s+/g, ' ').trim()
+        return {
+          pageNumber: chunk.pageNumber,
+          snippet: text.length > 140 ? `${text.slice(0, 140)}…` : text,
+          chunkId: chunk.id,
+        }
+      })
+      .filter((h): h is DocSearchHit => h !== null)
+      .sort((a, b) => a.pageNumber - b.pageNumber)
   }
 
   public clear() {

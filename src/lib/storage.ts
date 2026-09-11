@@ -90,6 +90,41 @@ export function savePreferences(p: Preferences): void {
   localStorage.setItem(KEY_PREFS, JSON.stringify(p))
 }
 
+// Chat history per document (P1: persists conversation across reloads/switches)
+export type ChatHistoryMsg = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  citations?: { pageNumber: number; snippet: string; matchType?: string }[]
+  searchMode?: 'hybrid' | 'lexical_only'
+}
+
+const KEY_CHAT_PREFIX = 'copixi:chat:'
+const MAX_HISTORY_MSGS = 30
+const MAX_HISTORY_CHARS = 1500
+
+export function getChatHistory(docId: string): ChatHistoryMsg[] {
+  if (typeof localStorage === 'undefined') return []
+  return safeParse<ChatHistoryMsg[]>(localStorage.getItem(KEY_CHAT_PREFIX + docId), [])
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+}
+export function saveChatHistory(docId: string, msgs: ChatHistoryMsg[]): void {
+  if (typeof localStorage === 'undefined') return
+  const trimmed = msgs.slice(-MAX_HISTORY_MSGS).map((m) => ({
+    ...m,
+    content: m.content.length > MAX_HISTORY_CHARS ? m.content.slice(0, MAX_HISTORY_CHARS) + '…' : m.content,
+    citations: (m.citations ?? []).slice(0, 3),
+  }))
+  try {
+    localStorage.setItem(KEY_CHAT_PREFIX + docId, JSON.stringify(trimmed))
+  } catch {
+    /* quota: keep in-memory only */
+  }
+}
+export function clearChatHistory(docId: string): void {
+  localStorage.removeItem(KEY_CHAT_PREFIX + docId)
+}
+
 // History (lightweight event log)
 export function getHistory(): string[] {
   if (typeof localStorage === 'undefined') return []

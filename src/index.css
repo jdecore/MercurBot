@@ -111,6 +111,28 @@
 * { box-sizing: border-box; }
 *::selection { background: rgba(255, 107, 0, 0.14); }
 
+/* Modo oscuro (P2): sigue al sistema, solo remapea tokens + superficies clave.
+   Los componentes usan var(--color-*) así que la mayoría cambia solo. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0b0f16;
+    --color-surface: #131a24;
+    --color-surface-2: #1b2431;
+    --color-text: #e9eef5;
+    --color-muted: #96a3b8;
+    --color-primary: #ff7a1a;
+    --color-primary-hover: #ff8c2f;
+    --color-border: #26313f;
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --color-danger: #f87171;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.45), 0 10px 15px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+  ::-webkit-scrollbar-thumb { background: #334155; }
+}
+
 html, body { margin: 0; padding: 0; min-height: 100%; background: var(--color-bg); }
 body { min-height: 100svh; }
 

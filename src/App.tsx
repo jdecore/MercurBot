@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import { parseAnyFile, validateAnyFile } from './data/universalParser'
 import { DashboardProvider, useDashboard } from './state/DashboardContext'
@@ -10,6 +10,9 @@ import { getPreferences, savePreferences, DEFAULT_BLOBATAR_NAME } from './lib/st
 import { ROBOT_UNITS, type MascotaMood, type RobotUnitId } from './types/mascota'
 import { ragClient } from './lib/ragClient'
 import { PdfProcessingCard, type PdfProcessingState } from './components/dashboard/PdfProcessingCard'
+import { PdfViewerDialog } from './components/pdf/PdfViewer'
+import { DocLibrary } from './components/pdf/DocLibrary'
+import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 
 function MainDashboard() {
   const {
@@ -24,7 +27,13 @@ function MainDashboard() {
   const [mascotRobot, setMascotRobot] = useState<RobotUnitId>(() => getPreferences().mascotRobot)
   const [blobatarName, setBlobatarName] = useState<string>(() => getPreferences().blobatarName)
   const [pdfProcessing, setPdfProcessing] = useState<PdfProcessingState | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [viewer, setViewer] = useState<{ open: boolean; page: number }>({ open: false, page: 1 })
+  const [currentLibId, setCurrentLibId] = useState<string | null>(null)
+  const [libraryToken, setLibraryToken] = useState(0)
+  const [customizerOpen, setCustomizerOpen] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const skipLibrarySaveRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const hasDocument = Boolean(pdfDoc)
@@ -105,7 +114,23 @@ function MainDashboard() {
       await ragClient.indexDocument(pdfResult.docId, file.name, pdfResult.chunks)
 
       // Ready!
+      if (!pdfResult.fullText.trim()) {
+        throw new Error('Este PDF parece escaneado (solo imágenes) y no contiene texto extraíble. Prueba con un PDF con texto seleccionable.')
+      }
+      setPdfFile(file)
       setPdfDoc(pdfResult)
+      // Guardar en biblioteca de recientes (OPFS, sin bloquear).
+      // Al re-abrir desde la biblioteca no se duplica la entrada.
+      if (skipLibrarySaveRef.current) {
+        skipLibrarySaveRef.current = false
+      } else {
+        void savePdfToLibrary(file).then((d) => {
+          if (d) {
+            setCurrentLibId(d.id)
+            setLibraryToken((t) => t + 1)
+          }
+        })
+      }
       setMascotaMood('exito')
       const readyMsg = `¡Listo! Ya leí todo el documento (${pdfResult.totalPages} págs · ${pdfResult.chunks.length} fragmentos). Pregúntame lo que necesites.`
       setMascotaSubtitulo(readyMsg)
@@ -116,13 +141,55 @@ function MainDashboard() {
       setMascotaMood('duda')
       setPdfProcessing(null)
       abortControllerRef.current = null
-      const msg = err instanceof Error ? err.message : 'Failed to parse file'
+      const errName = (err as { name?: string } | null)?.name
+      const msg = errName === 'PasswordException'
+        ? 'Este PDF está protegido con contraseña. Quítale la protección e inténtalo de nuevo.'
+        : err instanceof Error ? err.message : 'Failed to parse file'
       setError(msg)
       setMascotaSubtitulo(msg)
     } finally {
       setLoading(false)
     }
   }, [setError, setLoading, setPdfDoc])
+
+  // Las citas [Pág. N] del chat abren el visor embebido en esa página.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const page = (e as CustomEvent<number>).detail
+      if (!Number.isFinite(page)) return
+      setViewer({ open: true, page: Math.max(1, Math.floor(page as number)) })
+    }
+    const openHandler = () => setViewer((v) => ({ open: true, page: v.page || 1 }))
+    window.addEventListener('copixi:goto-page', handler as EventListener)
+    window.addEventListener('copixi:open-viewer', openHandler)
+    return () => {
+      window.removeEventListener('copixi:goto-page', handler as EventListener)
+      window.removeEventListener('copixi:open-viewer', openHandler)
+    }
+  }, [])
+
+  // Re-abrir un PDF de la biblioteca sin volver a subirlo.
+  const openLibraryDoc = useCallback(async (id: string) => {
+    const meta = listLibrary().find((d) => d.id === id)
+    if (!meta) {
+      setError('Ese documento ya no está en recientes. Súbelo de nuevo.')
+      return
+    }
+    if (id === currentLibId && pdfDoc) return
+    setLoading(true)
+    setError(null)
+    try {
+      const bytes = await getPdfBytes(id)
+      if (!bytes) throw new Error('No se encontraron los datos guardados. Súbelo de nuevo.')
+      skipLibrarySaveRef.current = true
+      setCurrentLibId(id)
+      await parseFile(new File([bytes], meta.name, { type: 'application/pdf' }))
+    } catch (err) {
+      skipLibrarySaveRef.current = false
+      setError(err instanceof Error ? err.message : 'No se pudo abrir el documento.')
+      setLoading(false)
+    }
+  }, [currentLibId, pdfDoc, parseFile, setError, setLoading])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)
@@ -154,6 +221,15 @@ function MainDashboard() {
           >
             📄 Cargar PDF
           </button>
+          <DocLibrary
+            currentId={currentLibId}
+            refreshToken={libraryToken}
+            onOpen={(doc) => void openLibraryDoc(doc.id)}
+            onRemoved={() => {
+              setCurrentLibId(null)
+              setLibraryToken((t) => t + 1)
+            }}
+          />
           <input
             ref={inputRef}
             type="file"
@@ -184,17 +260,30 @@ function MainDashboard() {
                 ? `¡Hola! Soy ${blobatarName || DEFAULT_BLOBATAR_NAME}, tu avatar analista. Carga tu documento PDF para comenzar.`
                 : hasDocument ? `Unidad ${mascotMeta.name} lista. ${mascotMeta.tagline}` : `¡Hola! Soy ${mascotMeta.name}. ${mascotMeta.tagline} Carga tu documento PDF para comenzar.`)}
             />
-            <MascotCustomizer
-              face={mascotFace}
-              robot={mascotRobot}
-              name={blobatarName}
-              onChange={(face, robot, name) => {
-                setMascotFace(face)
-                setMascotRobot(robot)
-                setBlobatarName(name)
-                savePreferences({ ...getPreferences(), mascotFace: face, mascotRobot: robot, blobatarName: name })
-              }}
-            />
+            <div className="customizer-toggle-row">
+              <button
+                type="button"
+                className="btn btn-secondary small"
+                onClick={() => setCustomizerOpen((o) => !o)}
+                aria-expanded={customizerOpen}
+                title="Cambiar la cara del robot"
+              >
+                ⚙ Personalizar robot
+              </button>
+            </div>
+            {customizerOpen && (
+              <MascotCustomizer
+                face={mascotFace}
+                robot={mascotRobot}
+                name={blobatarName}
+                onChange={(face, robot, name) => {
+                  setMascotFace(face)
+                  setMascotRobot(robot)
+                  setBlobatarName(name)
+                  savePreferences({ ...getPreferences(), mascotFace: face, mascotRobot: robot, blobatarName: name })
+                }}
+              />
+            )}
           </div>
 
           {/* Interactive PDF Processing Banner with Cancel */}
@@ -213,6 +302,14 @@ function MainDashboard() {
           )}
         </section>
       </main>
+
+      <PdfViewerDialog
+        open={viewer.open}
+        file={pdfFile}
+        page={viewer.page}
+        onPageChange={(page) => setViewer((v) => ({ ...v, page }))}
+        onOpenChange={(open) => setViewer((v) => ({ ...v, open }))}
+      />
     </div>
   )
 }

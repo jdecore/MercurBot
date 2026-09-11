@@ -67,6 +67,12 @@
       "skillPath": "skills/copilotkit-upgrade/SKILL.md",
       "computedHash": "2e5ad642cd45292425a49f5bcd81061217940dc45a7ecabc04a78222d9c9f243"
     },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
+    },
     "inspector-docs": {
       "source": "CopilotKit/CopilotKit",
       "sourceType": "github",

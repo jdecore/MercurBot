@@ -7,6 +7,83 @@
   position: relative;
 }
 
+/* Sistema base de botones (P2: .btn se usaba sin estilos) */
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.btn-primary {
+  background: var(--color-primary);
+  border-color: transparent;
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: transparent;
+}
+.btn-secondary {
+  background: var(--color-surface);
+}
+.btn.small {
+  padding: 5px 11px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+.btn-dock {
+  flex: none;
+}
+
+/* Error del hero con causa + arreglo (P0) */
+.hero-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 680px;
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 550;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+}
+
+/* Toggle del personalizador (P2: la cara se elige, no se exhibe siempre) */
+.customizer-toggle-row {
+  display: flex;
+  justify-content: center;
+}
+
 /* Floating minimal top controls */
 .canvas-top-bar {
   position: sticky;
@@ -485,8 +562,9 @@
   text-align: left;
 }
 .dropzone-title {
-  font-size: 13px;
-  font-weight: 750;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--color-text);
 }
 .dropzone-hint {
@@ -962,5 +1040,372 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* Píldora de cita clicable → abre el visor en esa página */
+button.citation-inline {
+  cursor: pointer;
+  font: inherit;
+}
+button.citation-inline:hover {
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+button.citation-inline:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.citation-goto {
+  border: 0;
+  background: transparent;
+  color: #ea580c;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.citation-goto:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Acciones sobre la respuesta (copiar / .md) */
+.ai-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.ai-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.ai-action-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+.ai-action-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.ai-copied-hint {
+  font-size: 11px;
+  color: #16a34a;
+  font-weight: 650;
+}
+
+/* Visor PDF embebido (Radix Dialog) */
+.pdf-viewer-overlay {
+  background: rgba(15, 23, 42, 0.55);
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.pdf-viewer-content {
+  position: fixed;
+  z-index: 61;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+}
+.pdf-viewer-content:focus {
+  outline: none;
+}
+.pdf-viewer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.pdf-viewer-title {
+  font-size: 14px;
+  font-weight: 750;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdf-viewer-body {
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 200px;
+}
+.pdf-viewer-canvas {
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+}
+.pdf-viewer-error {
+  padding: 16px;
+  font-size: 13px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+.pdf-viewer-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.pdf-viewer-counter {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-muted);
+  min-width: 52px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdf-viewer-content {
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Tablas y código en respuestas IA (P1) */
+.ai-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 8px 0;
+  display: block;
+  overflow-x: auto;
+}
+.ai-table th,
+.ai-table td {
+  border: 1px solid var(--color-border);
+  padding: 5px 9px;
+  text-align: left;
+  white-space: nowrap;
+}
+.ai-table thead th {
+  background: #fff7ed;
+  font-weight: 750;
+}
+.ai-code {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.ai-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: none;
+  padding: 0;
+}
+
+/* Biblioteca de PDFs recientes (P1) */
+.doc-library {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.doc-library-select {
+  max-width: 190px;
+  text-overflow: ellipsis;
+}
+
+/* Buscar en el documento (P1, dentro del visor) */
+.doc-search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.doc-search-input {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  width: 100%;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.doc-search-input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.doc-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.doc-search-hit {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.doc-search-hit:hover {
+  border-color: var(--color-primary);
+}
+.doc-search-hit:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.doc-search-page {
+  font-weight: 750;
+  color: #ea580c;
+  flex: none;
+}
+.doc-search-snippet {
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-search-empty {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+/* ============ MODO OSCURO: superficies con color fijo (P2) ============ */
+@media (prefers-color-scheme: dark) {
+  .canvas-wrapper {
+    background: radial-gradient(circle at 50% 15%, #141b26 0%, #0b0f16 70%);
+  }
+  .canvas-top-bar {
+    background: rgba(11, 15, 22, 0.8);
+    border-bottom-color: rgba(38, 49, 63, 0.9);
+  }
+  .dataset-pill {
+    background: var(--color-surface-2);
+  }
+  .speech-bubble,
+  .excel-dock-input,
+  .card,
+  .chat-expanded-log {
+    background: var(--color-surface);
+  }
+  .speech-bubble-header {
+    border-bottom-color: var(--color-border);
+  }
+  .bubble-icon-btn {
+    background: var(--color-surface-2);
+  }
+  .bubble-icon-btn.muted {
+    background: var(--color-surface-2);
+  }
+  .btn-hear-welcome {
+    background: rgba(255, 122, 26, 0.14);
+  }
+  .speech-bubble-text .ai-inline-code,
+  .excel-msg-ai .ai-inline-code {
+    background: rgba(255, 122, 26, 0.16);
+  }
+  .welcome-dropzone {
+    background: var(--color-surface-2);
+  }
+  .welcome-dropzone:hover {
+    background: #222d3d;
+  }
+  .mini-chart-card {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+  .suggestion-chip {
+    background: var(--color-surface);
+  }
+  .suggestion-chip:hover {
+    background: var(--color-surface-2);
+  }
+  .pdf-progress-card {
+    background: var(--color-surface);
+  }
+  .pdf-progress-bar-bg {
+    background: var(--color-surface-2);
+  }
+  .speech-bubble-error-box,
+  .excel-chat-error,
+  .hero-error {
+    background: rgba(248, 113, 113, 0.1);
+    border-color: #7f1d1d;
+    color: #fca5a5;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #1b2431 25%, #26313f 37%, #1b2431 63%);
+    background-size: 400% 100%;
+  }
+  .citation-badge {
+    background: rgba(255, 122, 26, 0.14);
+    border-color: #7c4a12;
+    color: #ffb066;
+  }
+  .citation-badge:hover,
+  button.citation-inline:hover {
+    background: rgba(255, 122, 26, 0.24);
+    border-color: #a16207;
+  }
+  .citation-goto {
+    color: #ffb066;
+  }
+  .ai-table thead th {
+    background: rgba(255, 122, 26, 0.12);
+  }
+  .ai-copied-hint {
+    color: #4ade80;
+  }
+  .pdf-viewer-content {
+    background: #131a24;
+  }
+  .pdf-viewer-body {
+    background: #0b0f16;
+  }
+  .pdf-viewer-error {
+    background: rgba(248, 113, 113, 0.1);
+    border-color: #7f1d1d;
+    color: #fca5a5;
+  }
+  .mascot-face-toggle,
+  .doc-search-hit {
+    background: var(--color-surface);
+  }
+  .mascot-name-field input,
+  .doc-search-input {
+    background: var(--color-surface-2);
+  }
+  .mascot-avatar-preview {
+    border-color: var(--color-border);
+  }
 }
 
