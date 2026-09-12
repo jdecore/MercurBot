@@ -4,17 +4,14 @@ import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as can
 import type { MascotaMood } from '../../types/mascota'
 import { ragClient } from '../../lib/ragClient'
 import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg } from '../../lib/storage'
+import { Icon } from '../ui/Icon'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
 
 function setMascotaMood(m: MascotaMood) {
   window.dispatchEvent(new CustomEvent('copixi:mascota-mood', { detail: m }))
 }
 
-const DEFAULT_SUGGESTIONS = [
-  '¿Qué puedes hacer por mí?',
-  'Subí un PDF, ¿por dónde empiezo?',
-  '¿Cómo citas las fuentes de mis preguntas?',
-]
+type ChatMsg = ChatHistoryMsg
 
 // Strip the trailing JSON action block (e.g. {"action":"setFilter",...}) so it
 // isn't shown to the user.
@@ -216,34 +213,6 @@ function renderRichText(text: string): React.ReactNode {
   return <>{blocks}</>
 }
 
-type ChatMsg = ChatHistoryMsg
-
-const FOLLOWUP_STOP = new Set([
-  'para', 'como', 'cómo', 'este', 'esta', 'esto', 'estos', 'estas', 'entre', 'sobre',
-  'desde', 'hasta', 'donde', 'dónde', 'cuando', 'cuándo', 'porque', 'página', 'páginas',
-  'documento', 'también', 'puede', 'pueden', 'tiene', 'tienen', 'hace', 'hacen', 'cada',
-  'todos', 'todas', 'ello', 'este', 'además', 'mismo', 'misma', 'gran', 'gran',
-])
-
-/**
- * Follow-ups dinámicos (P1): propone profundizar en los 2 términos propios
- * más frecuentes de la última respuesta. 100% local, sin LLM.
- */
-function suggestFollowUps(text: string): string[] {
-  const freq = new Map<string, number>()
-  for (const m of text.matchAll(/[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{3,}/g)) {
-    const w = m[0].toLowerCase()
-    if (FOLLOWUP_STOP.has(w)) continue
-    freq.set(w, (freq.get(w) ?? 0) + 1)
-  }
-  const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([w]) => w)
-  const out: string[] = []
-  if (top[0]) out.push(`Profundiza en ${top[0]}`)
-  if (top[1]) out.push(`¿Qué más dice el documento sobre ${top[1]}?`)
-  if (out.length === 0) out.push('Dame un ejemplo concreto del documento')
-  return out.slice(0, 3)
-}
-
 interface DictationResult {
   length: number
   [index: number]: { transcript: string }
@@ -374,14 +343,17 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   }, [messages, loading])
 
   const docId = pdfDoc?.docId ?? null
+  const docIdRef = useRef<string | null>(docId)
 
   // Historial por documento (P1): carga al cambiar de PDF…
   useEffect(() => {
+    docIdRef.current = docId
     setMessages(docId ? getChatHistory(docId) : [])
     setError(null)
     setStatus('idle')
     setChatLogOpen(false)
     setCopiedId(null)
+    lastQueryRef.current = ''
   }, [docId])
 
   // …y persiste al completar respuestas (localStorage, truncado en storage.ts).
@@ -414,6 +386,9 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     if (!trimmed) return
     lastQueryRef.current = trimmed
     setError(null)
+    // Fija el documento de la consulta: si el usuario cambia de PDF a mitad
+    // de búsqueda/streaming, la respuesta ajena se descarta (no se mezcla).
+    const queryDocId = docIdRef.current
 
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', content: trimmed }
     const assistantMsg: ChatMsg = { id: `a-${Date.now()}`, role: 'assistant', content: '' }
@@ -443,6 +418,14 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       snippet: String(h.text ?? '').slice(0, 200),
       matchType: h.matchType,
     }))
+
+    // El documento cambió durante la búsqueda → descarta sin ruido.
+    if (docIdRef.current !== queryDocId) {
+      setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
+      setStatus('idle')
+      setMascotaMood('neutro')
+      return
+    }
 
     const payloadContext = (pdfDoc || ragHits.length > 0)
       ? {
@@ -489,6 +472,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       let acc = ''
 
       while (true) {
+        // Si el documento cambió a mitad del streaming, corta y descarta.
+        if (docIdRef.current !== queryDocId) {
+          try { await reader.cancel() } catch { /* ignore */ }
+          break
+        }
         const { done, value } = await reader.read()
         if (done) break
         buffer += decoder.decode(value, { stream: true })
@@ -521,6 +509,12 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
         }
       }
 
+      if (docIdRef.current !== queryDocId) {
+        setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
+        setStatus('idle')
+        setMascotaMood('neutro')
+        return
+      }
       setStatus('done')
       setMascotaMood('exito')
       if (!getMuted() && acc) speak(cleanAI(acc).slice(0, 300))
@@ -549,11 +543,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     const t = input.trim()
     setInput('')
     void runQuery(t)
-  }
-
-  const ask = (q: string) => {
-    if (!q || loading) return
-    void runQuery(q)
   }
 
   const stop = () => abortRef.current?.abort()
@@ -592,51 +581,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
   const cleanedAi = useMemo(() => (lastAiMsg ? cleanAI(lastAiMsg.content) : ''), [lastAiMsg])
 
-  const suggestions = useMemo(() => DEFAULT_SUGGESTIONS, [])
-
-  // Follow-ups dinámicos (P1): solo al terminar una respuesta, derivados de ella.
-  const followUps = useMemo(() => {
-    if (status !== 'done' || !lastAiMsg?.content || !pdfDoc) return []
-    return suggestFollowUps(cleanAI(lastAiMsg.content))
-  }, [status, lastAiMsg, pdfDoc])
-
   return (
-    <div className="excel-chat-container" aria-label="compexi Chat">
+    <div className="excel-chat-container" aria-label="Chat de Copixi">
       <div className="speech-bubble-wrapper">
         <div className={`speech-bubble ${loading ? 'thinking' : ''}`} role="region" aria-live="polite">
           <div className="speech-bubble-tail" aria-hidden />
-          <div className="speech-bubble-header">
-            <div className="speech-bubble-avatar-title">
-              <span className="dot-pulse" aria-hidden />
-              <strong>compe</strong>
-              <span className="badge-expert">PDF AI Analyst</span>
-            </div>
-            <div className="speech-bubble-status">
-              {ttsSpeaking && !muted && (
-                <span className="audio-waves" title="Hablando por voz" aria-label="Hablando por voz">
-                  <span className="wave-bar" />
-                  <span className="wave-bar" />
-                  <span className="wave-bar" />
-                </span>
-              )}
-              {isTtsSupported() && (
-                <button
-                  type="button"
-                  className={`bubble-icon-btn ${muted ? 'muted' : ''}`}
-                  onClick={toggleMute}
-                  aria-label={muted ? 'Activar voz' : 'Silenciar voz'}
-                  title={muted ? 'Activar voz' : 'Silenciar voz'}
-                >
-                  <i className={`pixelart-icons-font-${muted ? 'volume-x' : 'volume'}`} aria-hidden />
-                </button>
-              )}
-              {ttsSpeaking && (
-                <button type="button" className="bubble-icon-btn" onClick={cancelTts} aria-label="Parar audio" title="Parar audio">
-                  <i className="pixelart-icons-font-pause" aria-hidden />
-                </button>
-              )}
-            </div>
-          </div>
 
           <div className="speech-bubble-content">
             {loading ? (
@@ -649,7 +598,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             ) : error ? (
               <div className="speech-bubble-error-box" role="alert">
                 <div className="error-badge-row">
-                  <i className="pixelart-icons-font-alert" aria-hidden />
+                  <Icon name="alert" size={16} />
                   <strong>Error al procesar la respuesta:</strong>
                 </div>
                 <div className="error-message-text">
@@ -669,7 +618,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   )}
                 </div>
                 <button type="button" className="btn btn-secondary small" onClick={regenerate} style={{ marginTop: 8 }}>
-                  <i className="pixelart-icons-font-reload" aria-hidden /> Reintentar consulta
+                  <Icon name="reload" size={14} /> Reintentar consulta
                 </button>
               </div>
             ) : cleanedAi ? (
@@ -682,7 +631,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     </span>
                     {lastAiMsg.citations.map((c, idx) => (
                       <details key={idx} className="citation-badge citation-details">
-                        <summary title={c.snippet}>📄 Pág. {c.pageNumber}</summary>
+                        <summary title={c.snippet}><Icon name="file" size={12} /> Pág. {c.pageNumber}</summary>
                         <div className="citation-snippet">
                           <q>{c.snippet}</q>
                           {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
@@ -702,54 +651,27 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 )}
                 <div className="ai-actions-row">
                   <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label="Copiar respuesta">
-                    ⧉ Copiar
+                    <Icon name="copy" size={13} /> Copiar
                   </button>
                   <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && handleDownloadMd(lastAiMsg)} aria-label="Descargar respuesta en Markdown">
-                    ⬇ .md
+                    <Icon name="download" size={13} /> .md
                   </button>
                   {lastAiMsg && copiedId === lastAiMsg.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
                 </div>
               </div>
+            ) : pdfDoc ? (
+              <div className="speech-bubble-idle">
+                <p>Pregunta lo que quieras sobre <strong>{pdfDoc.filename}</strong> en el cuadro de abajo.</p>
+              </div>
             ) : (
-              <div className="speech-bubble-welcome">
-                <div className="welcome-header-line">
-                  <p>¡Hola! Soy <strong>compe</strong>, tu analista de documentos PDF.</p>
-                  {isTtsSupported() && (
-                    <button
-                      type="button"
-                      className="btn-hear-welcome"
-                      onClick={() => speak('¡Hola! Soy compe, tu analista de documentos. Arrastra tu archivo PDF para comenzar.')}
-                      title="Escuchar saludo"
-                      aria-label="Escuchar saludo"
-                    >
-                      <i className="pixelart-icons-font-volume" aria-hidden /> Escuchar
-                    </button>
-                  )}
+              <div className="welcome-dropzone" onClick={onOpenFilePicker} role="button" tabIndex={0}>
+                <div className="dropzone-icon-ring">
+                  <Icon name="folder" size={22} />
                 </div>
-                {pdfDoc ? (
-                  <>
-                    <p className="subtext">
-                      He leído y vectorizado <strong>{pdfDoc.filename}</strong> ({pdfDoc.totalPages} páginas · {pdfDoc.chunks.length} fragmentos). Pregúntame cualquier detalle del documento.
-                    </p>
-                    <button
-                      type="button"
-                      className="btn btn-secondary small"
-                      onClick={() => window.dispatchEvent(new Event('copixi:open-viewer'))}
-                    >
-                      🔍 Buscar en el documento
-                    </button>
-                  </>
-                ) : (
-                  <div className="welcome-dropzone" onClick={onOpenFilePicker} role="button" tabIndex={0}>
-                    <div className="dropzone-icon-ring">
-                      <i className="pixelart-icons-font-folder" aria-hidden />
-                    </div>
-                    <div className="dropzone-text">
-                      <strong className="dropzone-title">Arrastra y suelta tu PDF aquí</strong>
-                      <span className="dropzone-hint">Solo documentos <strong>PDF (.pdf)</strong> · o haz clic para explorar</span>
-                    </div>
-                  </div>
-                )}
+                <div className="dropzone-text">
+                  <strong className="dropzone-title">Arrastra y suelta tu PDF aquí</strong>
+                  <span className="dropzone-hint">Solo documentos <strong>PDF (.pdf)</strong> · o haz clic para explorar</span>
+                </div>
               </div>
             )}
 
@@ -765,7 +687,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             onClick={() => setChatLogOpen((o) => !o)}
             aria-expanded={chatLogOpen}
           >
-            <i className={`pixelart-icons-font-${chatLogOpen ? 'chevron-up' : 'message'}`} aria-hidden />
+            <Icon name={chatLogOpen ? 'chevron-up' : 'message'} size={14} />
             {chatLogOpen ? 'Ocultar historial de chat' : `Ver historial completo (${messages.length})`}
           </button>
           <button
@@ -774,7 +696,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             onClick={clearChat}
             title="Limpiar conversación"
           >
-            <i className="pixelart-icons-font-trash" aria-hidden /> Limpiar
+            <Icon name="trash" size={14} /> Limpiar
           </button>
           {onOpenFilePicker && (
             <button
@@ -783,7 +705,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               onClick={onOpenFilePicker}
               title="Cargar otro documento PDF"
             >
-              <i className="pixelart-icons-font-upload" aria-hidden /> Cambiar archivo
+              <Icon name="upload" size={14} /> Cambiar archivo
             </button>
           )}
         </div>
@@ -804,7 +726,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                       </span>
                       {m.citations.map((c, idx) => (
                         <details key={idx} className="citation-badge citation-details">
-                          <summary title={c.snippet}>📄 Pág. {c.pageNumber}</summary>
+                          <summary title={c.snippet}><Icon name="file" size={12} /> Pág. {c.pageNumber}</summary>
                           <div className="citation-snippet">
                             <q>{c.snippet}</q>
                             {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
@@ -825,7 +747,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   {m.role === 'assistant' && (
                     <div className="ai-actions-row">
                       <button type="button" className="ai-action-btn" onClick={() => void handleCopy(m.id, m.content)} aria-label="Copiar respuesta">
-                        ⧉ Copiar
+                        <Icon name="copy" size={13} /> Copiar
                       </button>
                       {copiedId === m.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
                     </div>
@@ -847,16 +769,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       )}
 
       <div className="excel-dock">
-        {(followUps.length > 0 ? followUps : suggestions).length > 0 && (
-          <div className="smart-suggestions" aria-label={followUps.length > 0 ? 'Preguntas de seguimiento' : 'Sugerencias rápidas'}>
-            {(followUps.length > 0 ? followUps : suggestions).map((q, i) => (
-              <button key={i} type="button" className="suggestion-chip" onClick={() => ask(q)} disabled={loading}>
-                <span className="chip-sparkle" aria-hidden>✦</span> {q}
-              </button>
-            ))}
-          </div>
-        )}
-
         <form className="excel-dock-input" onSubmit={submit}>
           {onOpenFilePicker && (
             <button
@@ -866,7 +778,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               title="Subir documento PDF (.pdf)"
               aria-label="Subir PDF"
             >
-              <i className="pixelart-icons-font-upload" aria-hidden />
+              <Icon name="upload" size={16} />
             </button>
           )}
           {getDictationCtor() && (
@@ -879,7 +791,30 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               aria-label={listening ? 'Detener dictado' : 'Dictar pregunta por voz'}
               aria-pressed={listening}
             >
-              <span aria-hidden>{listening ? '⏹' : '🎙️'}</span>
+              <Icon name="mic" size={16} />
+            </button>
+          )}
+          {isTtsSupported() && (
+            <button
+              type="button"
+              className={`dock-attach-btn${muted ? ' dock-muted' : ''}`}
+              onClick={toggleMute}
+              title={muted ? 'Activar voz de respuesta' : 'Silenciar voz de respuesta'}
+              aria-label={muted ? 'Activar voz de respuesta' : 'Silenciar voz de respuesta'}
+              aria-pressed={!muted}
+            >
+              <Icon name={muted ? 'volume-x' : 'volume'} size={16} />
+            </button>
+          )}
+          {ttsSpeaking && (
+            <button
+              type="button"
+              className="dock-attach-btn"
+              onClick={cancelTts}
+              title="Parar audio"
+              aria-label="Parar audio"
+            >
+              <Icon name="pause" size={16} />
             </button>
           )}
           <input
@@ -892,11 +827,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
           />
           {loading ? (
             <button type="button" className="btn btn-primary btn-dock" onClick={stop} aria-label="Detener">
-              <i className="pixelart-icons-font-close" aria-hidden /> Detener
+              <Icon name="close" size={15} /> Detener
             </button>
           ) : (
             <button type="submit" className="btn btn-primary btn-dock" disabled={!input.trim()} aria-label="Enviar">
-              <i className="pixelart-icons-font-send" aria-hidden /> Enviar
+              <Icon name="send" size={15} /> Enviar
             </button>
           )}
         </form>

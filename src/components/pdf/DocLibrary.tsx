@@ -9,7 +9,9 @@ interface DocLibraryProps {
   onRemoved: () => void
 }
 
-function fmtMB(bytes: number): string {
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
@@ -53,10 +55,10 @@ export function DocLibrary({ currentId, refreshToken, disabled, onOpen, onRemove
         aria-label="Abrir documento reciente"
         title="Abrir documento reciente sin volver a subirlo"
       >
-        <option value="">📚 Recientes…</option>
+        <option value="">Recientes…</option>
         {docs.map((d) => (
           <option key={d.id} value={d.id}>
-            {d.name} · {fmtMB(d.size)}
+            {d.name} · {fmtSize(d.size)}
           </option>
         ))}
       </select>

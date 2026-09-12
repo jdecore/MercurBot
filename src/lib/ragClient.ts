@@ -39,6 +39,7 @@ class RagClient {
   }
   private onProgressCb: ((progress: RagProgressCallback) => void) | null = null
   private searchResolvers = new Map<string, (results: RagSearchResultItem[]) => void>()
+  private indexResolvers = new Map<string, () => void>()
 
   constructor() {
     this.initWorker()
@@ -99,6 +100,9 @@ class RagClient {
           percent: 100,
           message: `Documento indexado (${payload.chunkCount} fragmentos). Modo: ${payload.mode}.`,
         })
+        // Resuelve al llamador que espera la indexación real (no solo el post).
+        this.indexResolvers.get(payload.docId)?.()
+        this.indexResolvers.delete(payload.docId)
         break
 
       case 'SEARCH_RESULTS': {
@@ -144,6 +148,19 @@ class RagClient {
       this.worker.postMessage({
         action: 'INDEX_DOCUMENT',
         payload: { docId, docName, chunks },
+      })
+      // Espera a la indexación REAL del worker (antes retornaba al postear,
+      // mostrando "¡Listo!" prematuramente y dejando que el complete posterior
+      // sobrescribiera el subtítulo). Con timeout de seguridad: el índice
+      // léxico local ya quedó usable arriba.
+      await new Promise<void>((resolve) => {
+        this.indexResolvers.set(docId, resolve)
+        setTimeout(() => {
+          if (this.indexResolvers.has(docId)) {
+            this.indexResolvers.delete(docId)
+            resolve()
+          }
+        }, 180000)
       })
     } else {
       // Main Thread immediate fallback

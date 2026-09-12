@@ -1,19 +1,7 @@
 /* Copixi — Native CSS + design tokens (AGENTS.md §19) */
 
-/* Pixelarticons: solo woff2 (sin eot/ttf/woff/svg) + font-display swap */
-@font-face {
-  font-family: "pixelart-icons-font";
-  src: url('/pixelart-icons-font.woff2') format('woff2');
-  font-display: swap;
-  font-weight: normal;
-  font-style: normal;
-}
-[class^="pixelart-icons-font-"], [class*=" pixelart-icons-font-"] {
-  font-family: 'pixelart-icons-font' !important;
-  font-style: normal;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* Iconos: Pixelarticons como SVG inline vía src/components/ui/Icon.tsx
+   (el woff2 con <i> vacíos no renderizaba ningún glifo). */
 
 :root {
   /* colors */

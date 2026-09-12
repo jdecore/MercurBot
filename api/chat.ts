@@ -23,6 +23,11 @@ const hits = new Map<string, number[]>()
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now()
+  // Evita crecimiento ilimitado del mapa (una entrada por IP vista).
+  if (hits.size > 2000) {
+    const oldest = hits.keys().next().value
+    if (oldest !== undefined) hits.delete(oldest)
+  }
   const arr = hits.get(ip) ?? []
   const recent = arr.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
   recent.push(now)

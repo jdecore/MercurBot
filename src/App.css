@@ -7,6 +7,21 @@
   position: relative;
 }
 
+/* Iconos SVG inline (Pixelarticons vía Icon.tsx): alineación en botones */
+.btn svg,
+.dock-attach-btn svg,
+.ai-action-btn svg,
+.citation-badge svg,
+.dataset-pill svg,
+.error-badge-row svg {
+  display: block;
+  flex: none;
+}
+summary svg {
+  display: inline-block;
+  vertical-align: -2px;
+}
+
 /* Sistema base de botones (P2: .btn se usaba sin estilos) */
 .btn {
   appearance: none;
@@ -632,6 +647,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   background: white;
   border: 2px solid var(--color-border);
   border-radius: 14px;
@@ -675,6 +691,7 @@
 }
 .excel-text-input {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   font-size: 14px;

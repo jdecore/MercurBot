@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Blobatar } from '@blobatar/react'
 import { DEFAULT_BLOBATAR_NAME } from '../../lib/storage'
 import { ROBOT_UNITS, type RobotUnitId } from '../../types/mascota'
+import { Icon } from './Icon'
 
 export type MascotFace = 'robot' | 'blobatar'
 
@@ -40,7 +41,7 @@ export function MascotCustomizer({ face, robot, name, onChange }: MascotCustomiz
             className={`face-btn ${face === 'robot' ? 'active' : ''}`}
             onClick={() => onChange('robot', robot, sanitize(draft || name))}
           >
-            🤖 Robot
+            <Icon name="robot" size={14} /> Robot
           </button>
           <button
             type="button"
@@ -49,7 +50,7 @@ export function MascotCustomizer({ face, robot, name, onChange }: MascotCustomiz
             className={`face-btn ${face === 'blobatar' ? 'active' : ''}`}
             onClick={() => onChange('blobatar', robot, sanitize(draft || name))}
           >
-            🫧 Mi avatar
+            <Icon name="user" size={14} /> Mi avatar
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@ import './App.css'
 import { parseAnyFile, validateAnyFile } from './data/universalParser'
 import { DashboardProvider, useDashboard } from './state/DashboardContext'
 import { Mascota } from './components/ui/Mascota'
+import { Icon } from './components/ui/Icon'
 import { MascotCustomizer, type MascotFace } from './components/ui/MascotCustomizer'
 import { ExcelChat } from './components/excel/ExcelChat'
 import { speak } from './lib/tts'
@@ -31,6 +32,7 @@ function MainDashboard() {
   const [pdfProcessing, setPdfProcessing] = useState<PdfProcessingState | null>(null)
   const [briefing, setBriefing] = useState<string | null>(null)
   const [briefingLoading, setBriefingLoading] = useState(false)
+  const briefingReqRef = useRef(0)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [viewer, setViewer] = useState<{ open: boolean; page: number }>({ open: false, page: 1 })
   const [currentLibId, setCurrentLibId] = useState<string | null>(null)
@@ -48,6 +50,9 @@ function MainDashboard() {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
+    briefingReqRef.current++ // el briefing en vuelo ya no corresponde
+    setBriefing(null)
+    setBriefingLoading(false)
     setPdfProcessing(null)
     setLoading(false)
     setMascotaMood('duda')
@@ -60,7 +65,9 @@ function MainDashboard() {
   }, [setLoading])
 
   // Briefing proactivo (Fase 24C): 1 llamada tras indexar; si falla, sin tarjeta.
+  // Con contador de petición: un briefing tardío nunca pisa a un documento nuevo.
   const loadBriefing = useCallback(async (doc: { filename: string; totalPages: number; chunks: { length: number }; fullText: string }) => {
+    const my = ++briefingReqRef.current
     setBriefing(null)
     setBriefingLoading(true)
     try {
@@ -80,17 +87,26 @@ function MainDashboard() {
         }),
       })
       const json = (await res.json()) as { text?: string; error?: string }
+      if (my !== briefingReqRef.current) return
       if (res.ok && json.text?.trim()) setBriefing(json.text.trim())
     } catch {
       /* degradado silencioso */
     } finally {
-      setBriefingLoading(false)
+      if (my === briefingReqRef.current) setBriefingLoading(false)
     }
   }, [])
 
   const parseFile = useCallback(async (file: File) => {
     const valid = validateAnyFile(file)
     if (!valid.valid) { setError(valid.error ?? 'Tipo de archivo no soportado'); return }
+    briefingReqRef.current++ // invalida briefings en vuelo del documento anterior
+    // Aborta una carga anterior solapada antes de empezar la nueva.
+    try {
+      abortControllerRef.current?.abort()
+    } catch {
+      /* ignore */
+    }
+    abortControllerRef.current = null
     setLoading(true); setError(null)
     setBriefing(null); setBriefingLoading(false)
 
@@ -250,7 +266,7 @@ function MainDashboard() {
         <div className="canvas-actions">
           {hasDocument && pdfDoc && (
             <div className="dataset-pill" title={pdfDoc.filename}>
-              <i className="pixelart-icons-font-file" aria-hidden />
+              <Icon name="file" size={14} />
               <span>{pdfDoc.filename} ({pdfDoc.totalPages} págs · {pdfDoc.chunks.length} fragmentos)</span>
             </div>
           )}
@@ -259,7 +275,7 @@ function MainDashboard() {
             className="btn btn-secondary small"
             onClick={() => inputRef.current?.click()}
           >
-            📄 Cargar PDF
+            <Icon name="upload" size={14} /> Cargar PDF
           </button>
           <DocLibrary
             currentId={currentLibId}
@@ -341,7 +357,7 @@ function MainDashboard() {
 
           {error && (
             <div role="alert" className="hero-error">
-              <i className="pixelart-icons-font-alert" aria-hidden />
+              <Icon name="alert" size={16} />
               <span>{error}</span>
             </div>
           )}
