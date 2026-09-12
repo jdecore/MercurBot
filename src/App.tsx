@@ -7,8 +7,9 @@ import { Icon } from './components/ui/Icon'
 import { MascotCustomizer, type MascotFace } from './components/ui/MascotCustomizer'
 import { ExcelChat } from './components/excel/ExcelChat'
 import { speak } from './lib/tts'
-import { getPreferences, savePreferences, DEFAULT_BLOBATAR_NAME } from './lib/storage'
-import { ROBOT_UNITS, type MascotaMood, type RobotUnitId } from './types/mascota'
+import { getPreferences, savePreferences, DEFAULT_BLOBATAR_NAME, hasOnboarded, setOnboarded } from './lib/storage'
+import { OnboardingTour } from './components/onboarding/OnboardingTour'
+import { type MascotaMood, type RobotUnitId } from './types/mascota'
 import { ragClient } from './lib/ragClient'
 import { PdfProcessingCard, type PdfProcessingState } from './components/dashboard/PdfProcessingCard'
 import { PdfViewerDialog } from './components/pdf/PdfViewer'
@@ -29,6 +30,10 @@ function MainDashboard() {
   const [mascotFace, setMascotFace] = useState<MascotFace>(() => getPreferences().mascotFace)
   const [mascotRobot, setMascotRobot] = useState<RobotUnitId>(() => getPreferences().mascotRobot)
   const [blobatarName, setBlobatarName] = useState<string>(() => getPreferences().blobatarName)
+  const [robotConfig, setRobotConfig] = useState(() => getPreferences().robotConfig)
+  const [robotName, setRobotName] = useState<string>(() => getPreferences().robotName)
+  const [userName, setUserName] = useState<string>(() => getPreferences().userName)
+  const [tourOpen, setTourOpen] = useState(() => !hasOnboarded())
   const [pdfProcessing, setPdfProcessing] = useState<PdfProcessingState | null>(null)
   const [briefing, setBriefing] = useState<string | null>(null)
   const [briefingLoading, setBriefingLoading] = useState(false)
@@ -43,7 +48,6 @@ function MainDashboard() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const hasDocument = Boolean(pdfDoc)
-  const mascotMeta = ROBOT_UNITS[mascotRobot] || ROBOT_UNITS.helix
 
   const cancelPdfProcessing = useCallback(() => {
     if (abortControllerRef.current) {
@@ -115,16 +119,16 @@ function MainDashboard() {
       abortControllerRef.current = controller
 
       setMascotaMood('escaneando')
-      setMascotaSubtitulo(`Iniciando lectura de ${file.name}...`)
+      setMascotaSubtitulo(`Abriendo ${file.name}…`)
       setPdfProcessing({
         active: true,
         filename: file.name,
         percent: 5,
         phase: 'reading',
-        statusText: 'Extrayendo páginas y estructura...',
+        statusText: 'Leyendo las páginas…',
         canCancel: true,
       })
-      speak(`Iniciando lectura del documento ${file.name}. Espérame un momento.`)
+      speak(`Voy a leer ${file.name}, dame un momento.`)
 
       // Fase 24A: huella estable → mismo archivo, mismo docId, caché OPFS válida.
       const docId = await hashPdfFile(file)
@@ -149,12 +153,12 @@ function MainDashboard() {
 
       // Vectorize / index via Web Worker RAG
       setMascotaMood('pensando')
-      setMascotaSubtitulo(`Indexando ${pdfResult.chunks.length} conceptos clave...`)
+      setMascotaSubtitulo('Ordenando las ideas…')
       setPdfProcessing((prev) => prev ? {
         ...prev,
         percent: 55,
         phase: 'indexing',
-        statusText: `Indexando ${pdfResult.chunks.length} fragmentos en tu dispositivo...`,
+        statusText: 'Ordenando las ideas en tu dispositivo…',
       } : null)
 
       ragClient.setProgressListener((prog) => {
@@ -187,17 +191,23 @@ function MainDashboard() {
         })
       }
       setMascotaMood('exito')
-      const readyMsg = `¡Listo! Ya leí todo el documento (${pdfResult.totalPages} págs · ${pdfResult.chunks.length} fragmentos). Pregúntame lo que necesites.`
+      const readyMsg = userName
+        ? `¡Listo, ${userName}! Ya leí ${pdfResult.filename} (${pdfResult.totalPages} págs). Pregúntame lo que quieras.`
+        : `¡Listo! Ya leí ${pdfResult.filename} (${pdfResult.totalPages} págs). Pregúntame lo que quieras.`
       setMascotaSubtitulo(readyMsg)
-      speak(`Documento ${file.name} procesado con éxito. Estoy listo para responder tus preguntas.`)
+      speak(userName ? `Ya leí tu documento, ${userName}. Pregúntame lo que quieras.` : 'Ya leí tu documento. Pregúntame lo que quieras.')
       setPdfProcessing(null)
       abortControllerRef.current = null
       void loadBriefing(pdfResult)
     } catch (err) {
+      const errName = (err as { name?: string } | null)?.name
+      if (errName === 'AbortError') {
+        setLoading(false)
+        return
+      }
       setMascotaMood('duda')
       setPdfProcessing(null)
       abortControllerRef.current = null
-      const errName = (err as { name?: string } | null)?.name
       const msg = errName === 'PasswordException'
         ? 'Este PDF está protegido con contraseña. Quítale la protección e inténtalo de nuevo.'
         : err instanceof Error ? err.message : 'Failed to parse file'
@@ -206,7 +216,24 @@ function MainDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [setError, setLoading, setPdfDoc, loadBriefing])
+  }, [setError, setLoading, setPdfDoc, loadBriefing, userName])
+
+  // Tutorial de bienvenida (Fase E): guarda nombres + diseño y saluda.
+  const finishOnboarding = useCallback((user: string, rName: string, cfg: { color: 'brasita' | 'miel' | 'salvia' | 'tinta' | 'arena' | 'cobre'; eyes: 'round' | 'visor' | 'happy'; accessory: 'none' | 'antenna' | 'fins' | 'headphones' | 'tuft' }) => {
+    setUserName(user)
+    setRobotName(rName)
+    setRobotConfig(cfg)
+    savePreferences({ ...getPreferences(), userName: user, robotName: rName, robotConfig: cfg })
+    setOnboarded()
+    const hello = user ? `¡Hola, ${user}! Soy ${rName}. Suelta tu PDF y lo leemos juntos.` : `¡Hola! Soy ${rName}. Suelta tu PDF y lo leemos juntos.`
+    setMascotaMood('feliz')
+    setMascotaSubtitulo(hello)
+    speak(hello)
+    setTimeout(() => {
+      setMascotaMood('neutro')
+      setMascotaSubtitulo('')
+    }, 6000)
+  }, [])
 
   // Las citas [Pág. N] del chat abren el visor embebido en esa página.
   useEffect(() => {
@@ -260,14 +287,14 @@ function MainDashboard() {
         <div className="canvas-brand" aria-label="Copixi AI">
           <span className="brand-mark" aria-hidden>◈</span>
           <span className="brand-title">Copixi</span>
-          <span className="brand-badge">Analista de documentos PDF</span>
+          <span className="brand-sub">tu lector de PDFs</span>
         </div>
 
         <div className="canvas-actions">
           {hasDocument && pdfDoc && (
             <div className="dataset-pill" title={pdfDoc.filename}>
               <Icon name="file" size={14} />
-              <span>{pdfDoc.filename} ({pdfDoc.totalPages} págs · {pdfDoc.chunks.length} fragmentos)</span>
+              <span>Leyendo: {pdfDoc.filename} · {pdfDoc.totalPages} págs</span>
             </div>
           )}
           <button
@@ -276,6 +303,14 @@ function MainDashboard() {
             onClick={() => inputRef.current?.click()}
           >
             <Icon name="upload" size={14} /> Cargar PDF
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary small"
+            onClick={() => setTourOpen(true)}
+            title="Qué es Copixi y cómo se usa"
+          >
+            ¿Cómo funciona?
           </button>
           <DocLibrary
             currentId={currentLibId}
@@ -309,12 +344,13 @@ function MainDashboard() {
             <Mascota
               variant={mascotFace === 'blobatar' ? 'blobatar' : mascotRobot}
               avatarName={blobatarName}
+              config={mascotFace === 'robot' ? robotConfig : undefined}
               mood={mascotaMood}
               subtitulo={mascotaSubtitulo}
-              size={260}
+              size={180}
               onClick={() => speak(mascotFace === 'blobatar'
                 ? `¡Hola! Soy ${blobatarName || DEFAULT_BLOBATAR_NAME}, tu avatar analista. Carga tu documento PDF para comenzar.`
-                : hasDocument ? `Unidad ${mascotMeta.name} lista. ${mascotMeta.tagline}` : `¡Hola! Soy ${mascotMeta.name}. ${mascotMeta.tagline} Carga tu documento PDF para comenzar.`)}
+                : hasDocument ? `${robotName} listo${userName ? `, ${userName}` : ''}. Pregúntame lo que quieras de tu documento.` : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)}
             />
             <div className="customizer-toggle-row">
               <button
@@ -332,11 +368,15 @@ function MainDashboard() {
                 face={mascotFace}
                 robot={mascotRobot}
                 name={blobatarName}
-                onChange={(face, robot, name) => {
+                robotName={robotName}
+                config={robotConfig}
+                onChange={(face, robot, name, rName, cfg) => {
                   setMascotFace(face)
                   setMascotRobot(robot)
                   setBlobatarName(name)
-                  savePreferences({ ...getPreferences(), mascotFace: face, mascotRobot: robot, blobatarName: name })
+                  setRobotName(rName)
+                  setRobotConfig(cfg)
+                  savePreferences({ ...getPreferences(), mascotFace: face, mascotRobot: robot, blobatarName: name, robotName: rName, robotConfig: cfg })
                 }}
               />
             )}
@@ -370,6 +410,14 @@ function MainDashboard() {
         page={viewer.page}
         onPageChange={(page) => setViewer((v) => ({ ...v, page }))}
         onOpenChange={(open) => setViewer((v) => ({ ...v, open }))}
+      />
+
+      <OnboardingTour
+        open={tourOpen}
+        onOpenChange={setTourOpen}
+        initialUserName={userName}
+        initialRobotName={robotName}
+        onFinish={finishOnboarding}
       />
     </div>
   )

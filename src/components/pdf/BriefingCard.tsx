@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { sanitizeRichText } from '../excel/ExcelChat'
 
 const PAGE_CITE_RE = /\[P[áa]g\.?\s*(\d+)\]|\[P[áa]gina\s*(\d+)\]|\[p\.\s*(\d+)\]/gi
 
@@ -74,7 +75,7 @@ export function BriefingCard({ text, loading }: BriefingCardProps) {
       ) : (
         <ul className="briefing-list">
           {points.map((p, i) => (
-            <li key={i}>{renderWithCites(p, `b${i}`)}</li>
+            <li key={i}>{renderWithCites(sanitizeRichText(p), `b${i}`)}</li>
           ))}
         </ul>
       )}

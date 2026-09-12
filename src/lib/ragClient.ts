@@ -40,6 +40,7 @@ class RagClient {
   private onProgressCb: ((progress: RagProgressCallback) => void) | null = null
   private searchResolvers = new Map<string, (results: RagSearchResultItem[]) => void>()
   private indexResolvers = new Map<string, () => void>()
+  private currentDocId: string | null = null
 
   constructor() {
     this.initWorker()
@@ -90,6 +91,10 @@ class RagClient {
         break
 
       case 'INDEX_COMPLETE':
+        if (payload.docId !== this.currentDocId) {
+          this.indexResolvers.delete(payload.docId)
+          break
+        }
         this.state.isIndexing = false
         this.state.isReady = true
         this.state.mode = payload.mode
@@ -127,10 +132,15 @@ class RagClient {
   }
 
   public async indexDocument(docId: string, docName: string, chunks: PdfChunk[]): Promise<void> {
+    this.currentDocId = docId
     this.state.isIndexing = true
     this.state.isReady = false
     this.state.docName = docName
     this.state.chunkCount = chunks.length
+
+    // Limpia resolvers de indexaciones previas (evita que un INDEX_COMPLETE
+    // tardío de un documento anterior resuelva la promesa de este nuevo).
+    for (const [key] of this.indexResolvers) this.indexResolvers.delete(key)
 
     // Populate fallback Main Thread MiniSearch
     this.mainThreadChunks.clear()
@@ -253,6 +263,7 @@ class RagClient {
       docName: null,
       chunkCount: 0,
     }
+    this.currentDocId = null
     this.mainThreadMiniSearch = null
     this.mainThreadChunks.clear()
     this.worker?.postMessage({ action: 'CLEAR' })

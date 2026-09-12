@@ -22,7 +22,7 @@ export function PdfProcessingCard({ state, onCancel }: PdfProcessingCardProps) {
           <span className="pdf-badge" aria-hidden>PDF</span>
           <span className="pdf-filename" title={state.filename}>{state.filename}</span>
         </div>
-        <span className="pdf-pct">{state.percent}%</span>
+        <span className="pdf-pct" title={`${state.percent}% completado`} aria-label={`${state.percent}% completado`}>{state.percent}%</span>
       </div>
 
       <div className="pdf-progress-bar-bg" aria-hidden>

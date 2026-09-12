@@ -45,6 +45,13 @@ function getClientIp(req: any): string {
   return 'unknown'
 }
 
+function getContentType(req: any): string {
+  const h = req?.headers
+  if (!h) return ''
+  if (typeof h.get === 'function') return String(h.get('content-type') || '').toLowerCase()
+  return String(h['content-type'] || '').toLowerCase()
+}
+
 // Primary: Gemini. If it fails (e.g. tokens/quota exhausted, model unavailable),
 // it automatically falls back to OpenRouter (nvidia/nemotron-3.5-lightning:free).
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite'
@@ -155,7 +162,8 @@ async function generate(prompt: string, system: string): Promise<string> {
   if (errors.length === 0) {
     throw new Error('No AI provider configured (set GEMINI_API_KEY or OPENROUTER_API_KEY).')
   }
-  throw new Error(errors.join(' | '))
+  const publicMsg = process.env.NODE_ENV !== 'production' ? errors.join(' | ') : 'AI provider error.'
+  throw new Error(publicMsg)
 }
 
 // ---- SSE helpers (plain string response, Vercel-safe) ----
@@ -199,22 +207,31 @@ function readBody(req: any): Promise<any> {
 
 function makeResponder(res: any) {
   const isNode = typeof res !== 'undefined' && typeof res.setHeader === 'function'
+  const corsHeaders: Record<string, string> = {
+    'access-control-allow-origin': 'same-origin',
+    'access-control-allow-methods': 'POST, OPTIONS',
+    'access-control-allow-headers': 'content-type',
+    'access-control-max-age': '86400',
+    'vary': 'origin',
+  }
   return {
     json(status: number, data: any) {
       const body = JSON.stringify(data)
       if (isNode) {
         res.statusCode = status
+        for (const [k, v] of Object.entries(corsHeaders)) res.setHeader(k, v)
         res.setHeader('content-type', 'application/json')
         res.end(body)
         return
       }
-      return new Response(body, { status, headers: { 'content-type': 'application/json' } })
+      return new Response(body, { status, headers: { ...corsHeaders, 'content-type': 'application/json' } })
     },
     sse(sseText: string) {
       const headers: Record<string, string> = {
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache, no-transform',
         connection: 'close',
+        ...corsHeaders,
       }
       if (isNode) {
         res.statusCode = 200
@@ -233,6 +250,9 @@ export default async function handler(req: any, res?: any): Promise<Response | v
   const respond = makeResponder(res)
 
   const method = req?.method || 'GET'
+  if (method === 'OPTIONS') {
+    return respond.json(204, {})
+  }
   if (method !== 'POST') {
     return respond.json(405, { error: 'Method not allowed. Use POST.' })
   }
@@ -240,6 +260,11 @@ export default async function handler(req: any, res?: any): Promise<Response | v
   const ip = getClientIp(req)
   if (isRateLimited(ip)) {
     return respond.json(429, { error: 'Rate limit exceeded. Try again later.' })
+  }
+
+  const ct = getContentType(req)
+  if (!ct.includes('application/json')) {
+    return respond.json(415, { error: 'Unsupported Media Type. Use application/json.' })
   }
 
   let body: Record<string, unknown>
@@ -295,7 +320,8 @@ export default async function handler(req: any, res?: any): Promise<Response | v
       return respond.json(200, { rows })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
-      return respond.json(502, { error: 'AI provider error', detail: message.slice(0, 500) })
+      const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'
+      return respond.json(502, { error: 'AI provider error', detail: safe })
     }
   }
 

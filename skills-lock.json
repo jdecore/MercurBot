@@ -1,101 +1,11 @@
 {
   "version": 1,
   "skills": {
-    "a2ui-renderer": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/a2ui-renderer/SKILL.md",
-      "computedHash": "5431b4d8a9489dd8163e70b227efea22367ad0b9c4022b7448143857b6b6a0a7"
-    },
-    "channels-setup": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/channels-setup/SKILL.md",
-      "computedHash": "8b08bbd9888f53720eb8d9c5aff796f946c28b640c426965b45315dc4406876d"
-    },
-    "copilotkit-agui": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-agui/SKILL.md",
-      "computedHash": "67f23c8448e4b3b2b467ee9ac3659686b3d8315ed2c73a201810018b06947bd7"
-    },
-    "copilotkit-channels": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-channels/SKILL.md",
-      "computedHash": "47fda8602bb63b77ea2e47fb13486bb8373e91bf85b93c00fd0b66c29b8f735c"
-    },
-    "copilotkit-contribute": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-contribute/SKILL.md",
-      "computedHash": "8f64f3215cd93ce0bb82c5e4ea84e616aa96713eb371ed073ae5d2c908f7ecb8"
-    },
-    "copilotkit-debug": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-debug/SKILL.md",
-      "computedHash": "95ce44ca3a381ec8d0f654119e19df601df0b903651084615c23d48f6e804f30"
-    },
-    "copilotkit-develop": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-develop/SKILL.md",
-      "computedHash": "d643b19cece634305754d077cad9e5fd4b293e086e9d56fec5e5036151a0b64a"
-    },
-    "copilotkit-integrations": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-integrations/SKILL.md",
-      "computedHash": "3fbae3383ea999b8a0ab4c0aa4842a3c3aeb36e31d1a28529cdadc23a7d7abb6"
-    },
-    "copilotkit-self-update": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-self-update/SKILL.md",
-      "computedHash": "8ca22cf9c046322676686ba9bf3e3402fe83449943489d401b900cd33617f2e2"
-    },
-    "copilotkit-setup": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-setup/SKILL.md",
-      "computedHash": "43956823c53373a4dedeec585ebcf4ee364a3c63bcbe35242247b455ce6f74bc"
-    },
-    "copilotkit-upgrade": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/copilotkit-upgrade/SKILL.md",
-      "computedHash": "2e5ad642cd45292425a49f5bcd81061217940dc45a7ecabc04a78222d9c9f243"
-    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
-    },
-    "inspector-docs": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/inspector-docs/SKILL.md",
-      "computedHash": "383d778a7116204ac53a60c66d7a6e32ec0ba9bce2abee0f9bbbb8434017b7b7"
-    },
-    "react-core": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/react-core/SKILL.md",
-      "computedHash": "5d99995ae351c39562331f4e0844fa7d7afcbbd91064e93989ba730ff10822da"
-    },
-    "runtime": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/runtime/SKILL.md",
-      "computedHash": "76ef8b1403ba13ead9832bc214ef590672d2b34bb2968723112e59ac05649714"
-    },
-    "setup-slack-channel": {
-      "source": "CopilotKit/CopilotKit",
-      "sourceType": "github",
-      "skillPath": "skills/setup-slack-channel/SKILL.md",
-      "computedHash": "58a4be56bc52b8f66ac3932e6b1a55bca525909bb31bd0ab6ff2ccf960d7534b"
     }
   }
 }

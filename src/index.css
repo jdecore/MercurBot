@@ -4,17 +4,17 @@
    (el woff2 con <i> vacíos no renderizaba ningún glifo). */
 
 :root {
-  /* colors */
-  --color-bg: #ffffff;
-  --color-surface: #f8fafc;
-  --color-surface-2: #f1f5f9;
-  --color-text: #0a0a0a;
-  --color-muted: #64748b;
-  --color-primary: #ff6b00;
-  --color-primary-hover: #e65f00;
+  /* colors — Fase A: papel/tinta naturales (un solo acento terracota) */
+  --color-bg: #FAF6EF;
+  --color-surface: #F5EEE1;
+  --color-surface-2: #EDE4D3;
+  --color-text: #1C1917;
+  --color-muted: #5E6A5E;
+  --color-primary: #B34A24;
+  --color-primary-hover: #A8441F;
   --color-accent: #166534;
   --color-accent-hover: #14532d;
-  --color-border: #e2e8f0;
+  --color-border: #E2D8C3;
   --color-success: #166534;
   --color-warning: #c27803;
   --color-danger: #e02424;
@@ -35,6 +35,7 @@
   --radius-full: 9999px;
 
   /* typography */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-sans: ui-sans-system, system-ui, -apple-system, "Inter", "Geist", Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --text-sm: 0.875rem;
@@ -97,20 +98,20 @@
 }
 
 * { box-sizing: border-box; }
-*::selection { background: rgba(255, 107, 0, 0.14); }
+*::selection { background: rgba(179, 74, 36, 0.18); }
 
 /* Modo oscuro (P2): sigue al sistema, solo remapea tokens + superficies clave.
    Los componentes usan var(--color-*) así que la mayoría cambia solo. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #0b0f16;
-    --color-surface: #131a24;
-    --color-surface-2: #1b2431;
-    --color-text: #e9eef5;
-    --color-muted: #96a3b8;
-    --color-primary: #ff7a1a;
-    --color-primary-hover: #ff8c2f;
-    --color-border: #26313f;
+    --color-bg: #171310;
+    --color-surface: #221C15;
+    --color-surface-2: #2C241A;
+    --color-text: #F1E8D9;
+    --color-muted: #A89E8C;
+    --color-primary: #E0784A;
+    --color-primary-hover: #E8865A;
+    --color-border: #3A3126;
     --color-success: #4ade80;
     --color-warning: #fbbf24;
     --color-danger: #f87171;

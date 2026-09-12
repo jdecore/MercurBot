@@ -3,7 +3,8 @@
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(circle at 50% 15%, #fffaf5 0%, #ffffff 70%);
+  background-color: var(--color-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.29 0 0 0 0 0.22 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
   position: relative;
 }
 
@@ -124,12 +125,12 @@ summary svg {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #ea580c 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   color: white;
   display: grid;
   place-items: center;
   font-size: 14px;
-  box-shadow: 0 2px 5px rgba(255, 107, 0, 0.25);
+  box-shadow: 0 2px 5px rgba(179, 74, 36, 0.3);
 }
 .canvas-actions {
   display: flex;
@@ -140,13 +141,16 @@ summary svg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f1f5f9;
-  border: 1px solid var(--color-border);
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 4px 2px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-muted);
+  max-width: 320px;
+}
+.dataset-pill span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .btn-upload-excel {
   display: inline-flex;
@@ -260,47 +264,23 @@ summary svg {
 }
 .speech-bubble {
   width: 100%;
-  background: white;
-  border: 2px solid var(--color-border);
-  border-radius: 20px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.07), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 18px 18px 18px 6px;
+  box-shadow: 0 6px 18px -8px rgba(28, 25, 23, 0.18);
   padding: 18px 22px;
   position: relative;
-  animation: bubblePop 240ms cubic-bezier(0.16, 1, 0.3, 1);
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .speech-bubble.thinking {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(179, 74, 36, 0.1);
 }
 
-/* Comic / Pixel tail pointing to mascot mouth */
-.speech-bubble-tail {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 14px solid transparent;
-  border-right: 14px solid transparent;
-  border-bottom: 14px solid var(--color-border);
-}
+/* La cola cómica se retira: la burbuja respira junto al rostro, sin disfraz */
+.speech-bubble-tail,
 .speech-bubble-tail::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: -12px;
-  width: 0;
-  height: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 12px solid white;
-}
-
-@keyframes bubblePop {
-  0% { transform: scale(0.96) translateY(-4px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
+  display: none;
 }
 
 .speech-bubble-header {
@@ -394,9 +374,19 @@ summary svg {
 }
 
 .speech-bubble-content {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #1e293b;
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--color-text);
+  max-width: 62ch;
+}
+.speech-bubble-content .ai-inline-code,
+.speech-bubble-content .citation-snippet,
+.speech-bubble-content .ai-actions-row,
+.speech-bubble-content .ai-citations-row,
+.speech-bubble-content .speech-bubble-error-box,
+.speech-bubble-content .speech-bubble-thinking {
+  font-family: var(--font-sans);
 }
 .speech-bubble-thinking {
   display: flex;
@@ -648,16 +638,16 @@ summary svg {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  background: white;
-  border: 2px solid var(--color-border);
-  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
   padding: 6px 8px 6px 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.06);
   transition: all 180ms ease;
 }
 .excel-dock-input:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 6px 16px rgba(255, 107, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(179, 74, 36, 0.1);
 }
 .dock-attach-btn {
   background: #f1f5f9;
@@ -688,6 +678,28 @@ summary svg {
 }
 @keyframes micPulse {
   50% { opacity: 0.55; }
+}
+.dock-attach-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+/* Estado del dictado: escuchando / interim / error accionable */
+.dock-voice-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.dock-voice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e02424;
+  flex-shrink: 0;
+  animation: micPulse 1.2s ease-in-out infinite;
 }
 .excel-text-input {
   flex: 1;
@@ -897,7 +909,8 @@ summary svg {
 .excel-chat-error { display: flex; gap: 10px; align-items: center; justify-content: space-between; background: #fef2f2; border: 1px solid #fecaca; color: var(--color-danger); padding: 10px 14px; border-radius: 12px; font-size: 13px; }
 
 /* Brand badge + utility */
-.brand-badge { font-weight: 700; font-size: 11px; color: white; background: var(--color-primary); padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em; }
+.brand-badge { display: none; }
+.brand-sub { font-weight: 500; font-size: 12px; color: var(--color-muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; border-radius: 6px; height: 14px; }
@@ -950,21 +963,21 @@ summary svg {
   max-width: 320px;
 }
 .pdf-pct {
-  font-size: 13px;
-  font-weight: 750;
-  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
   font-variant-numeric: tabular-nums;
 }
 .pdf-progress-bar-bg {
   width: 100%;
-  height: 6px;
-  background: #f1f5f9;
+  height: 3px;
+  background: var(--color-surface-2);
   border-radius: 999px;
   overflow: hidden;
 }
 .pdf-progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary) 0%, #ea580c 100%);
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   border-radius: 999px;
   transition: width 250ms ease-out;
 }
@@ -1008,29 +1021,26 @@ summary svg {
   border-top: 1px dashed rgba(226, 232, 240, 0.8);
 }
 .citations-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 .citation-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #fff7ed;
-  border: 1px solid #ffedd5;
-  color: #ea580c;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
   font-size: 11px;
   font-weight: 650;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: 999px;
   cursor: help;
   transition: all 150ms ease;
 }
 .citation-badge:hover {
-  background: #ffedd5;
-  border-color: #fdba74;
+  border-color: var(--color-primary);
 }
 /* Fase 4 — citas inline [Pág. N] dentro del texto en streaming */
 .citation-inline {
@@ -1075,8 +1085,7 @@ button.citation-inline {
   font: inherit;
 }
 button.citation-inline:hover {
-  background: #ffedd5;
-  border-color: #fdba74;
+  border-color: var(--color-primary);
 }
 button.citation-inline:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -1085,7 +1094,7 @@ button.citation-inline:focus-visible {
 .citation-goto {
   border: 0;
   background: transparent;
-  color: #ea580c;
+  color: var(--color-primary);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -1212,11 +1221,164 @@ button.citation-inline:focus-visible {
   text-align: center;
 }
 
+/* ============ TUTORIAL DE BIENVENIDA (Fase E) ============ */
+.onboard-overlay {
+  background: rgba(28, 25, 23, 0.5);
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+.onboard-content {
+  position: fixed;
+  z-index: 71;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, 92vw);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: 22px 22px 16px;
+  box-shadow: 0 24px 64px rgba(28, 25, 23, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.onboard-content:focus {
+  outline: none;
+}
+.onboard-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.onboard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+.onboard-body p {
+  margin: 0;
+}
+.onboard-muted {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.onboard-mascot {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0;
+}
+.onboard-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.onboard-field input {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 400;
+  background: var(--color-surface);
+  color: var(--color-text);
+  width: 100%;
+}
+.onboard-field input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+.onboard-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.onboard-hello {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--color-primary);
+}
+.onboard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+.onboard-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+.onboard-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-border);
+}
+.onboard-dot.active {
+  background: var(--color-primary);
+}
+.onboard-btns {
+  display: inline-flex;
+  gap: 8px;
+}
+.onboard-skip {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.onboard-skip:hover {
+  color: var(--color-text);
+}
+.onboard-skip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pdf-viewer-content {
     transform: translate(-50%, -50%);
   }
+  .onboard-content {
+    transform: translate(-50%, -50%);
+  }
   .dock-mic-btn.recording {
+    animation: none;
+  }
+  .dock-voice-dot {
+    animation: none;
+  }
+}
+
+/* Motion único (Fase G): la respuesta llega con un rise suave de 200ms.
+   Nada más anima la entrada — el resto del motion solo responde a acciones. */
+.speech-bubble-text {
+  animation: riseIn 200ms ease-out;
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .speech-bubble-text {
     animation: none;
   }
 }
@@ -1374,7 +1536,7 @@ button.citation-inline:focus-visible {
 /* ============ MODO OSCURO: superficies con color fijo (P2) ============ */
 @media (prefers-color-scheme: dark) {
   .canvas-wrapper {
-    background: radial-gradient(circle at 50% 15%, #141b26 0%, #0b0f16 70%);
+    background-color: var(--color-bg);
   }
   .canvas-top-bar {
     background: rgba(11, 15, 22, 0.8);

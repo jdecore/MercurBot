@@ -5,6 +5,7 @@ import './Mascota.css'
 import { speak, isSpeaking } from '../../lib/tts'
 import type { MascotaMood, MascotVariant, RobotUnitId } from '../../types/mascota'
 import { ROBOT_UNITS } from '../../types/mascota'
+import { ROBOT_DESIGNS, type RobotConfig } from '../../lib/robotSeed'
 import { DEFAULT_BLOBATAR_NAME } from '../../lib/storage'
 
 interface MascotaProps {
@@ -15,9 +16,11 @@ interface MascotaProps {
   variant?: MascotVariant
   /** Nombre semilla del avatar Blobatar (solo usado con variant="blobatar"). */
   avatarName?: string
+  /** Diseño del robot personalizable (Fase C): gana a la unidad legacy. */
+  config?: RobotConfig
 }
 
-export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', avatarName }: MascotaProps) {
+export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', avatarName, config }: MascotaProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [localMood, setLocalMood] = useState<MascotaMood>(mood)
   const [speakingState, setSpeakingState] = useState<boolean>(isSpeaking())
@@ -47,9 +50,9 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
       const cy = rect.top + rect.height * 0.35
       const dx = (e.clientX - cx) / (rect.width || 1)
       const dy = (e.clientY - cy) / (rect.height || 1)
-      el.style.setProperty('--mouse-x', `${Math.max(-4, Math.min(4, dx * 5))}px`)
-      el.style.setProperty('--mouse-y', `${Math.max(-3, Math.min(3, dy * 4))}px`)
-      el.style.setProperty('--head-rot', `${Math.max(-8, Math.min(8, dx * 7))}deg`)
+      el.style.setProperty('--mouse-x', `${Math.max(-2, Math.min(2, dx * 2))}px`)
+      el.style.setProperty('--mouse-y', `${Math.max(-1.5, Math.min(1.5, dy * 2))}px`)
+      el.style.setProperty('--head-rot', `${Math.max(-4, Math.min(4, dx * 3))}deg`)
     }
     window.addEventListener('mousemove', handler, { passive: true })
     return () => window.removeEventListener('mousemove', handler)
@@ -96,10 +99,15 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     )
   }
 
-  // Mapeo a unidad de robot
+  // Mapeo a unidad de robot (legacy) o diseño personalizable por semilla (Fase C).
   const isRobotUnit = variant in ROBOT_UNITS
   const activeUnitId: RobotUnitId = isRobotUnit ? (variant as RobotUnitId) : 'helix'
   const robotMeta = ROBOT_UNITS[activeUnitId] || ROBOT_UNITS.helix
+  const design = config ? ROBOT_DESIGNS[config.color] ?? null : null
+  const primary = design?.hex ?? robotMeta.primaryColor
+  const accent = design?.aura ?? robotMeta.accentColor
+  const eyesClass = config ? `eyes-${config.eyes}` : `visor-${activeUnitId}`
+  const accessory = config?.accessory ?? null
 
   const unitClass = `unit-${activeUnitId}`
 
@@ -111,10 +119,10 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
       onClick={onClick}
       style={{
         ...(size ? { ['--robot-size' as string]: `${size}px` } : {}),
-        ['--unit-primary' as string]: robotMeta.primaryColor,
-        ['--unit-accent' as string]: robotMeta.accentColor,
+        ['--unit-primary' as string]: primary,
+        ['--unit-accent' as string]: accent,
       } as React.CSSProperties}
-      aria-label={`${robotMeta.name} (${robotMeta.domain}), estado: ${effectiveMood}`}
+      aria-label={`${design ? 'Mi robot' : `${robotMeta.name} (${robotMeta.domain})`}, estado: ${effectiveMood}`}
       role="img"
     >
       <div className="robot-container">
@@ -124,7 +132,17 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
         <div className={`robot-head chasis-${activeUnitId}`}>
           <div className="robot-head-shell">
             <div className="head-gloss" aria-hidden />
-            
+
+            {/* Accesorio del diseño personalizable (Fase C) o chasis legacy por unidad */}
+            {accessory ? (
+              <div className={`acc acc-${accessory}`} aria-hidden>
+                {accessory === 'antenna' && (<><span className="acc-stalk" /><span className="acc-bulb" /></>)}
+                {accessory === 'fins' && (<><span className="acc-fin left" /><span className="acc-fin right" /></>)}
+                {accessory === 'headphones' && (<><span className="acc-band" /><span className="acc-cup left" /><span className="acc-cup right" /></>)}
+                {accessory === 'tuft' && (<span className="acc-tuft" />)}
+              </div>
+            ) : (
+            <>
             {/* Chasis y orejitas/sensores únicos y tiernos por robot */}
             {activeUnitId === 'curio' && (
               <div className="curio-antennae" aria-hidden>
@@ -161,8 +179,10 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
                 <span className="orb-dot left" /><span className="orb-dot right" />
               </div>
             )}
+            </>
+            )}
 
-            <div className={`robot-visor visor-${activeUnitId}`}>
+            <div className={`robot-visor ${eyesClass}`}>
               <div className="visor-glare" aria-hidden />
 
               {/* Ojos Neón Expresivos y Amigables (tipo EVE / WALL-E) con personalidad por Robot */}
@@ -204,7 +224,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
             <div className="body-gloss" aria-hidden />
             <div className="chest-core">
               <div className="core-light" />
-              <span className="unit-badge-text">{robotMeta.code}</span>
+              <span className="unit-badge-text">{design ? design.label : robotMeta.code}</span>
             </div>
           </div>
           <div className="robot-arm left" aria-hidden />

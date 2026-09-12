@@ -5,6 +5,7 @@
  */
 import type { Filter, ChartConfig } from '../data/types'
 import type { RobotUnitId } from '../types/mascota'
+import { ROBOT_DESIGNS, type RobotConfig } from './robotSeed'
 
 export type SavedDataset = {
   id: string
@@ -34,12 +35,29 @@ export type Preferences = {
   mascotRobot: RobotUnitId
   /** Nombre semilla del Blobatar (determinista: mismo nombre = mismo avatar). */
   blobatarName: string
+  /** Nombre del usuario (tutorial de bienvenida, Fase B). Saludo humano. */
+  userName: string
+  /** Nombre del robot (semilla de su diseño + cómo te saluda). */
+  robotName: string
+  /** Diseño del robot: 6 diseños base + mezcla libre rasgo por rasgo. */
+  robotConfig: RobotConfig
 }
 
 const KEY_ANALYSES = 'copixi:saved_analyses'
 const KEY_DATASETS = 'copixi:saved_datasets'
 const KEY_PREFS = 'copixi:preferences'
 const KEY_HISTORY = 'copixi:history'
+const KEY_ONBOARDED = 'copixi:onboarded'
+
+// Tutorial de bienvenida (Fase E): solo primer arranque, reabrible.
+export function hasOnboarded(): boolean {
+  if (typeof localStorage === 'undefined') return true
+  return localStorage.getItem(KEY_ONBOARDED) === '1'
+}
+export function setOnboarded(): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(KEY_ONBOARDED, '1')
+}
 
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback
@@ -80,11 +98,27 @@ export function saveDataset(d: SavedDataset): void {
 
 // Preferences (anomaly threshold, method, mascot face)
 export const DEFAULT_BLOBATAR_NAME = 'compe'
-const DEFAULT_PREFS: Preferences = { anomalyThreshold: 2.5, anomalyMethod: 'zscore', mascotFace: 'robot', mascotRobot: 'helix', blobatarName: DEFAULT_BLOBATAR_NAME }
+export const DEFAULT_ROBOT_NAME = 'Copi'
+const brasita = ROBOT_DESIGNS.brasita
+const DEFAULT_PREFS: Preferences = {
+  anomalyThreshold: 2.5,
+  anomalyMethod: 'zscore',
+  mascotFace: 'robot',
+  mascotRobot: 'helix',
+  blobatarName: DEFAULT_BLOBATAR_NAME,
+  userName: '',
+  robotName: DEFAULT_ROBOT_NAME,
+  robotConfig: { color: brasita.color, eyes: brasita.eyes, accessory: brasita.accessory },
+}
 export function getPreferences(): Preferences {
   if (typeof localStorage === 'undefined') return DEFAULT_PREFS
   const stored = safeParse<Partial<Preferences>>(localStorage.getItem(KEY_PREFS), {})
-  return { ...DEFAULT_PREFS, ...stored }
+  // Fusión profunda de robotConfig: migra prefs viejas sin romper.
+  return {
+    ...DEFAULT_PREFS,
+    ...stored,
+    robotConfig: { ...DEFAULT_PREFS.robotConfig, ...(stored.robotConfig ?? {}) },
+  }
 }
 export function savePreferences(p: Preferences): void {
   localStorage.setItem(KEY_PREFS, JSON.stringify(p))

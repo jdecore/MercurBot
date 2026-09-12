@@ -6,12 +6,38 @@ import { ragClient } from '../../lib/ragClient'
 import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg } from '../../lib/storage'
 import { Icon } from '../ui/Icon'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
+import { useDictation, getDictationSupport } from '../../lib/dictation'
 
 function setMascotaMood(m: MascotaMood) {
   window.dispatchEvent(new CustomEvent('copixi:mascota-mood', { detail: m }))
 }
 
 type ChatMsg = ChatHistoryMsg
+
+// Defense-in-depth: escapa entidades HTML y neutraliza javascript:/on* antes
+// de que el texto toque cualquier renderizado. React ya escapa por defecto,
+// pero el LLM puede generar contenido impredecible (HTML, event handlers).
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function neutralizeHtml(str: string): string {
+  return str
+    .replace(/javascript\s*:/gi, 'blocked:')
+    .replace(/on\w+\s*=\s*(['"]).*?\1/gi, '')
+    .replace(/<\/?[^>]+>/g, '')
+}
+
+// Sanitiza texto del LLM o del usuario antes de renderizar.
+// Aplica escape HTML + eliminación de etiquetas/eventos/URLs peligrosas.
+export function sanitizeRichText(text: string): string {
+  return escapeHtml(neutralizeHtml(text))
+}
 
 // Strip the trailing JSON action block (e.g. {"action":"setFilter",...}) so it
 // isn't shown to the user.
@@ -22,6 +48,13 @@ function cleanAI(text: string): string {
     if (tail.startsWith('{') && tail.endsWith('}')) return text.slice(0, idx).trim()
   }
   return text
+}
+
+// La voz lee solo la primera frase: suena humano en vez de recitar el informe.
+function firstSentence(text: string): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  const m = clean.match(/^.{20,}?[.!?…](\s|$)/)
+  return (m ? m[0] : clean.slice(0, 180)).trim()
 }
 
 // Minimal, dependency-free markdown: **bold**, *italic*, `code`.
@@ -213,37 +246,6 @@ function renderRichText(text: string): React.ReactNode {
   return <>{blocks}</>
 }
 
-interface DictationResult {
-  length: number
-  [index: number]: { transcript: string }
-  isFinal: boolean
-}
-
-interface DictationResultList {
-  length: number
-  [index: number]: DictationResult
-}
-
-interface DictationInstance {
-  lang: string
-  interimResults: boolean
-  continuous: boolean
-  onresult: ((e: { results: DictationResultList }) => void) | null
-  onend: (() => void) | null
-  onerror: (() => void) | null
-  start: () => void
-  stop: () => void
-  abort: () => void
-}
-
-type DictationCtor = new () => DictationInstance
-
-function getDictationCtor(): DictationCtor | null {
-  if (typeof window === 'undefined') return null
-  const w = window as unknown as { SpeechRecognition?: DictationCtor; webkitSpeechRecognition?: DictationCtor }
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
-}
-
 export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void }) {
   const { pdfDoc } = useDashboard()
 
@@ -258,62 +260,23 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const [status, setStatus] = useState<'idle' | 'submitted' | 'streaming' | 'done' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [listening, setListening] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const lastQueryRef = useRef('')
-  const dictationRef = useRef<DictationInstance | null>(null)
+  const [dictationBase, setDictationBase] = useState('')
 
-  // Dictado por voz (Fase 24D): Web Speech API, sin deps. Oculto sin soporte.
-  const stopDictation = () => {
-    try {
-      dictationRef.current?.stop()
-    } catch {
-      /* ignore */
-    }
-    dictationRef.current = null
-    setListening(false)
-  }
-
-  const toggleDictation = () => {
-    const Ctor = getDictationCtor()
-    if (!Ctor || loading) return
-    if (listening) {
-      stopDictation()
-      return
-    }
-    const rec = new Ctor()
-    rec.lang = 'es-ES'
-    rec.interimResults = true
-    rec.continuous = false
-    rec.onresult = (e) => {
-      let text = ''
-      for (let i = 0; i < e.results.length; i++) text += e.results[i][0]?.transcript ?? ''
-      if (text.trim()) setInput(text.trim())
-    }
-    rec.onend = () => {
-      dictationRef.current = null
-      setListening(false)
-    }
-    rec.onerror = () => {
-      dictationRef.current = null
-      setListening(false)
-    }
-    try {
-      rec.start()
-      dictationRef.current = rec
-      setListening(true)
-    } catch {
-      setListening(false)
-    }
-  }
-
-  useEffect(() => () => {
-    try {
-      dictationRef.current?.abort()
-    } catch {
-      /* ignore */
-    }
-  }, [])
+  // Dictado por voz: Web Speech API nativa (STT del navegador, sin deps).
+  // continuous=true + segmentos finales acumulados + errores accionables.
+  const {
+    listening,
+    interim: dictationInterim,
+    dictationError,
+    toggle: toggleDictation,
+    stop: stopDictation,
+    clearDictationError,
+  } = useDictation({
+    lang: 'es-ES',
+    onFinalText: (text) => setInput((dictationBase ? dictationBase + ' ' : '') + text),
+  })
 
   useEffect(() => {
     const handleTts = (e: Event) => {
@@ -338,8 +301,15 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     if (loading) setMascotaMood('pensando')
   }, [loading])
 
+  function isNearBottom(el: HTMLDivElement): boolean {
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
+
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    const el = scrollRef.current
+    if (el && isNearBottom(el)) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    }
   }, [messages, loading])
 
   const docId = pdfDoc?.docId ?? null
@@ -515,9 +485,36 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
         setMascotaMood('neutro')
         return
       }
+
+      // Flush remanente: si el stream terminó con un evento sin \n\n de cierre,
+      // el bucle anterior lo dejó en buffer y no se procesó.
+      const tail = buffer.trim()
+      if (tail.startsWith('data:')) {
+        const payload = tail.slice(5).trim()
+        if (payload) {
+          try {
+            const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string }
+            if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
+              acc += evt.delta
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode }
+                    : m
+                )
+              )
+            } else if (evt.type === 'error') {
+              throw new Error(evt.message || 'Error del servidor')
+            }
+          } catch (e) {
+            if (e instanceof Error && (e as any).type === 'error') throw e
+          }
+        }
+      }
+
       setStatus('done')
       setMascotaMood('exito')
-      if (!getMuted() && acc) speak(cleanAI(acc).slice(0, 300))
+      if (!getMuted() && acc) speak(firstSentence(cleanAI(acc)))
     } catch (e) {
       // Detener es una acción del usuario, no un error: limpia sin alarmar.
       if ((e instanceof DOMException && e.name === 'AbortError') || (e instanceof Error && e.name === 'AbortError')) {
@@ -540,9 +537,19 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || loading) return
+    if (listening) stopDictation()
     const t = input.trim()
     setInput('')
+    setDictationBase('')
     void runQuery(t)
+  }
+
+  const handleMicToggle = () => {
+    if (!listening) {
+      setDictationBase(input.trim())
+      clearDictationError()
+    }
+    toggleDictation()
   }
 
   const stop = () => abortRef.current?.abort()
@@ -593,13 +600,13 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 <span className="skeleton-dot" />
                 <span className="skeleton-dot" />
                 <span className="skeleton-dot" />
-                <span>Analizando tu documento…</span>
+                <span>Leyendo…</span>
               </div>
             ) : error ? (
               <div className="speech-bubble-error-box" role="alert">
                 <div className="error-badge-row">
                   <Icon name="alert" size={16} />
-                  <strong>Error al procesar la respuesta:</strong>
+                  <strong>Algo no salió bien:</strong>
                 </div>
                 <div className="error-message-text">
                   {error || 'No se pudo conectar con el servicio de IA.'}
@@ -623,11 +630,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               </div>
             ) : cleanedAi ? (
               <div className="speech-bubble-text">
-                {renderRichText(cleanedAi)}
+                {renderRichText(sanitizeRichText(cleanedAi))}
                 {lastAiMsg?.citations && lastAiMsg.citations.length > 0 && (
                   <div className="ai-citations-row" aria-label="Fuentes del documento">
                     <span className="citations-label">
-                      Fuentes{lastAiMsg.searchMode ? ` · ${lastAiMsg.searchMode === 'hybrid' ? 'híbrida (vectorial + léxica → RRF)' : 'léxica'}` : ''}:
+                      Lo encontré en{lastAiMsg.searchMode ? ` · ${lastAiMsg.searchMode === 'hybrid' ? 'búsqueda combinada' : 'búsqueda literal'}` : ''}:
                     </span>
                     {lastAiMsg.citations.map((c, idx) => (
                       <details key={idx} className="citation-badge citation-details">
@@ -661,7 +668,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               </div>
             ) : pdfDoc ? (
               <div className="speech-bubble-idle">
-                <p>Pregunta lo que quieras sobre <strong>{pdfDoc.filename}</strong> en el cuadro de abajo.</p>
+                <p>¿Qué quieres saber de <strong>{pdfDoc.filename}</strong>?</p>
               </div>
             ) : (
               <div className="welcome-dropzone" onClick={onOpenFilePicker} role="button" tabIndex={0}>
@@ -669,8 +676,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   <Icon name="folder" size={22} />
                 </div>
                 <div className="dropzone-text">
-                  <strong className="dropzone-title">Arrastra y suelta tu PDF aquí</strong>
-                  <span className="dropzone-hint">Solo documentos <strong>PDF (.pdf)</strong> · o haz clic para explorar</span>
+                  <strong className="dropzone-title">Suelta tu PDF aquí — lo leo contigo</strong>
+                  <span className="dropzone-hint">PDF con texto · o haz clic para buscarlo · nada se sube</span>
                 </div>
               </div>
             )}
@@ -718,11 +725,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             return (
               <div key={i} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
                 <div className="excel-msg-body">
-                  {renderRichText(cleanAI(m.content))}
+                  {renderRichText(sanitizeRichText(cleanAI(m.content)))}
                   {m.citations && m.citations.length > 0 && (
                     <div className="ai-citations-row" aria-label="Fuentes del documento">
                       <span className="citations-label">
-                        Fuentes{m.searchMode ? ` · ${m.searchMode === 'hybrid' ? 'híbrida (vectorial + léxica → RRF)' : 'léxica'}` : ''}:
+                        Lo encontré en{m.searchMode ? ` · ${m.searchMode === 'hybrid' ? 'búsqueda combinada' : 'búsqueda literal'}` : ''}:
                       </span>
                       {m.citations.map((c, idx) => (
                         <details key={idx} className="citation-badge citation-details">
@@ -781,19 +788,30 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               <Icon name="upload" size={16} />
             </button>
           )}
-          {getDictationCtor() && (
-            <button
-              type="button"
-              className={`dock-attach-btn dock-mic-btn${listening ? ' recording' : ''}`}
-              onClick={toggleDictation}
-              disabled={loading}
-              title={listening ? 'Detener dictado' : 'Dictar pregunta por voz'}
-              aria-label={listening ? 'Detener dictado' : 'Dictar pregunta por voz'}
-              aria-pressed={listening}
-            >
-              <Icon name="mic" size={16} />
-            </button>
-          )}
+          {(() => {
+            const support = getDictationSupport()
+            const unavailableTitle =
+              support === 'no-api'
+                ? 'Dictado no disponible en este navegador (ej. Firefox): usa Chrome, Edge o Safari, o escribe la pregunta'
+                : support === 'insecure-context'
+                  ? 'El dictado requiere HTTPS o localhost: escribe la pregunta o abre la app en conexión segura'
+                  : listening
+                    ? 'Detener dictado'
+                    : 'Dictar pregunta por voz'
+            return (
+              <button
+                type="button"
+                className={`dock-attach-btn dock-mic-btn${listening ? ' recording' : ''}`}
+                onClick={handleMicToggle}
+                disabled={loading || support !== 'supported'}
+                title={unavailableTitle}
+                aria-label={support === 'supported' ? (listening ? 'Detener dictado' : 'Dictar pregunta por voz') : unavailableTitle}
+                aria-pressed={listening}
+              >
+                <Icon name="mic" size={16} />
+              </button>
+            )
+          })()}
           {isTtsSupported() && (
             <button
               type="button"
@@ -821,7 +839,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             className="excel-text-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={pdfDoc ? 'Pregunta sobre tu documento…' : 'Sube un PDF y pregúntame lo que quieras…'}
+            placeholder={pdfDoc ? 'Pregúntale algo a tu documento…' : 'Sube un PDF y conversamos…'}
             aria-label="Escribe tu consulta"
             disabled={loading}
           />
@@ -835,6 +853,18 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             </button>
           )}
         </form>
+        {(listening || dictationInterim || dictationError) && (
+          <p className="dock-voice-hint" role="status" aria-live="polite">
+            {dictationError ? (
+              dictationError
+            ) : (
+              <>
+                <span className="dock-voice-dot" aria-hidden="true" />
+                Escuchando… {dictationInterim ? `«${dictationInterim}»` : 'habla ahora'}
+              </>
+            )}
+          </p>
+        )}
       </div>
     </div>
   )
