@@ -808,6 +808,17 @@
   border-radius: 50% 50% 10% 10%;
 }
 
+.eyes-sleepy .friendly-eye {
+  height: 10px;
+  border-radius: 5px;
+}
+
+.eyes-big .friendly-eye {
+  width: 38px;
+  height: 42px;
+  border-radius: 50%;
+}
+
 /* Accesorios libres del diseño personalizable (usan el color del diseño) */
 .acc {
   position: absolute;
@@ -881,6 +892,86 @@
   position: absolute;
   top: -12px;
   transform: rotate(-8deg);
+}
+
+/* Gafas de lector: sobre el visor */
+.acc-glasses {
+  top: 36%;
+  width: 100%;
+  gap: 0;
+}
+
+.acc-lens {
+  width: 34px;
+  height: 26px;
+  border: 3px solid var(--unit-primary);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  flex: none;
+}
+
+.acc-bridge {
+  width: 12px;
+  height: 3px;
+  background: var(--unit-primary);
+  flex: none;
+}
+
+/* Lazo al costado de la cabeza */
+.acc-bow {
+  left: auto;
+  right: 4%;
+  top: 6%;
+  transform: none;
+}
+
+.acc-bow .acc-bow {
+  width: 14px;
+  height: 18px;
+  background: var(--unit-primary);
+  position: absolute;
+}
+
+.acc-bow .acc-bow.left {
+  left: -14px;
+  border-radius: 50% 50% 4px 50%;
+  transform: rotate(-18deg);
+}
+
+.acc-bow .acc-bow.right {
+  right: -14px;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(18deg);
+}
+
+.acc-knot {
+  width: 9px;
+  height: 9px;
+  background: var(--unit-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--unit-accent);
+}
+
+/* Gorra ladeada */
+.acc-cap {
+  width: 62px;
+  height: 24px;
+  background: var(--unit-primary);
+  border-radius: 32px 32px 0 0;
+  position: absolute;
+  top: -14px;
+  transform: rotate(-6deg);
+}
+
+.acc-brim {
+  width: 78px;
+  height: 8px;
+  background: var(--unit-primary);
+  border-radius: 999px;
+  position: absolute;
+  top: 8px;
+  transform: rotate(-6deg);
+  opacity: 0.92;
 }
 
 @media (prefers-reduced-motion: reduce) {

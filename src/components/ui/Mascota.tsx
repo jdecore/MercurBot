@@ -140,6 +140,9 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
                 {accessory === 'fins' && (<><span className="acc-fin left" /><span className="acc-fin right" /></>)}
                 {accessory === 'headphones' && (<><span className="acc-band" /><span className="acc-cup left" /><span className="acc-cup right" /></>)}
                 {accessory === 'tuft' && (<span className="acc-tuft" />)}
+                {accessory === 'glasses' && (<><span className="acc-lens left" /><span className="acc-bridge" /><span className="acc-lens right" /></>)}
+                {accessory === 'bow' && (<><span className="acc-bow left" /><span className="acc-bow right" /><span className="acc-knot" /></>)}
+                {accessory === 'cap' && (<><span className="acc-cap" /><span className="acc-brim" /></>)}
               </div>
             ) : (
             <>

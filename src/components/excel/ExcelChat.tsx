@@ -354,6 +354,28 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     if (loading) return
     const trimmed = text.trim()
     if (!trimmed) return
+
+    // Client-side rate limit backup (serverless: server token-bucket is
+    // best-effort because Vercel instances don't share memory).
+    const RL_KEY = 'copixi:chat:rl'
+    const RL_WINDOW = 60_000
+    const RL_MAX = 18
+    try {
+      const raw = localStorage.getItem(RL_KEY)
+      const ts = raw ? Number(JSON.parse(raw).ts) : 0
+      const count = raw ? Number(JSON.parse(raw).count) : 0
+      const now = Date.now()
+      if (now - ts < RL_WINDOW && count >= RL_MAX) {
+        const wait = Math.ceil((RL_WINDOW - (now - ts)) / 1000)
+        setError(`Límite de peticiones alcanzado. Espera ${wait}s e inténtalo de nuevo.`)
+        return
+      }
+      const newCount = now - ts < RL_WINDOW ? count + 1 : 1
+      localStorage.setItem(RL_KEY, JSON.stringify({ ts: now, count: newCount }))
+    } catch {
+      // localStorage full or unavailable: proceed, server still limits
+    }
+
     lastQueryRef.current = trimmed
     setError(null)
     // Fija el documento de la consulta: si el usuario cambia de PDF a mitad

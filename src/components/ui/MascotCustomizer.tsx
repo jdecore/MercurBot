@@ -35,6 +35,8 @@ const EYES_OPTIONS: { id: RobotEyes; label: string }[] = [
   { id: 'round', label: 'Redondos' },
   { id: 'visor', label: 'Visor' },
   { id: 'happy', label: 'Felices' },
+  { id: 'sleepy', label: 'Soñolientos' },
+  { id: 'big', label: 'Grandes' },
 ]
 
 const ACCESSORY_OPTIONS: { id: RobotAccessory; label: string }[] = [
@@ -43,6 +45,9 @@ const ACCESSORY_OPTIONS: { id: RobotAccessory; label: string }[] = [
   { id: 'fins', label: 'Aletas' },
   { id: 'headphones', label: 'Auriculares' },
   { id: 'tuft', label: 'Mota' },
+  { id: 'glasses', label: 'Gafas' },
+  { id: 'bow', label: 'Lazo' },
+  { id: 'cap', label: 'Gorra' },
 ]
 
 /**

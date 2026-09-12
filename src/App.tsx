@@ -8,6 +8,7 @@ import { MascotCustomizer, type MascotFace } from './components/ui/MascotCustomi
 import { ExcelChat } from './components/excel/ExcelChat'
 import { speak } from './lib/tts'
 import { getPreferences, savePreferences, DEFAULT_BLOBATAR_NAME, hasOnboarded, setOnboarded } from './lib/storage'
+import type { RobotConfig } from './lib/robotSeed'
 import { OnboardingTour } from './components/onboarding/OnboardingTour'
 import { type MascotaMood, type RobotUnitId } from './types/mascota'
 import { ragClient } from './lib/ragClient'
@@ -219,7 +220,7 @@ function MainDashboard() {
   }, [setError, setLoading, setPdfDoc, loadBriefing, userName])
 
   // Tutorial de bienvenida (Fase E): guarda nombres + diseño y saluda.
-  const finishOnboarding = useCallback((user: string, rName: string, cfg: { color: 'brasita' | 'miel' | 'salvia' | 'tinta' | 'arena' | 'cobre'; eyes: 'round' | 'visor' | 'happy'; accessory: 'none' | 'antenna' | 'fins' | 'headphones' | 'tuft' }) => {
+  const finishOnboarding = useCallback((user: string, rName: string, cfg: RobotConfig) => {
     setUserName(user)
     setRobotName(rName)
     setRobotConfig(cfg)

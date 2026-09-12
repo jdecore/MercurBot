@@ -19,20 +19,39 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 20
+const MAX_BODY_BYTES = 32 * 1024 // 32 KB
 const hits = new Map<string, number[]>()
+const ALLOWED_ORIGINS = [
+  'https://copixi.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+]
 
-function isRateLimited(ip: string): boolean {
+function rateLimitHeaders(retryAfter: number): Record<string, string> {
+  return {
+    'x-ratelimit-limit': String(RATE_LIMIT_MAX),
+    'x-ratelimit-remaining': '0',
+    'x-ratelimit-reset': String(retryAfter),
+    'retry-after': String(retryAfter),
+  }
+}
+
+function isRateLimited(ip: string): { limited: boolean; retryAfter: number } {
   const now = Date.now()
-  // Evita crecimiento ilimitado del mapa (una entrada por IP vista).
   if (hits.size > 2000) {
     const oldest = hits.keys().next().value
     if (oldest !== undefined) hits.delete(oldest)
   }
   const arr = hits.get(ip) ?? []
   const recent = arr.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
+  if (recent.length >= RATE_LIMIT_MAX) {
+    const oldest = recent[0]
+    const retryAfter = Math.max(0, Math.ceil((RATE_LIMIT_WINDOW_MS - (now - oldest)) / 1000))
+    return { limited: true, retryAfter }
+  }
   recent.push(now)
   hits.set(ip, recent)
-  return recent.length > RATE_LIMIT_MAX
+  return { limited: false, retryAfter: 0 }
 }
 
 function getClientIp(req: any): string {
@@ -43,6 +62,20 @@ function getClientIp(req: any): string {
   else if (typeof h['x-forwarded-for'] === 'string') fwd = h['x-forwarded-for']
   if (typeof fwd === 'string' && fwd) return fwd.split(',')[0].trim() || 'unknown'
   return 'unknown'
+}
+
+function getOrigin(req: any): string {
+  const h = req?.headers
+  if (!h) return ''
+  if (typeof h.get === 'function') return String(h.get('origin') || '').trim()
+  return String(h['origin'] || '').trim()
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return true
+  if (ALLOWED_ORIGINS.includes(origin)) return true
+  if (origin.endsWith('.vercel.app')) return true
+  return false
 }
 
 function getContentType(req: any): string {
@@ -193,11 +226,33 @@ function messageText(m: any): string {
 // plain object and there is no req.json). These helpers cover both so the
 // function works on any Vercel runtime.
 
-function readBody(req: any): Promise<any> {
-  if (req && typeof req.json === 'function') return req.json()
+async function readBody(req: any, maxBytes = MAX_BODY_BYTES): Promise<any> {
+  // Vercel modern runtime (Web API Request)
+  if (req && typeof req.json === 'function') {
+    const cl = req.headers?.get?.('content-length')
+    if (cl && Number(cl) > maxBytes) {
+      throw new Error(`Body too large (max ${maxBytes} bytes).`)
+    }
+    // Vercel may already parse JSON for us; fall back only if needed
+    try {
+      return await req.json()
+    } catch {
+      // If req.json() fails (e.g. because of size), fall through to manual
+    }
+  }
+  // Legacy Node runtime or fallback
   return new Promise((resolve, reject) => {
+    let size = 0
     let data = ''
-    req.on('data', (chunk: any) => { data += chunk })
+    req.on('data', (chunk: any) => {
+      size += Buffer.byteLength(chunk)
+      if (size > maxBytes) {
+        req.destroy()
+        reject(new Error(`Body too large (max ${maxBytes} bytes).`))
+        return
+      }
+      data += chunk
+    })
     req.on('end', () => {
       try { resolve(data ? JSON.parse(data) : {}) } catch (e) { reject(e) }
     })
@@ -215,23 +270,24 @@ function makeResponder(res: any) {
     'vary': 'origin',
   }
   return {
-    json(status: number, data: any) {
+    json(status: number, data: any, extraHeaders: Record<string, string> = {}) {
       const body = JSON.stringify(data)
       if (isNode) {
         res.statusCode = status
-        for (const [k, v] of Object.entries(corsHeaders)) res.setHeader(k, v)
+        for (const [k, v] of Object.entries({ ...corsHeaders, ...extraHeaders })) res.setHeader(k, v)
         res.setHeader('content-type', 'application/json')
         res.end(body)
         return
       }
-      return new Response(body, { status, headers: { ...corsHeaders, 'content-type': 'application/json' } })
+      return new Response(body, { status, headers: { ...corsHeaders, ...extraHeaders, 'content-type': 'application/json' } })
     },
-    sse(sseText: string) {
+    sse(sseText: string, extraHeaders: Record<string, string> = {}) {
       const headers: Record<string, string> = {
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache, no-transform',
         connection: 'close',
         ...corsHeaders,
+        ...extraHeaders,
       }
       if (isNode) {
         res.statusCode = 200
@@ -257,9 +313,18 @@ export default async function handler(req: any, res?: any): Promise<Response | v
     return respond.json(405, { error: 'Method not allowed. Use POST.' })
   }
 
+  // Origin check: solo permitimos llamadas desde el mismo origen o desde
+  // nuestra propia app en Vercel / localhost. Bloquea CSRF cross-origin.
+  const origin = getOrigin(req)
+  if (process.env.NODE_ENV !== 'production') console.log('[chat] origin=', origin, 'allowed=', isAllowedOrigin(origin))
+  if (origin && !isAllowedOrigin(origin)) {
+    return respond.json(403, { error: 'Forbidden origin.' })
+  }
+
   const ip = getClientIp(req)
-  if (isRateLimited(ip)) {
-    return respond.json(429, { error: 'Rate limit exceeded. Try again later.' })
+  const rl = isRateLimited(ip)
+  if (rl.limited) {
+    return respond.json(429, { error: 'Rate limit exceeded. Try again later.' }, rateLimitHeaders(rl.retryAfter))
   }
 
   const ct = getContentType(req)
@@ -269,8 +334,10 @@ export default async function handler(req: any, res?: any): Promise<Response | v
 
   let body: Record<string, unknown>
   try {
-    body = (await readBody(req)) as Record<string, unknown>
-  } catch {
+    body = (await readBody(req, MAX_BODY_BYTES)) as Record<string, unknown>
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Invalid request body'
+    if (msg.includes('Body too large')) return respond.json(413, { error: msg })
     return respond.json(400, { error: 'Invalid JSON body' })
   }
 
