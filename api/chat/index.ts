@@ -110,6 +110,10 @@ function buildContextBlock(context: unknown): string {
     const docName = String(ctx.filename ?? 'documento.pdf')
     const totalPages = ctx.totalPages ?? '?'
     const MAX_CHARS_PER_HIT = 1200
+    const searchMode = ctx.searchMode === 'hybrid' ? 'hybrid' : 'lexical_only'
+    const modeLine = searchMode === 'hybrid'
+      ? 'Búsqueda combinada local (semántica vectorial + léxica con fusión RRF).'
+      : 'Búsqueda literal local (solo léxica; el modelo semántico no estuvo disponible). Si la pregunta parece semántica y los fragmentos no encajan, dilo con transparencia en vez de forzar una respuesta.'
     const snippets = (ctx.ragHits as any[]).slice(0, 3)
       .map((h: any, i: number) => {
         const page = Number.isFinite(Number(h.pageNumber)) ? Number(h.pageNumber) : '?'
@@ -120,7 +124,7 @@ function buildContextBlock(context: unknown): string {
       .join('\n\n')
 
     return `\n\n--- FUENTE DEL DOCUMENTO: "${docName}" (${totalPages} páginas) ---\n` +
-      `Los siguientes fragmentos fueron recuperados directamente del documento mediante búsqueda semántica local en el dispositivo del usuario:\n\n` +
+      `Los siguientes fragmentos fueron recuperados directamente del documento mediante ${modeLine}\n\n` +
       `${snippets}\n\n` +
       `INSTRUCCIONES PARA ESTA RESPUESTA:\n` +
       `- Responde basándote estrictamente en los fragmentos anteriores.\n` +

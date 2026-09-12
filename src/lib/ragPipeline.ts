@@ -82,9 +82,13 @@ export async function runRagPipeline(query: string, topK: number = RAG_TOP_K): P
     return { hits: [], mode: 'lexical_only', usedFallback: true }
   }
   const stateAfter = ragClient.getState()
-  const effectiveMode: RagPipelineMode = stateAfter.mode === 'hybrid' ? 'hybrid' : 'lexical_only'
+  // El watchdog del cliente puede resolver con MiniSearch local aunque el
+  // modo global siga siendo 'hybrid' (p. ej. el modelo tarda en la primera
+  // query). didLastSearchUseFallback() dice la verdad de ESTA búsqueda.
+  const fellBack = ragClient.didLastSearchUseFallback()
+  const effectiveMode: RagPipelineMode = !fellBack && stateAfter.mode === 'hybrid' ? 'hybrid' : 'lexical_only'
   // Fallback = el cliente ya estaba en léxico, o el worker conmutó por timeout.
-  const usedFallback = stateBefore.mode !== 'hybrid' && effectiveMode !== 'hybrid'
+  const usedFallback = fellBack || (stateBefore.mode !== 'hybrid' && effectiveMode !== 'hybrid')
   const hits = raw.slice(0, topK).map(normalizeHit).filter((h) => h.text.length > 0)
   return { hits, mode: effectiveMode, usedFallback }
 }

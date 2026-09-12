@@ -41,6 +41,10 @@ class RagClient {
   private searchResolvers = new Map<string, (results: RagSearchResultItem[]) => void>()
   private indexResolvers = new Map<string, () => void>()
   private currentDocId: string | null = null
+  // true si la última búsqueda se resolvió por el watchdog léxico
+  // (el worker tardó > timeoutMs). Sin esto, runRagPipeline reportaba
+  // "búsqueda combinada" aunque los hits vinieran de MiniSearch local.
+  private lastSearchUsedFallback = false
 
   constructor() {
     this.initWorker()
@@ -114,6 +118,7 @@ class RagClient {
         const { query, results } = payload
         const resolver = this.searchResolvers.get(query)
         if (resolver) {
+          this.lastSearchUsedFallback = false
           resolver(results)
           this.searchResolvers.delete(query)
         }
@@ -194,6 +199,7 @@ class RagClient {
         const timer = setTimeout(() => {
           console.warn('[RagClient] Worker Watchdog timeout excedido. Conmutando a búsqueda léxica local.')
           this.searchResolvers.delete(query)
+          this.lastSearchUsedFallback = true
           resolve(this.searchMainThread(query, topK))
         }, timeoutMs)
 
@@ -210,6 +216,7 @@ class RagClient {
     }
 
     // Direct fallback
+    this.lastSearchUsedFallback = true
     return this.searchMainThread(query, topK)
   }
 
@@ -271,6 +278,11 @@ class RagClient {
 
   public getState(): RagClientState {
     return { ...this.state }
+  }
+
+  /** true si la última búsqueda cayó al fallback léxico (watchdog o sin worker). */
+  public didLastSearchUseFallback(): boolean {
+    return this.lastSearchUsedFallback
   }
 }
 
