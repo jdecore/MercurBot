@@ -663,6 +663,16 @@
   color: var(--color-primary);
   transform: scale(1.05);
 }
+/* Dictado por voz (Fase 24D) */
+.dock-mic-btn.recording {
+  background: #fef2f2;
+  border-color: #e02424;
+  color: #e02424;
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+@keyframes micPulse {
+  50% { opacity: 0.55; }
+}
 .excel-text-input {
   flex: 1;
   border: none;
@@ -1189,6 +1199,9 @@ button.citation-inline:focus-visible {
   .pdf-viewer-content {
     transform: translate(-50%, -50%);
   }
+  .dock-mic-btn.recording {
+    animation: none;
+  }
 }
 
 /* Tablas y código en respuestas IA (P1) */
@@ -1299,6 +1312,48 @@ button.citation-inline:focus-visible {
   color: var(--color-muted);
 }
 
+/* Briefing proactivo (Fase 24C) */
+.briefing-card {
+  width: 100%;
+  max-width: 680px;
+  margin: 10px auto 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.briefing-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+.briefing-sparkle {
+  color: var(--color-primary);
+}
+.briefing-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.briefing-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
 /* ============ MODO OSCURO: superficies con color fijo (P2) ============ */
 @media (prefers-color-scheme: dark) {
   .canvas-wrapper {
@@ -1406,6 +1461,11 @@ button.citation-inline:focus-visible {
   }
   .mascot-avatar-preview {
     border-color: var(--color-border);
+  }
+  .dock-mic-btn.recording {
+    background: rgba(248, 113, 113, 0.14);
+    border-color: #f87171;
+    color: #f87171;
   }
 }
 

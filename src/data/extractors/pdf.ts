@@ -35,6 +35,8 @@ export interface PdfExtractOptions {
   chunkSizeWords?: number // Default ~350 words (~400 tokens)
   overlapWords?: number // Default ~50 words
   onProgress?: (progress: PdfExtractProgress) => void
+  /** docId estable (huella del archivo). Si se omite, se genera uno aleatorio. */
+  docId?: string
 }
 
 export interface PdfExtractResult {
@@ -175,9 +177,10 @@ export async function extractPdf(file: File, options: PdfExtractOptions = {}): P
     chunkSizeWords = 350,
     overlapWords = 50,
     onProgress,
+    docId: docIdOption,
   } = options
 
-  const docId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  const docId = docIdOption ?? `doc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
   const arrayBuffer = await file.arrayBuffer()
 
   // Setup timeout & cancellation

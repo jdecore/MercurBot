@@ -120,16 +120,23 @@ async function getPipeline(): Promise<any> {
 }
 
 // OPFS Persistence Helpers (Origin Private File System inside Worker)
+// Formato: header Uint32 [count, dim] + por entrada: id (64 bytes) + vector (dim floats).
+// La versión anterior guardaba header [count] con dim implícito 384; el lector
+// acepta ambos (Fase 24B).
+const LEGACY_DIM = 384
+
 async function saveVectorsToOPFS(docId: string, vectors: Map<string, Float32Array>) {
   try {
     if (!navigator.storage?.getDirectory) return
+    if (vectors.size === 0) return
     const root = await navigator.storage.getDirectory()
     const dir = await root.getDirectoryHandle('copixi_vectors', { create: true })
     const fileHandle = await dir.getFileHandle(`${docId}.bin`, { create: true })
     const writable = await fileHandle.createWritable()
 
-    // Write number of entries
-    const header = new Uint32Array([vectors.size])
+    // Write entry count + vector dim
+    const first = vectors.values().next().value as Float32Array | undefined
+    const header = new Uint32Array([vectors.size, first?.length ?? 0])
     await writable.write(header)
 
     for (const [chunkId, vec] of vectors) {
@@ -140,6 +147,48 @@ async function saveVectorsToOPFS(docId: string, vectors: Map<string, Float32Arra
     await writable.close()
   } catch (err) {
     console.warn('[RAG Worker] OPFS write skipped or unavailable', err)
+  }
+}
+
+/**
+ * Fase 24B: recupera vectores persistidos de un documento ya visto.
+ * Retorna null si no hay caché, está corrupta o no cubre todos los chunks
+ * actuales (los chunk IDs derivan del docId estable de la Fase 24A).
+ */
+async function loadVectorsFromOPFS(docId: string): Promise<Map<string, Float32Array> | null> {
+  try {
+    if (!navigator.storage?.getDirectory) return null
+    const root = await navigator.storage.getDirectory()
+    const dir = await root.getDirectoryHandle('copixi_vectors')
+    const fileHandle = await dir.getFileHandle(`${docId}.bin`)
+    const buf = await (await fileHandle.getFile()).arrayBuffer()
+    if (buf.byteLength < 8) return null
+
+    const header = new Uint32Array(buf.slice(0, 8))
+    const count = header[0]
+    const dimFromFile = header[1]
+    const isNewFormat =
+      dimFromFile > 0 && dimFromFile <= 2048 &&
+      buf.byteLength === 8 + count * (64 + dimFromFile * 4)
+    const dim = isNewFormat ? dimFromFile : LEGACY_DIM
+    const base = isNewFormat ? 8 : 4
+    if (!isNewFormat && buf.byteLength !== 4 + count * (64 + dim * 4)) return null
+    if (count === 0 || count > 10000) return null
+
+    const out = new Map<string, Float32Array>()
+    const decoder = new TextDecoder()
+    let offset = base
+    for (let i = 0; i < count; i++) {
+      const id = decoder.decode(new Uint8Array(buf, offset, 64)).trim()
+      offset += 64
+      const vec = new Float32Array(buf.slice(offset, offset + dim * 4))
+      offset += dim * 4
+      if (vec.length !== dim || !id) return null
+      out.set(id, vec)
+    }
+    return out
+  } catch {
+    return null
   }
 }
 
@@ -159,6 +208,26 @@ async function handleIndexDocument({ docId, docName, chunks }: WorkerIndexPayloa
     type: 'PROGRESS',
     payload: { phase: 'lexical_ready', percent: 30, message: 'Índice léxico BM25 listo.' },
   })
+
+  // Fase 24B: si los vectores de este documento ya están en OPFS (mismo docId
+  // estable de la Fase 24A), se cargan y se salta la vectorización.
+  const cached = await loadVectorsFromOPFS(docId)
+  if (cached && cached.size === chunks.length && chunks.every((c) => cached.has(c.id))) {
+    vectorStore = cached
+    self.postMessage({
+      type: 'PROGRESS',
+      payload: {
+        phase: 'vectors_cached',
+        percent: 95,
+        message: `Búsqueda inteligente recuperada del dispositivo (${cached.size} fragmentos, sin recompute).`,
+      },
+    })
+    self.postMessage({
+      type: 'INDEX_COMPLETE',
+      payload: { docId, docName, chunkCount: chunks.length, mode: 'hybrid' },
+    })
+    return
+  }
 
   // 2. Vectorize in small batches (if model available)
   const pipe = await getPipeline()

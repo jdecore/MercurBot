@@ -29,7 +29,7 @@ Un **analista de documentos con IA**: subes un PDF y conversas con él, con cada
 
 1. Carga un PDF (drag & drop, 30 MB) — solo PDF, sin otros formatos
 2. Extracción de páginas + indexado local (MiniSearch inmediato, vectores MiniLM en Web Worker con OPFS)
-3. Pregunta en lenguaje natural → respuesta en streaming con citas `[Pág. N]` clicables: abren el visor embebido en esa página
+3. Pregunta en lenguaje natural → respuesta en streaming con citas `[Pág. N]` clicables: abren el visor embebido en esa página. Al abrir, la IA te recibe con un briefing de 3 puntos clicables (generado una vez, sin bloquear)
 4. Copia la respuesta o descárgala en `.md`; biblioteca de recientes (OPFS) para re-abrir sin re-subir; buscar-en-documento por páginas; historial por documento + follow-ups dinámicos; mascota con voz y cara personalizable (colapsable con ⚙)
 
 ---

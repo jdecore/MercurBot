@@ -11,8 +11,10 @@ import { ROBOT_UNITS, type MascotaMood, type RobotUnitId } from './types/mascota
 import { ragClient } from './lib/ragClient'
 import { PdfProcessingCard, type PdfProcessingState } from './components/dashboard/PdfProcessingCard'
 import { PdfViewerDialog } from './components/pdf/PdfViewer'
+import { BriefingCard } from './components/pdf/BriefingCard'
 import { DocLibrary } from './components/pdf/DocLibrary'
 import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
+import { hashPdfFile } from './lib/fileHash'
 
 function MainDashboard() {
   const {
@@ -27,6 +29,8 @@ function MainDashboard() {
   const [mascotRobot, setMascotRobot] = useState<RobotUnitId>(() => getPreferences().mascotRobot)
   const [blobatarName, setBlobatarName] = useState<string>(() => getPreferences().blobatarName)
   const [pdfProcessing, setPdfProcessing] = useState<PdfProcessingState | null>(null)
+  const [briefing, setBriefing] = useState<string | null>(null)
+  const [briefingLoading, setBriefingLoading] = useState(false)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [viewer, setViewer] = useState<{ open: boolean; page: number }>({ open: false, page: 1 })
   const [currentLibId, setCurrentLibId] = useState<string | null>(null)
@@ -55,10 +59,40 @@ function MainDashboard() {
     }, 4000)
   }, [setLoading])
 
+  // Briefing proactivo (Fase 24C): 1 llamada tras indexar; si falla, sin tarjeta.
+  const loadBriefing = useCallback(async (doc: { filename: string; totalPages: number; chunks: { length: number }; fullText: string }) => {
+    setBriefing(null)
+    setBriefingLoading(true)
+    try {
+      const sample = doc.fullText.replace(/\s+/g, ' ').trim().slice(0, 4000)
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'summary',
+          context: {
+            documentType: 'pdf',
+            filename: doc.filename,
+            totalPages: doc.totalPages,
+            chunks: doc.chunks.length,
+            sample,
+          },
+        }),
+      })
+      const json = (await res.json()) as { text?: string; error?: string }
+      if (res.ok && json.text?.trim()) setBriefing(json.text.trim())
+    } catch {
+      /* degradado silencioso */
+    } finally {
+      setBriefingLoading(false)
+    }
+  }, [])
+
   const parseFile = useCallback(async (file: File) => {
     const valid = validateAnyFile(file)
     if (!valid.valid) { setError(valid.error ?? 'Tipo de archivo no soportado'); return }
     setLoading(true); setError(null)
+    setBriefing(null); setBriefingLoading(false)
 
     try {
       const controller = new AbortController()
@@ -76,7 +110,12 @@ function MainDashboard() {
       })
       speak(`Iniciando lectura del documento ${file.name}. Espérame un momento.`)
 
+      // Fase 24A: huella estable → mismo archivo, mismo docId, caché OPFS válida.
+      const docId = await hashPdfFile(file)
+      if (import.meta.env.DEV) console.log('[Copixi] docId', docId)
+
       const parseResult = await parseAnyFile(file, {
+        docId,
         signal: controller.signal,
         timeoutMs: 60000,
         onProgress: (p) => {
@@ -137,6 +176,7 @@ function MainDashboard() {
       speak(`Documento ${file.name} procesado con éxito. Estoy listo para responder tus preguntas.`)
       setPdfProcessing(null)
       abortControllerRef.current = null
+      void loadBriefing(pdfResult)
     } catch (err) {
       setMascotaMood('duda')
       setPdfProcessing(null)
@@ -150,7 +190,7 @@ function MainDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [setError, setLoading, setPdfDoc])
+  }, [setError, setLoading, setPdfDoc, loadBriefing])
 
   // Las citas [Pág. N] del chat abren el visor embebido en esa página.
   useEffect(() => {
@@ -289,6 +329,11 @@ function MainDashboard() {
           {/* Interactive PDF Processing Banner with Cancel */}
           {pdfProcessing && (
             <PdfProcessingCard state={pdfProcessing} onCancel={cancelPdfProcessing} />
+          )}
+
+          {/* Briefing proactivo (Fase 24C): la IA trabaja antes de que escribas */}
+          {(briefing || briefingLoading) && (
+            <BriefingCard text={briefing} loading={briefingLoading} />
           )}
 
           {/* Interactive Speech Bubble & Excel Chat & MiniCharts */}

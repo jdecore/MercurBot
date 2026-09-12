@@ -244,6 +244,37 @@ function suggestFollowUps(text: string): string[] {
   return out.slice(0, 3)
 }
 
+interface DictationResult {
+  length: number
+  [index: number]: { transcript: string }
+  isFinal: boolean
+}
+
+interface DictationResultList {
+  length: number
+  [index: number]: DictationResult
+}
+
+interface DictationInstance {
+  lang: string
+  interimResults: boolean
+  continuous: boolean
+  onresult: ((e: { results: DictationResultList }) => void) | null
+  onend: (() => void) | null
+  onerror: (() => void) | null
+  start: () => void
+  stop: () => void
+  abort: () => void
+}
+
+type DictationCtor = new () => DictationInstance
+
+function getDictationCtor(): DictationCtor | null {
+  if (typeof window === 'undefined') return null
+  const w = window as unknown as { SpeechRecognition?: DictationCtor; webkitSpeechRecognition?: DictationCtor }
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
+}
+
 export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void }) {
   const { pdfDoc } = useDashboard()
 
@@ -258,8 +289,62 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const [status, setStatus] = useState<'idle' | 'submitted' | 'streaming' | 'done' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [listening, setListening] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const lastQueryRef = useRef('')
+  const dictationRef = useRef<DictationInstance | null>(null)
+
+  // Dictado por voz (Fase 24D): Web Speech API, sin deps. Oculto sin soporte.
+  const stopDictation = () => {
+    try {
+      dictationRef.current?.stop()
+    } catch {
+      /* ignore */
+    }
+    dictationRef.current = null
+    setListening(false)
+  }
+
+  const toggleDictation = () => {
+    const Ctor = getDictationCtor()
+    if (!Ctor || loading) return
+    if (listening) {
+      stopDictation()
+      return
+    }
+    const rec = new Ctor()
+    rec.lang = 'es-ES'
+    rec.interimResults = true
+    rec.continuous = false
+    rec.onresult = (e) => {
+      let text = ''
+      for (let i = 0; i < e.results.length; i++) text += e.results[i][0]?.transcript ?? ''
+      if (text.trim()) setInput(text.trim())
+    }
+    rec.onend = () => {
+      dictationRef.current = null
+      setListening(false)
+    }
+    rec.onerror = () => {
+      dictationRef.current = null
+      setListening(false)
+    }
+    try {
+      rec.start()
+      dictationRef.current = rec
+      setListening(true)
+    } catch {
+      setListening(false)
+    }
+  }
+
+  useEffect(() => () => {
+    try {
+      dictationRef.current?.abort()
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   useEffect(() => {
     const handleTts = (e: Event) => {
@@ -782,6 +867,19 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               aria-label="Subir PDF"
             >
               <i className="pixelart-icons-font-upload" aria-hidden />
+            </button>
+          )}
+          {getDictationCtor() && (
+            <button
+              type="button"
+              className={`dock-attach-btn dock-mic-btn${listening ? ' recording' : ''}`}
+              onClick={toggleDictation}
+              disabled={loading}
+              title={listening ? 'Detener dictado' : 'Dictar pregunta por voz'}
+              aria-label={listening ? 'Detener dictado' : 'Dictar pregunta por voz'}
+              aria-pressed={listening}
+            >
+              <span aria-hidden>{listening ? '⏹' : '🎙️'}</span>
             </button>
           )}
           <input

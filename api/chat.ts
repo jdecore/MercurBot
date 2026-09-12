@@ -257,7 +257,10 @@ export default async function handler(req: any, res?: any): Promise<Response | v
         if (ctxStr.length > 8000) {
           return respond.json(400, { error: 'context too large (max 8000 chars)' })
         }
-        const prompt = `Genera un resumen en español en 3-5 bullets concisos + 1 insight accionable sobre este dataset. Cita números reales del contexto. No inventes columnas. Texto plano, sin JSON.\n\nContexto: ${ctxStr}`
+        const isPdf = (ctx as Record<string, unknown>).documentType === 'pdf'
+        const prompt = isPdf
+          ? `Resume este documento PDF en español en exactamente 3 puntos clave. Empieza cada punto con la información directa (sin introducciones). Cita la página de cada dato con el formato [Pág. N]. No inventes datos. Texto plano con "-" por punto, sin JSON.\n\nContexto: ${ctxStr}`
+          : `Genera un resumen en español en 3-5 bullets concisos + 1 insight accionable sobre este dataset. Cita números reales del contexto. No inventes columnas. Texto plano, sin JSON.\n\nContexto: ${ctxStr}`
         const text = (await generate(prompt, EXCEL_SYSTEM)).trim()
         if (!text) return respond.json(200, { error: 'Empty summary' })
         return respond.json(200, { text })
