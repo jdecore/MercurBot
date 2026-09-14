@@ -6,13 +6,19 @@
  *   - chat:    { messages, context? }  -> UI message stream (SSE) for the custom client
  *   - summary: { mode:'summary', context } -> JSON { text }
  *   - extract: { mode:'extract', text, filename } -> JSON { rows | text }
+ *   - chart-full: { mode:'chart-full', filename, totalPages, truncated, pages:[{page,text}] }
+ *     -> JSON { text, analyzedPages } — gráfica del documento completo, SOLO
+ *     bajo orden explícita del usuario (botón "Generar gráfica", Fase E).
+ *     Excepción documentada a §8 en AGENTS.md (§41): el usuario consiente
+ *     enviar el texto (máx. 250 KB) al proveedor de IA; nada se persiste.
  *
  * Generation uses the official @google/generative-ai SDK (Gemini). If it fails
  * or no key is set, it falls back to OpenRouter (OpenAI-compatible). The chat
  * response is a plain SSE string (no streaming Response object) so Vercel never
  * surfaces a broken stream as FUNCTION_INVOCATION_FAILED.
  *
- * Only aggregated context is ever sent (§8). Never raw rows.
+ * Only aggregated context is ever sent (§8), salvo chart-full bajo demanda.
+ * Never raw rows.
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
@@ -20,6 +26,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 20
 const MAX_BODY_BYTES = 32 * 1024 // 32 KB
+// Fase E: el texto completo viaja solo en chart-full (consentido). El resto de
+// modos conserva su tope efectivo de 32 KB (se re-valida tras parsear).
+const CHART_FULL_BODY_MAX = 300 * 1024 // 300 KB
+const CHART_FULL_MAX_CHARS = 250_000
+const CHART_FULL_MAX_PAGES = 500
 const hits = new Map<string, number[]>()
 const ALLOWED_ORIGINS = [
   'https://copixi.vercel.app',
@@ -99,7 +110,16 @@ Especialidades:
 Reglas:
 - Copixi solo trabaja con PDFs: si el usuario pregunta por Excel, CSV u otros formatos, indícale amablemente que suba el contenido como PDF.
 - Si el contexto incluye fragmentos recuperados por RAG, fundaméntate en ellos y cita las páginas con el formato [Pág. N].
-- No inventes información ni datos que no figuren en los fragmentos provistos.`
+- No inventes información ni datos que no figuren en los fragmentos provistos.
+
+Gráficas (solo cuando aporten valor):
+- Si la pregunta pide comparar cifras o ver una evolución Y los fragmentos contienen esos números, cierra tu respuesta con un bloque chart-json con este formato EXACTO:
+\`\`\`chart-json
+{"chartType":"bar","title":"Título corto","unit":"unidad opcional","data":[{"label":"Etiqueta","value":123,"sourcePage":2}]}
+\`\`\`
+- chartType solo "bar" o "line". Máx. 12 puntos.
+- value SOLO cifras literales copiadas de los fragmentos: prohibido calcular, redondear, estimar o convertir unidades. sourcePage es la página del fragmento de cada cifra.
+- Si los fragmentos no tienen cifras comparables, NO emitas el bloque: responde solo texto.`
 
 function buildContextBlock(context: unknown): string {
   if (!context || typeof context !== 'object') return ''
@@ -338,7 +358,7 @@ export default async function handler(req: any, res?: any): Promise<Response | v
 
   let body: Record<string, unknown>
   try {
-    body = (await readBody(req, MAX_BODY_BYTES)) as Record<string, unknown>
+    body = (await readBody(req, CHART_FULL_BODY_MAX)) as Record<string, unknown>
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Invalid request body'
     if (msg.includes('Body too large')) return respond.json(413, { error: msg })
@@ -346,6 +366,12 @@ export default async function handler(req: any, res?: any): Promise<Response | v
   }
 
   const mode = typeof body.mode === 'string' ? body.mode : undefined
+
+  // Tope histórico de 32 KB para todo lo que no sea chart-full: el cuerpo ya
+  // se leyó con el tope elevado, así que se re-valida aquí por modo.
+  if (mode !== 'chart-full' && JSON.stringify(body).length > MAX_BODY_BYTES) {
+    return respond.json(413, { error: `Body too large (max ${MAX_BODY_BYTES} bytes).` })
+  }
 
   if (mode === 'summary' || mode === 'extract') {
     try {
@@ -389,6 +415,48 @@ export default async function handler(req: any, res?: any): Promise<Response | v
         return respond.json(200, { text: raw, rows: null, error: 'No valid JSON array extracted' })
       }
       return respond.json(200, { rows })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'
+      return respond.json(502, { error: 'AI provider error', detail: safe })
+    }
+  }
+
+  // Chart-full mode (Fase E): gráfica del documento completo bajo demanda.
+  // Mismos guards que el resto (origen, rate-limit); tope elevado propio.
+  if (mode === 'chart-full') {
+    try {
+      const filename = String(body.filename ?? 'documento.pdf').slice(0, 200)
+      const totalPages = Number(body.totalPages)
+      const truncated = body.truncated === true
+      const rawPages = Array.isArray(body.pages) ? body.pages : null
+      if (!rawPages || rawPages.length === 0 || rawPages.length > CHART_FULL_MAX_PAGES) {
+        return respond.json(400, { error: 'chart-full requires pages array (1-500).' })
+      }
+      const clean: { page: number; text: string }[] = []
+      let chars = 0
+      for (const p of rawPages) {
+        const page = Math.floor(Number((p as Record<string, unknown>)?.page))
+        const text = String((p as Record<string, unknown>)?.text ?? '').replace(/\s+/g, ' ').trim()
+        if (!Number.isFinite(page) || page < 1 || !text) {
+          return respond.json(400, { error: 'chart-full: each page needs {page>=1, text}.' })
+        }
+        chars += text.length
+        clean.push({ page, text })
+      }
+      if (chars > CHART_FULL_MAX_CHARS) {
+        return respond.json(413, { error: `chart-full text too large (max ${CHART_FULL_MAX_CHARS} chars).` })
+      }
+      clean.sort((a, b) => a.page - b.page)
+      const analyzedPages = clean.map((p) => p.page)
+      const scope = truncated && Number.isFinite(totalPages)
+        ? `Páginas analizadas: ${analyzedPages.join(', ')} (de ${Math.floor(totalPages)} totales; pre-selección de las páginas con más cifras).`
+        : `Páginas analizadas: ${analyzedPages.join(', ')} (documento íntegro).`
+      const docText = clean.map((p) => `[Pág. ${p.page}]:\n"""${p.text}"""`).join('\n\n')
+      const prompt = `Analiza este documento PDF "${filename}" y devuelve LA comparación o evolución numérica más relevante en forma de gráfica, más 2-3 líneas de lectura en español.\n\n${scope}\n\nBasa cada cifra SOLO en el texto siguiente; el sourcePage de cada dato debe ser una de las páginas analizadas.\n\n${docText}\n\nCierra con el bloque chart-json (chartType bar|line, máx. 12 puntos, value SOLO cifras literales del texto — prohibido calcular, redondear o estimar). Si no hay cifras comparables, responde solo texto sin bloque. Cita páginas con [Pág. N] en la lectura.`
+      const text = (await generate(prompt, EXCEL_SYSTEM)).trim()
+      if (!text) return respond.json(200, { error: 'Empty chart-full response' })
+      return respond.json(200, { text, analyzedPages })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'

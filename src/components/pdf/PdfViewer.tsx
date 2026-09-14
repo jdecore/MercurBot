@@ -3,6 +3,9 @@ import * as Dialog from '@radix-ui/react-dialog'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { ragClient, type DocSearchHit } from '../../lib/ragClient'
+import { matchHighlightSpans } from '../../lib/highlight'
+import { ChartFullButton } from './ChartFullButton'
+import type { PdfPageText } from '../../data/extractors/pdf'
 
 // El worker ya se configura en extractors/pdf.ts; se reafirma aquí por si el
 // visor se monta sin haber pasado por la extracción.
@@ -16,6 +19,13 @@ async function destroyDoc(d: unknown) {
   } catch {
     /* ignore */
   }
+}
+
+/** Payload del evento `copixi:goto-page` (Fase B): página + texto a resaltar. */
+export interface GotoPageDetail {
+  page: number
+  /** Primeras palabras del snippet fuente; si falta, solo se navega. */
+  query?: string
 }
 
 /**
@@ -72,30 +82,44 @@ function DocSearch({ onJump }: { onJump: (page: number) => void }) {
   )
 }
 
-interface PdfViewerDialogProps {
-  open: boolean
+interface PdfViewerBodyProps {
   file: File | null
   page: number
   onPageChange: (page: number) => void
-  onOpenChange: (open: boolean) => void
+  /** false = no carga ni renderiza (el diálogo está cerrado). */
+  enabled: boolean
+  /** Fase B: texto a resaltar tras navegar (query + nonce para re-disparar). */
+  highlight?: { query: string; nonce: number } | null
 }
 
 /**
- * Visor PDF embebido (P0): muestra la página citada sin salir de la app.
- * Las citas `[Pág. N]` del chat emiten `copixi:goto-page` y App abre este
- * diálogo en esa página. 100% local (pdfjs-dist ya era dependencia).
+ * Cuerpo del visor (Fase A): carga del documento + canvas + búsqueda +
+ * navegación. Sin cromo de diálogo, para reutilizarlo embebido en el panel
+ * lateral y dentro del diálogo modal.
+ *
+ * Fase B: capa de texto invisible de pdf.js sobre el canvas, solo para
+ * buscar y resaltar el fragmento fuente al llegar desde una cita.
  */
-export function PdfViewerDialog({ open, file, page, onPageChange, onOpenChange }: PdfViewerDialogProps) {
+function PdfViewerBody({ file, page, onPageChange, enabled, highlight }: PdfViewerBodyProps) {
   const docRef = useRef<any>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const textLayerRef = useRef<HTMLDivElement>(null)
+  const textLayerObjRef = useRef<InstanceType<typeof pdfjsLib.TextLayer> | null>(null)
+  const renderSeqRef = useRef(0)
+  const highlightRef = useRef(highlight)
+  useEffect(() => {
+    highlightRef.current = highlight
+  }, [highlight])
   const [numPages, setNumPages] = useState(0)
   const [loadError, setLoadError] = useState<string | null>(null)
+  /** true = se pidió resaltar pero el texto no apareció en la página. */
+  const [hitMiss, setHitMiss] = useState(false)
 
   const safePage = numPages > 0 ? Math.min(Math.max(1, page), numPages) : 1
 
   // Cargar documento (una vez por archivo)
   useEffect(() => {
-    if (!open || !file) return
+    if (!enabled || !file) return
     let cancelled = false
     setLoadError(null)
     setNumPages(0)
@@ -120,16 +144,46 @@ export function PdfViewerDialog({ open, file, page, onPageChange, onOpenChange }
       void destroyDoc(docRef.current)
       docRef.current = null
     }
-  }, [open, file])
+  }, [enabled, file])
 
-  // Renderizar página actual
+  // Marca coincidencias del snippet en la capa de texto. Devuelve true si
+  // marcó al menos una. Lógica pura en src/lib/highlight.ts (testeable).
+  // Nunca lanza: el fallo es solo "miss" honesto.
+  const applyHighlight = useCallback((): boolean => {
+    try {
+      const container = textLayerRef.current
+      const layer = textLayerObjRef.current
+      container?.querySelectorAll('.pdf-hit').forEach((el) => el.classList.remove('pdf-hit'))
+      const divs = layer?.textDivs as unknown as HTMLElement[] | undefined
+      if (!divs || divs.length === 0) return false
+      const idx = matchHighlightSpans(
+        divs.map((d) => d.textContent ?? ''),
+        highlightRef.current?.query ?? '',
+      )
+      idx.forEach((i) => {
+        if (divs[i]) divs[i].classList.add('pdf-hit')
+      })
+      return idx.length > 0
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Renderizar página actual. Si llega una query nueva con la página ya
+  // visible (misma página citada dos veces), el efecto re-corre y la aplica:
+  // una sola vía, sin condiciones de carrera entre render y resaltado.
+  // El resaltado vive dentro del bloque async (DOM externo), igual que el
+  // render del canvas.
+  const highlightNonce = highlight?.nonce
   useEffect(() => {
-    if (!open || !docRef.current || numPages === 0) return
+    if (!enabled || !docRef.current || numPages === 0) return
     let cancelled = false
+    const seq = ++renderSeqRef.current
+    setHitMiss(false)
     ;(async () => {
       try {
         const pdfPage = await docRef.current.getPage(safePage)
-        if (cancelled) return
+        if (cancelled || seq !== renderSeqRef.current) return
         const viewport = pdfPage.getViewport({ scale: 1 })
         const scale = Math.min(1.75, 640 / viewport.width)
         const scaled = pdfPage.getViewport({ scale })
@@ -140,18 +194,129 @@ export function PdfViewerDialog({ open, file, page, onPageChange, onOpenChange }
         const ctx = canvas.getContext('2d')
         if (!ctx) return
         await pdfPage.render({ canvasContext: ctx, viewport: scaled }).promise
+        if (cancelled || seq !== renderSeqRef.current) return
+        // TextLayer invisible sobre el canvas (Fase B): solo búsqueda y
+        // resaltado. Si falla, la página sigue visible sin marcas.
+        const container = textLayerRef.current
+        try {
+          textLayerObjRef.current?.cancel()
+        } catch {
+          /* ignore */
+        }
+        textLayerObjRef.current = null
+        if (container) {
+          container.innerHTML = ''
+          container.style.width = `${canvas.width}px`
+          container.style.height = `${canvas.height}px`
+          try {
+            const textContent = await pdfPage.getTextContent()
+            if (cancelled || seq !== renderSeqRef.current) return
+            const layer = new pdfjsLib.TextLayer({
+              container,
+              viewport: scaled,
+              textContentSource: textContent,
+            })
+            textLayerObjRef.current = layer
+            await layer.render()
+            if (cancelled || seq !== renderSeqRef.current) return
+            if (highlightRef.current?.query) {
+              setHitMiss(!applyHighlight())
+            }
+          } catch (tlErr) {
+            console.warn('[PdfViewer] text layer falló (se sigue sin resaltado)', tlErr)
+          }
+        }
+        try {
+          pdfPage.cleanup()
+        } catch {
+          /* ignore */
+        }
       } catch (err) {
         if (!cancelled) console.warn('[PdfViewer] render falló', err)
       }
     })()
     return () => { cancelled = true }
-  }, [open, safePage, numPages])
+  }, [enabled, safePage, numPages, highlightNonce, applyHighlight])
 
   const go = useCallback((next: number) => {
     if (numPages === 0) return
     onPageChange(Math.min(Math.max(1, next), numPages))
   }, [numPages, onPageChange])
 
+  if (!file) {
+    return <div className="pdf-viewer-empty">Carga un PDF para verlo aquí.</div>
+  }
+
+  return (
+    <>
+      {loadError ? (
+        <div className="pdf-viewer-error" role="alert">{loadError}</div>
+      ) : (
+        <>
+          <DocSearch onJump={(p) => go(p)} />
+          {hitMiss && (
+            <div className="pdf-hit-miss" role="status">
+              Fragmento no localizado en esta página, revísala directamente.
+            </div>
+          )}
+          <div className="pdf-viewer-body">
+            <div className="pdf-viewer-canvas-wrap">
+              <canvas
+                ref={canvasRef}
+                className="pdf-viewer-canvas"
+                role="img"
+                aria-label={`Página ${safePage}${numPages > 0 ? ` de ${numPages}` : ''} de ${file?.name ?? 'documento'}`}
+              />
+              <div ref={textLayerRef} className="pdf-text-layer" aria-hidden="true" />
+            </div>
+          </div>
+        </>
+      )}
+
+      {numPages > 0 && (
+        <div className="pdf-viewer-nav">
+          <button
+            type="button"
+            className="btn btn-secondary small"
+            onClick={() => go(safePage - 1)}
+            disabled={safePage <= 1}
+            aria-label="Página anterior"
+          >
+            ← Anterior
+          </button>
+          <span className="pdf-viewer-counter" aria-live="polite">
+            {safePage} / {numPages}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary small"
+            onClick={() => go(safePage + 1)}
+            disabled={safePage >= numPages}
+            aria-label="Página siguiente"
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+interface PdfViewerDialogProps {
+  open: boolean
+  file: File | null
+  page: number
+  onPageChange: (page: number) => void
+  onOpenChange: (open: boolean) => void
+  highlight?: { query: string; nonce: number } | null
+}
+
+/**
+ * Visor PDF en diálogo modal (P0 + mobile): las citas `[Pág. N]` del chat
+ * emiten `copixi:goto-page` y App abre este diálogo en esa página.
+ * 100% local (pdfjs-dist ya era dependencia).
+ */
+export function PdfViewerDialog({ open, file, page, onPageChange, onOpenChange, highlight }: PdfViewerDialogProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -163,56 +328,71 @@ export function PdfViewerDialog({ open, file, page, onPageChange, onOpenChange }
         >
           <div className="pdf-viewer-head">
             <Dialog.Title className="pdf-viewer-title">
-              {file?.name ?? 'Documento'} — Pág. {safePage}{numPages > 0 ? ` de ${numPages}` : ''}
+              {file?.name ?? 'Documento'} — Pág. {page}
             </Dialog.Title>
             <Dialog.Close className="btn btn-secondary small" aria-label="Cerrar visor">
               ✕ Cerrar
             </Dialog.Close>
           </div>
 
-          {loadError ? (
-            <div className="pdf-viewer-error" role="alert">{loadError}</div>
-          ) : (
-            <>
-              <DocSearch onJump={(p) => go(p)} />
-              <div className="pdf-viewer-body">
-              <canvas
-                ref={canvasRef}
-                className="pdf-viewer-canvas"
-                role="img"
-                aria-label={`Página ${safePage}${numPages > 0 ? ` de ${numPages}` : ''} de ${file?.name ?? 'documento'}`}
-              />
-              </div>
-            </>
-          )}
-
-          {numPages > 0 && (
-            <div className="pdf-viewer-nav">
-              <button
-                type="button"
-                className="btn btn-secondary small"
-                onClick={() => go(safePage - 1)}
-                disabled={safePage <= 1}
-                aria-label="Página anterior"
-              >
-                ← Anterior
-              </button>
-              <span className="pdf-viewer-counter" aria-live="polite">
-                {safePage} / {numPages}
-              </span>
-              <button
-                type="button"
-                className="btn btn-secondary small"
-                onClick={() => go(safePage + 1)}
-                disabled={safePage >= numPages}
-                aria-label="Página siguiente"
-              >
-                Siguiente →
-              </button>
-            </div>
-          )}
+          <PdfViewerBody file={file} page={page} onPageChange={onPageChange} enabled={open} highlight={highlight} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  )
+}
+
+interface PdfViewerPanelProps {
+  file: File | null
+  page: number
+  onPageChange: (page: number) => void
+  onHide: () => void
+  highlight?: { query: string; nonce: number } | null
+  /** Fase E: datos para el botón "Generar gráfica" (texto completo bajo demanda). */
+  docPages?: PdfPageText[]
+  docFilename?: string
+  docId?: string
+}
+
+/**
+ * Panel lateral del documento (Fase A): el mismo visor embebido en la
+ * columna derecha del layout split. Las citas del chat navegan aquí sin
+ * modal en desktop. El botón de gráficas queda reservado deshabilitado
+ * (hueco de Fase E) con tooltip honesto.
+ */
+export function PdfViewerPanel({ file, page, onPageChange, onHide, highlight, docPages, docFilename, docId }: PdfViewerPanelProps) {
+  return (
+    <section className="pdf-panel" id="pdf-panel" aria-label="Documento PDF">
+      <div className="pdf-panel-head">
+        <h2 className="pdf-panel-title" title={file?.name ?? 'Documento'}>
+          {file?.name ?? 'Documento'}
+        </h2>
+        <div className="pdf-panel-actions">
+          {docPages && docPages.length > 0 && docId ? (
+            <ChartFullButton key={docId} pages={docPages} filename={docFilename ?? file?.name ?? 'documento.pdf'} docId={docId} totalPages={docPages.length} />
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary small"
+              disabled
+              title="Disponible cuando el documento termine de cargarse"
+              aria-label="Generar gráfica del documento (cargando)"
+            >
+              Generar gráfica
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-secondary small"
+            onClick={onHide}
+            title="Ocultar el panel y volver a la vista centrada"
+            aria-label="Ocultar panel del documento"
+          >
+            Ocultar
+          </button>
+        </div>
+      </div>
+      <PdfViewerBody file={file} page={page} onPageChange={onPageChange} enabled highlight={highlight} />
+    </section>
   )
 }

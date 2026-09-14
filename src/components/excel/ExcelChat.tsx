@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useDashboard } from '../../state/DashboardContext'
 import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as cancelTts, isSpeaking } from '../../lib/tts'
 import type { MascotaMood } from '../../types/mascota'
@@ -7,6 +7,13 @@ import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg 
 import { Icon } from '../ui/Icon'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
 import { useDictation, getDictationSupport } from '../../lib/dictation'
+import { splitChartBlock, stripChartBlock, type ChartSpec } from '../../lib/chartJson'
+import { verifyChartSpec } from '../../lib/verifyChart'
+import { formatPageRange } from '../../lib/chartFull'
+import type { ChartFullResultDetail } from '../pdf/ChartFullButton'
+
+// Fase C: gráfica SVG propia en chunk separado (no engorda el bundle inicial).
+const ChartCard = lazy(() => import('../charts/ChartCard'))
 
 function setMascotaMood(m: MascotaMood) {
   window.dispatchEvent(new CustomEvent('copixi:mascota-mood', { detail: m }))
@@ -79,9 +86,11 @@ function renderInline(text: string): React.ReactNode[] {
 // Las citas son botones: abren el visor embebido en esa página (evento copixi:goto-page).
 const PAGE_CITE_RE = /\[P[áa]g\.?\s*(\d+)\]|\[P[áa]gina\s*(\d+)\]|\[p\.\s*(\d+)\]/gi
 
-function gotoPage(page: number) {
+function gotoPage(page: number, query?: string) {
   if (Number.isFinite(page) && page > 0) {
-    window.dispatchEvent(new CustomEvent('copixi:goto-page', { detail: page }))
+    // Fase B: con query (snippet fuente) el visor resalta el fragmento;
+    // sin query (pills inline) solo navega a la página.
+    window.dispatchEvent(new CustomEvent('copixi:goto-page', { detail: { page, query } }))
   }
 }
 
@@ -326,6 +335,27 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     lastQueryRef.current = ''
   }, [docId])
 
+  // Fase E: el resultado del chart-full (botón del panel) entra al chat como
+  // mensajes normales: pasa por el mismo pipeline (split → verificar → SVG)
+  // y persiste en el historial del documento. Se ignora si cambió el doc.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent<ChartFullResultDetail>).detail
+      if (!d || typeof d.text !== 'string' || !d.docId || d.docId !== docIdRef.current) return
+      const range = formatPageRange(d.analyzedPages ?? [])
+      const scope = d.truncated ? ` (${range} de ${d.totalPages} págs.)` : ` (${range})`
+      const now = Date.now()
+      setMessages((prev) => [
+        ...prev,
+        { id: `u-cf-${now}`, role: 'user', content: `Generar gráfica del documento${scope}` },
+        { id: `a-cf-${now}`, role: 'assistant', content: d.text, chartPages: d.analyzedPages },
+      ])
+      setMascotaMood('exito')
+    }
+    window.addEventListener('copixi:chart-full-result', handler as EventListener)
+    return () => window.removeEventListener('copixi:chart-full-result', handler as EventListener)
+  }, [])
+
   // …y persiste al completar respuestas (localStorage, truncado en storage.ts).
   useEffect(() => {
     if (docId && messages.length > 0 && (status === 'done' || status === 'idle')) {
@@ -334,7 +364,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   }, [messages, docId, status])
 
   async function handleCopy(id: string, text: string) {
-    const ok = await copyText(cleanAI(text))
+    const ok = await copyText(stripChartBlock(cleanAI(text)))
     if (ok) {
       setCopiedId(id)
       setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 2000)
@@ -346,7 +376,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     const prevUser = [...messages.slice(0, idx)].reverse().find((m) => m.role === 'user')
     const base = (pdfDoc?.filename ?? 'respuesta').replace(/\.pdf$/i, '') || 'respuesta'
     const sources = (msg.citations ?? []).map((c) => `- Pág. ${c.pageNumber}: ${c.snippet}`).join('\n')
-    const body = `# ${base}\n\n${prevUser ? `**Pregunta:** ${prevUser.content}\n\n` : ''}**Respuesta:**\n\n${cleanAI(msg.content)}\n\n${sources ? `**Fuentes:**\n\n${sources}\n` : ''}`
+    const body = `# ${base}\n\n${prevUser ? `**Pregunta:** ${prevUser.content}\n\n` : ''}**Respuesta:**\n\n${stripChartBlock(cleanAI(msg.content))}\n\n${sources ? `**Fuentes:**\n\n${sources}\n` : ''}`
     downloadMarkdown(`${base}.md`, body)
   }
 
@@ -536,7 +566,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
       setStatus('done')
       setMascotaMood('exito')
-      if (!getMuted() && acc) speak(firstSentence(cleanAI(acc)))
+      if (!getMuted() && acc) speak(firstSentence(stripChartBlock(cleanAI(acc))))
     } catch (e) {
       // Detener es una acción del usuario, no un error: limpia sin alarmar.
       if ((e instanceof DOMException && e.name === 'AbortError') || (e instanceof Error && e.name === 'AbortError')) {
@@ -608,7 +638,23 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     return null
   }, [messages])
 
-  const cleanedAi = useMemo(() => (lastAiMsg ? cleanAI(lastAiMsg.content) : ''), [lastAiMsg])
+  const cleanedAi = useMemo(() => {
+    const empty = { text: '', chart: null as ChartSpec | null, dropped: 0, total: 0, rejected: false, chartPages: null as number[] | null }
+    if (!lastAiMsg) return empty
+    const { text, chart: rawChart } = splitChartBlock(lastAiMsg.content)
+    // Fase D: ninguna cifra llega al SVG sin existir en el documento.
+    // Fase E: chartPages restringe al rango analizado bajo demanda.
+    const pages = lastAiMsg.chartPages ?? undefined
+    const v = verifyChartSpec(rawChart, (p) => ragClient.getPageTexts(p), pages)
+    return {
+      text: cleanAI(text),
+      chart: v.spec,
+      dropped: v.dropped,
+      total: v.total,
+      rejected: rawChart !== null && v.spec === null,
+      chartPages: pages ?? null,
+    }
+  }, [lastAiMsg])
 
   return (
     <div className="excel-chat-container" aria-label="Chat de Copixi">
@@ -650,9 +696,9 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   <Icon name="reload" size={14} /> Reintentar consulta
                 </button>
               </div>
-            ) : cleanedAi ? (
+            ) : cleanedAi.text ? (
               <div className="speech-bubble-text">
-                {renderRichText(sanitizeRichText(cleanedAi))}
+                {renderRichText(sanitizeRichText(cleanedAi.text))}
                 {lastAiMsg?.citations && lastAiMsg.citations.length > 0 && (
                   <div className="ai-citations-row" aria-label="Fuentes del documento">
                     <span className="citations-label">
@@ -668,7 +714,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                           <button
                             type="button"
                             className="citation-goto"
-                            onClick={() => gotoPage(c.pageNumber)}
+                            onClick={() => gotoPage(c.pageNumber, c.snippet)}
                             aria-label={`Ver página ${c.pageNumber} en el visor`}
                           >
                             Ver página →
@@ -676,6 +722,26 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                         </div>
                       </details>
                     ))}
+                  </div>
+                )}
+                {cleanedAi.chart && (
+                  <>
+                    {cleanedAi.dropped > 0 && (
+                      <div className="chart-notice" role="status">
+                        {cleanedAi.dropped} de {cleanedAi.total} datos no se verificaron en el documento; se muestran solo los verificados.
+                      </div>
+                    )}
+                    <Suspense fallback={<div className="chart-skeleton" role="status">Dibujando gráfica…</div>}>
+                      <ChartCard spec={cleanedAi.chart} />
+                    </Suspense>
+                    {cleanedAi.chartPages && (
+                      <div className="chart-scope">Analizado: {formatPageRange(cleanedAi.chartPages)}.</div>
+                    )}
+                  </>
+                )}
+                {cleanedAi.rejected && (
+                  <div className="chart-notice chart-rejected" role="status">
+                    Gráfica descartada: los datos no se verificaron en el documento.
                   </div>
                 )}
                 <div className="ai-actions-row">
@@ -744,10 +810,20 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
         <div className="chat-expanded-log card" ref={scrollRef} role="log" aria-live="polite">
           {messages.map((m, i) => {
             if (!m.content) return null
+            // Fase C: la gráfica vive en el mensaje; se extrae antes de sanitizar
+            // (el escape HTML rompería el JSON). Función pura, apta en el map.
+            const msgSplit = m.role === 'assistant' ? splitChartBlock(m.content) : null
+            const msgText = msgSplit ? cleanAI(msgSplit.text) : cleanAI(m.content)
+            // Fase D: verificación en vivo contra el índice del documento actual
+            // (el historial es por documento, así que el índice corresponde).
+            // Fase E: chartPages restringe al rango analizado bajo demanda.
+            const msgPages = m.chartPages ?? undefined
+            const msgVer = msgSplit?.chart ? verifyChartSpec(msgSplit.chart, (p) => ragClient.getPageTexts(p), msgPages) : null
+            const msgRejected = !!msgSplit?.chart && !msgVer?.spec
             return (
               <div key={i} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
                 <div className="excel-msg-body">
-                  {renderRichText(sanitizeRichText(cleanAI(m.content)))}
+                  {renderRichText(sanitizeRichText(msgText))}
                   {m.citations && m.citations.length > 0 && (
                     <div className="ai-citations-row" aria-label="Fuentes del documento">
                       <span className="citations-label">
@@ -763,7 +839,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                             <button
                               type="button"
                               className="citation-goto"
-                              onClick={() => gotoPage(c.pageNumber)}
+                              onClick={() => gotoPage(c.pageNumber, c.snippet)}
                               aria-label={`Ver página ${c.pageNumber} en el visor`}
                             >
                               Ver página →
@@ -779,6 +855,26 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                         <Icon name="copy" size={13} /> Copiar
                       </button>
                       {copiedId === m.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
+                    </div>
+                  )}
+                  {msgVer?.spec && (
+                    <>
+                      {msgVer.dropped > 0 && (
+                        <div className="chart-notice" role="status">
+                          {msgVer.dropped} de {msgVer.total} datos no se verificaron en el documento; se muestran solo los verificados.
+                        </div>
+                      )}
+                      <Suspense fallback={<div className="chart-skeleton" role="status">Dibujando gráfica…</div>}>
+                        <ChartCard spec={msgVer.spec} />
+                      </Suspense>
+                      {msgPages && (
+                        <div className="chart-scope">Analizado: {formatPageRange(msgPages)}.</div>
+                      )}
+                    </>
+                  )}
+                  {msgRejected && (
+                    <div className="chart-notice chart-rejected" role="status">
+                      Gráfica descartada: los datos no se verificaron en el documento.
                     </div>
                   )}
                 </div>

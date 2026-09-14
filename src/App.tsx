@@ -13,7 +13,7 @@ import { OnboardingTour } from './components/onboarding/OnboardingTour'
 import { type MascotaMood, type RobotUnitId } from './types/mascota'
 import { ragClient } from './lib/ragClient'
 import { PdfProcessingCard, type PdfProcessingState } from './components/dashboard/PdfProcessingCard'
-import { PdfViewerDialog } from './components/pdf/PdfViewer'
+import { PdfViewerDialog, PdfViewerPanel } from './components/pdf/PdfViewer'
 import { BriefingCard } from './components/pdf/BriefingCard'
 import { DocLibrary } from './components/pdf/DocLibrary'
 import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
@@ -41,6 +41,11 @@ function MainDashboard() {
   const briefingReqRef = useRef(0)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [viewer, setViewer] = useState<{ open: boolean; page: number }>({ open: false, page: 1 })
+  // Fase A — panel lateral: página visible + visibilidad (volver a vista centrada).
+  const [panelPage, setPanelPage] = useState(1)
+  const [panelVisible, setPanelVisible] = useState(true)
+  // Fase B — texto a resaltar en el visor (query + nonce para re-disparar).
+  const [panelHighlight, setPanelHighlight] = useState<{ query: string; nonce: number } | null>(null)
   const [currentLibId, setCurrentLibId] = useState<string | null>(null)
   const [libraryToken, setLibraryToken] = useState(0)
   const [customizerOpen, setCustomizerOpen] = useState(false)
@@ -179,6 +184,10 @@ function MainDashboard() {
       }
       setPdfFile(file)
       setPdfDoc(pdfResult)
+      // Fase A: documento nuevo → panel visible desde la página 1.
+      setPanelPage(1)
+      setPanelVisible(true)
+      setPanelHighlight(null)
       // Guardar en biblioteca de recientes (OPFS, sin bloquear).
       // Al re-abrir desde la biblioteca no se duplica la entrada.
       if (skipLibrarySaveRef.current) {
@@ -236,12 +245,29 @@ function MainDashboard() {
     }, 6000)
   }, [])
 
-  // Las citas [Pág. N] del chat abren el visor embebido en esa página.
+  // Las citas [Pág. N] del chat navegan al panel lateral (Fase A) y, si el
+  // panel está oculto, lo reabren. En pantallas estrechas el panel queda
+  // apilado debajo del chat y se hace scroll hasta él.
+  // Fase B: el evento puede traer `query` (snippet fuente) para resaltar el
+  // fragmento; sin query solo se navega. Se acepta número plano (legacy).
   useEffect(() => {
     const handler = (e: Event) => {
-      const page = (e as CustomEvent<number>).detail
+      const raw = (e as CustomEvent<number | { page: number; query?: string }>).detail
+      const page = typeof raw === 'number' ? raw : raw?.page
+      const query = typeof raw === 'object' && raw ? raw.query : undefined
       if (!Number.isFinite(page)) return
-      setViewer({ open: true, page: Math.max(1, Math.floor(page as number)) })
+      const p = Math.max(1, Math.floor(page as number))
+      setPanelPage(p)
+      setPanelVisible(true)
+      setPanelHighlight(query ? { query, nonce: Date.now() } : null)
+      setViewer((v) => ({ ...v, page: p }))
+      const reduceMotion =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      requestAnimationFrame(() => {
+        document.getElementById('pdf-panel')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' })
+      })
     }
     const openHandler = () => setViewer((v) => ({ open: true, page: v.page || 1 }))
     window.addEventListener('copixi:goto-page', handler as EventListener)
@@ -280,6 +306,11 @@ function MainDashboard() {
     const file = e.dataTransfer.files?.[0]
     if (file) parseFile(file)
   }, [parseFile])
+
+  // Fase A — split layout: con documento y panel visible, chat a la
+  // izquierda y PDF a la derecha; sin documento (o panel oculto), vista
+  // centrada original.
+  const showSplit = hasDocument && pdfFile !== null && panelVisible
 
   return (
     <div className="canvas-wrapper">
@@ -332,7 +363,7 @@ function MainDashboard() {
         </div>
       </div>
 
-      <main className="main-canvas" id="main-content">
+      <main className={`main-canvas${showSplit ? ' wide' : ''}`} id="main-content">
         <section
           className={`hero-excel ${dragging ? 'dropping' : ''}`}
           aria-label="Escenario interactivo del Robot Analista"
@@ -389,19 +420,50 @@ function MainDashboard() {
           )}
 
           {/* Briefing proactivo (Fase 24C): la IA trabaja antes de que escribas */}
-          {(briefing || briefingLoading) && (
-            <BriefingCard text={briefing} loading={briefingLoading} />
-          )}
+          <div className={showSplit ? 'doc-split' : 'doc-stack'}>
+            <div className="doc-chat-col">
+              {(briefing || briefingLoading) && (
+                <BriefingCard text={briefing} loading={briefingLoading} />
+              )}
 
-          {/* Interactive Speech Bubble & Excel Chat & MiniCharts */}
-          <ExcelChat onOpenFilePicker={() => inputRef.current?.click()} />
+              {hasDocument && pdfFile && !panelVisible && (
+                <button
+                  type="button"
+                  className="btn btn-secondary small"
+                  onClick={() => setPanelVisible(true)}
+                >
+                  <Icon name="file" size={14} /> Mostrar documento
+                </button>
+              )}
 
-          {error && (
-            <div role="alert" className="hero-error">
-              <Icon name="alert" size={16} />
-              <span>{error}</span>
+              {/* Interactive Speech Bubble & Excel Chat & MiniCharts */}
+              <ExcelChat onOpenFilePicker={() => inputRef.current?.click()} />
+
+              {error && (
+                <div role="alert" className="hero-error">
+                  <Icon name="alert" size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
             </div>
-          )}
+
+            {showSplit && (
+              <PdfViewerPanel
+                file={pdfFile}
+                page={panelPage}
+                onPageChange={(p) => {
+                  // Navegación manual: limpia el resaltado de la cita anterior.
+                  setPanelPage(p)
+                  setPanelHighlight(null)
+                }}
+                onHide={() => setPanelVisible(false)}
+                highlight={panelHighlight}
+                docPages={pdfDoc?.pages}
+                docFilename={pdfDoc?.filename}
+                docId={pdfDoc?.docId}
+              />
+            )}
+          </div>
         </section>
       </main>
 
@@ -409,8 +471,12 @@ function MainDashboard() {
         open={viewer.open}
         file={pdfFile}
         page={viewer.page}
-        onPageChange={(page) => setViewer((v) => ({ ...v, page }))}
+        onPageChange={(page) => {
+          setViewer((v) => ({ ...v, page }))
+          setPanelHighlight(null)
+        }}
         onOpenChange={(open) => setViewer((v) => ({ ...v, open }))}
+        highlight={panelHighlight}
       />
 
       <OnboardingTour

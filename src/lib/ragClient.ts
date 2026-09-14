@@ -280,6 +280,18 @@ class RagClient {
     return { ...this.state }
   }
 
+  /**
+   * Textos de los chunks de una página (Fase D): el verificador de gráficas
+   * comprueba cada cifra contra ellos. Solo memoria local, sin LLM.
+   */
+  public getPageTexts(pageNumber: number): string[] {
+    const out: string[] = []
+    for (const chunk of this.mainThreadChunks.values()) {
+      if (chunk.pageNumber === pageNumber && typeof chunk.text === 'string') out.push(chunk.text)
+    }
+    return out
+  }
+
   /** true si la última búsqueda cayó al fallback léxico (watchdog o sin worker). */
   public didLastSearchUseFallback(): boolean {
     return this.lastSearchUsedFallback

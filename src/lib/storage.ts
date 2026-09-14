@@ -131,11 +131,27 @@ export type ChatHistoryMsg = {
   content: string
   citations?: { pageNumber: number; snippet: string; matchType?: string }[]
   searchMode?: 'hybrid' | 'lexical_only'
+  /** Fase E: páginas analizadas por el chart-full (rango del verificador). */
+  chartPages?: number[]
 }
 
 const KEY_CHAT_PREFIX = 'copixi:chat:'
 const MAX_HISTORY_MSGS = 30
 const MAX_HISTORY_CHARS = 1500
+
+/**
+ * Recorta preservando el bloque chart-json del final: si hay fence y el
+ * texto excede, se recorta la prosa (no el JSON de la gráfica).
+ */
+export function trimHistoryContent(content: string): string {
+  if (content.length <= MAX_HISTORY_CHARS) return content
+  const fence = content.search(/```chart-json/i)
+  if (fence === -1) return content.slice(0, MAX_HISTORY_CHARS) + '…'
+  const tail = content.slice(fence)
+  if (tail.length >= MAX_HISTORY_CHARS) return content.slice(0, MAX_HISTORY_CHARS) + '…'
+  const headBudget = MAX_HISTORY_CHARS - tail.length - 2
+  return content.slice(0, Math.max(0, headBudget)) + '…\n' + tail
+}
 
 export function getChatHistory(docId: string): ChatHistoryMsg[] {
   if (typeof localStorage === 'undefined') return []
@@ -146,8 +162,9 @@ export function saveChatHistory(docId: string, msgs: ChatHistoryMsg[]): void {
   if (typeof localStorage === 'undefined') return
   const trimmed = msgs.slice(-MAX_HISTORY_MSGS).map((m) => ({
     ...m,
-    content: m.content.length > MAX_HISTORY_CHARS ? m.content.slice(0, MAX_HISTORY_CHARS) + '…' : m.content,
+    content: trimHistoryContent(m.content),
     citations: (m.citations ?? []).slice(0, 3),
+    chartPages: Array.isArray(m.chartPages) ? m.chartPages.filter((n) => Number.isFinite(n)).slice(0, 500) : undefined,
   }))
   try {
     localStorage.setItem(KEY_CHAT_PREFIX + docId, JSON.stringify(trimmed))

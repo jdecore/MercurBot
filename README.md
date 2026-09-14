@@ -31,6 +31,8 @@ Un **analista de documentos con IA**: subes un PDF y conversas con él, con cada
 2. Extracción de páginas + indexado local (MiniSearch inmediato, vectores MiniLM en Web Worker con OPFS)
 3. Pregunta en lenguaje natural → respuesta en streaming con citas `[Pág. N]` clicables: abren el visor embebido en esa página. Al abrir, la IA te recibe con un briefing de 3 puntos clicables (generado una vez, sin bloquear)
 4. Copia la respuesta o descárgala en `.md`; biblioteca de recientes (OPFS) para re-abrir sin re-subir; buscar-en-documento por páginas; historial por documento; dictado por voz + lectura de respuestas (TTS); mascota con voz y cara personalizable (colapsable con ⚙)
+5. Vista split chat | documento: las citas `[Pág. N]` abren la página en el panel lateral y **resaltan el fragmento fuente** (con aviso honesto si no se localiza)
+6. Gráficas verificadas: si preguntas por comparaciones/evoluciones con cifras, la IA devuelve chart-JSON y la app lo dibuja en SVG propio — cada cifra se verifica contra el documento (lo no verificado se elimina con aviso; sin verificación no hay gráfica). Botón **Generar gráfica** en el panel para analizar el documento completo bajo tu orden (con consentimiento inline, alcance visible y cancelación)
 
 ---
 
@@ -55,7 +57,7 @@ El motor tabular (profiler/statistics/transformations/anomalyDetection/chartAdap
 
 ### Capa de IA — chat propio + RAG local
 - **Frontend:** `ExcelChat.tsx` — cliente de chat propio y ligero (fetch + SSE `text-delta` a `/api/chat`, sin SDK externo). Ante cada consulta corre el pipeline RAG e inyecta los fragmentos con página.
-- **Backend único:** `api/chat.ts` — SDK oficial `@google/generative-ai` (Gemini) primario y fallback OpenRouter, 3 modos (chat SSE, `summary`, `extract`), rate-limit 20/min, `GEMINI_API_KEY` solo en server. Nunca recibe el documento, solo 3 fragmentos.
+- **Backend único:** `api/chat.ts` — SDK oficial `@google/generative-ai` (Gemini) primario y fallback OpenRouter, 4 modos (chat SSE, `summary`, `extract`, `chart-full`), rate-limit 20/min, `GEMINI_API_KEY` solo en server. Por defecto solo recibe 3 fragmentos; el texto completo (máx. 250 KB) viaja únicamente con `chart-full`, bajo orden explícita del usuario con consentimiento inline (Fase E).
 - **Pipeline de búsqueda RAG (Fases 14 + 24):** `src/lib/ragPipeline.ts` (`runRagPipeline`): modo híbrido Top 15 vectorial + Top 15 MiniSearch → fusión RRF (k=60) → Top 3 (lógica en `src/workers/rag.worker.ts`; embeddings MiniLM `Xenova/all-MiniLM-L6-v2` en Web Worker con persistencia OPFS); fallback Top 3 MiniSearch directo (`ragClient.searchMainThread` + watchdog con conmutación). Desde la Fase 24 el `docId` es la huella estable del archivo (`src/lib/fileHash.ts`), así que los vectores se recuperan de OPFS sin recompute al reabrir. `api/chat.ts` topea a 3 fragmentos de ≤1200 chars con formato `[Fragmento i | Pág. N]` e instruye citar `[Pág. N]`; `ExcelChat.tsx` renderiza citas inline en el streaming + badges expandibles con snippet/matchType e indica el modo (híbrida vs. léxica).
 - **Briefing + voz (Fase 24):** al indexar, `mode:'summary'` genera la tarjeta "Este documento en 3 puntos" (clicable al visor, degradado silencioso); el dock tiene dictado por voz (Web Speech API `es-ES`, sin deps, oculto sin soporte).
 
@@ -93,7 +95,7 @@ Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (serve
 
 ## Seguridad y Privacidad
 
-- *Your document stays in your browser.* Sin subida del PDF; la IA solo recibe 3 fragmentos con página (§8).
+- *Your document stays in your browser.* Sin subida del PDF; la IA solo recibe 3 fragmentos con página (§8). Excepción consentida (Fase E): el botón **Generar gráfica** envía el texto (máx. 250 KB) al proveedor de IA tras confirmación inline — nada se persiste.
 - Keys nunca en frontend ni logs. Rate-limit y validación de payload en la Function.
 - Solo se aceptan PDFs (30 MB); otros formatos se rechazan con mensaje accionable.
 - Errores que dirigen: PDF con contraseña, escaneado sin texto, límite de peticiones (429) y sin conexión explican causa + arreglo.
@@ -103,7 +105,7 @@ Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (serve
 ## Quality Gate (verificado)
 `pnpm build` ok · sin Tailwind/shadcn/lucide · solo Pixelarticons · sin `VITE_` secrets · sin backend tradicional (solo proxy mínimo) · PDF 100% local · RAG híbrido + citas verificables · responsive + a11y AA · ErrorBoundary + empty states.
 
-Fases 0–25 completadas (ver `AGENTS.md` §42/§43).
+Fases 0–34 completadas (ver `AGENTS.md` §42/§43): split chat|documento, cita→resaltado, gráficas SVG verificadas y chart-full bajo demanda.
 
 ---
 *Construido con pnpm, CSS nativo, Radix, pdfjs y chat SSE propio. Sin atajos. Sin humo. Solo producto.*
