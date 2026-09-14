@@ -1188,7 +1188,7 @@ button.citation-inline:focus-visible {
   overflow: auto;
   display: flex;
   justify-content: center;
-  background: #f1f5f9;
+  background: var(--color-surface-2);
   border-radius: 10px;
   padding: 10px;
   min-height: 200px;
@@ -1457,6 +1457,9 @@ button.citation-inline:focus-visible {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  /* D8: el anillo de foco de los botones nunca se recorta. */
+  overflow: visible;
+  padding: 2px;
 }
 .pdf-panel .pdf-viewer-body {
   flex: 1;
@@ -1469,6 +1472,12 @@ button.citation-inline:focus-visible {
   .pdf-panel {
     position: static;
     max-height: none;
+  }
+  /* D6: el dropdown ocupa el ancho del panel en mobile, no 260px a la derecha. */
+  .chart-full-box {
+    left: 0;
+    right: 0;
+    width: auto;
   }
 }
 
@@ -1790,8 +1799,8 @@ button.citation-inline:focus-visible {
     background-color: var(--color-bg);
   }
   .canvas-top-bar {
-    background: rgba(11, 15, 22, 0.8);
-    border-bottom-color: rgba(38, 49, 63, 0.9);
+    background: var(--color-bg);
+    border-bottom-color: var(--color-border);
   }
   .dataset-pill {
     background: var(--color-surface-2);
@@ -1822,7 +1831,8 @@ button.citation-inline:focus-visible {
     background: var(--color-surface-2);
   }
   .welcome-dropzone:hover {
-    background: #222d3d;
+    background: var(--color-surface-2);
+    border-color: var(--color-primary);
   }
   .mini-chart-card {
     background: var(--color-surface);
@@ -1871,20 +1881,20 @@ button.citation-inline:focus-visible {
     color: #4ade80;
   }
   .pdf-viewer-content {
-    background: #131a24;
+    background: var(--color-surface);
   }
   .pdf-panel {
-    background: #131a24;
+    background: var(--color-surface);
   }
   .chart-full-box {
-    background: #1b2431;
+    background: var(--color-surface);
   }
   .pdf-text-layer > span.pdf-hit {
     background: rgba(255, 170, 60, 0.5);
     box-shadow: 0 0 0 1px rgba(255, 170, 60, 0.6);
   }
   .pdf-viewer-body {
-    background: #0b0f16;
+    background: var(--color-bg);
   }
   .pdf-viewer-error {
     background: rgba(248, 113, 113, 0.1);

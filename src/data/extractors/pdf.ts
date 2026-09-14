@@ -265,7 +265,7 @@ export async function extractPdf(file: File, options: PdfExtractOptions = {}): P
       page: extractedPages.length,
       totalPages,
       percent: 100,
-      statusText: `¡Listo! ${extractedPages.length} páginas y ${chunks.length} fragmentos extraídos.`,
+      statusText: `¡Listo! ${extractedPages.length} páginas leídas.`,
     })
 
     return {

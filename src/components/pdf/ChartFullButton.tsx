@@ -43,7 +43,20 @@ export function ChartFullButton({
   useEffect(() => () => abortRef.current?.abort(), [])
 
   const openConfirm = () => {
-    setSel(selectChartFullPages(pages.map((p) => ({ pageNumber: p.pageNumber, text: p.text }))))
+    const selection = selectChartFullPages(pages.map((p) => ({ pageNumber: p.pageNumber, text: p.text })))
+    // Sin texto no hay confirmación que mostrar: aviso honesto directo
+    // (PDF escaneado). Antes el botón Enviar quedaba deshabilitado y la UI
+    // parecía atascada en el consentimiento.
+    if (selection.pages.length === 0) {
+      setSel(selection)
+      setError(
+        'Este documento no tiene texto extraíble — parece un PDF escaneado (solo imágenes). ' +
+          'La gráfica necesita texto: súbelo con texto seleccionable o pásalo por un OCR.',
+      )
+      setState('error')
+      return
+    }
+    setSel(selection)
     setError(null)
     setState('confirm')
   }

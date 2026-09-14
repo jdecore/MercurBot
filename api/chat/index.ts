@@ -68,9 +68,19 @@ function isRateLimited(ip: string): { limited: boolean; retryAfter: number } {
 function getClientIp(req: any): string {
   const h = req?.headers
   if (!h) return 'unknown'
-  let fwd: string | undefined
-  if (typeof h.get === 'function') fwd = h.get('x-forwarded-for')
-  else if (typeof h['x-forwarded-for'] === 'string') fwd = h['x-forwarded-for']
+  // M1: x-real-ip la pone la plataforma (no falsificable por el cliente);
+  // X-Forwarded-For sí: su primer elemento lo controla quien la inyecta.
+  const get = (k: string): string | undefined => {
+    if (typeof h.get === 'function') {
+      const v = h.get(k)
+      return typeof v === 'string' ? v : undefined
+    }
+    const v = h[k]
+    return typeof v === 'string' ? v : undefined
+  }
+  const real = get('x-real-ip')
+  if (real && real.trim()) return real.trim()
+  const fwd = get('x-forwarded-for')
   if (typeof fwd === 'string' && fwd) return fwd.split(',')[0].trim() || 'unknown'
   return 'unknown'
 }
@@ -84,9 +94,10 @@ function getOrigin(req: any): string {
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return true
-  if (ALLOWED_ORIGINS.includes(origin)) return true
-  if (origin.endsWith('.vercel.app')) return true
-  return false
+  // H2: whitelist exacta. El comodín *.vercel.app permitía que cualquiera
+  // desplegara evil.vercel.app y abusara la cuota desde navegadores ajenos.
+  // Previews de Vercel: si se necesitan, añadir su host exacto aquí.
+  return ALLOWED_ORIGINS.includes(origin)
 }
 
 function getContentType(req: any): string {
@@ -257,6 +268,25 @@ async function readBody(req: any, maxBytes = MAX_BODY_BYTES): Promise<any> {
     if (cl && Number(cl) > maxBytes) {
       throw new Error(`Body too large (max ${maxBytes} bytes).`)
     }
+    // M3: sin content-length (chunked) no hay pre-chequeo: leer el stream con
+    // contador para no materializar cuerpos gigantes en memoria.
+    if (!cl && req.body && typeof req.body.getReader === 'function') {
+      const reader = req.body.getReader()
+      const chunks: Uint8Array[] = []
+      let size = 0
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        size += value.byteLength
+        if (size > maxBytes) {
+          try { await reader.cancel() } catch { /* ignore */ }
+          throw new Error(`Body too large (max ${maxBytes} bytes).`)
+        }
+        chunks.push(value)
+      }
+      const text = Buffer.concat(chunks).toString('utf8')
+      return text ? JSON.parse(text) : {}
+    }
     // Vercel may already parse JSON for us; fall back only if needed
     try {
       return await req.json()
@@ -287,7 +317,8 @@ async function readBody(req: any, maxBytes = MAX_BODY_BYTES): Promise<any> {
 function makeResponder(res: any) {
   const isNode = typeof res !== 'undefined' && typeof res.setHeader === 'function'
   const corsHeaders: Record<string, string> = {
-    'access-control-allow-origin': 'same-origin',
+    // B1: sin ACAO. 'same-origin' no es un valor CORS válido (los navegadores
+    // lo tratan como "sin CORS"); las llamadas mismo-origen no lo necesitan.
     'access-control-allow-methods': 'POST, OPTIONS',
     'access-control-allow-headers': 'content-type',
     'access-control-max-age': '86400',
@@ -480,7 +511,11 @@ export default async function handler(req: any, res?: any): Promise<Response | v
     const text = await generate(prompt, EXCEL_SYSTEM)
     return respond.sse(sseChatText(text))
   } catch (err) {
+    // H1: en producción no se expone el error crudo del proveedor (puede
+    // traer nombres de modelo, cuota o fragmentos internos). Igual que
+    // summary/extract/chart-full.
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return respond.json(502, { error: 'AI provider error', detail: message.slice(0, 500) })
+    const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'
+    return respond.json(502, { error: 'AI provider error', detail: safe })
   }
 }

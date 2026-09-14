@@ -107,7 +107,7 @@ class RagClient {
         this.onProgressCb?.({
           phase: 'complete',
           percent: 100,
-          message: `Documento indexado (${payload.chunkCount} fragmentos). Modo: ${payload.mode}.`,
+          message: `Documento listo.`,
         })
         // Resuelve al llamador que espera la indexación real (no solo el post).
         this.indexResolvers.get(payload.docId)?.()
@@ -185,7 +185,7 @@ class RagClient {
       this.onProgressCb?.({
         phase: 'complete',
         percent: 100,
-        message: `Índice léxico listo en modo ligero (${chunks.length} fragmentos).`,
+          message: `Documento listo (modo ligero).`,
       })
     }
   }

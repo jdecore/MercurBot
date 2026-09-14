@@ -16,7 +16,7 @@
   --color-accent-hover: #14532d;
   --color-border: #E2D8C3;
   --color-success: #166534;
-  --color-warning: #c27803;
+  --color-warning: #8a5a00;
   --color-danger: #e02424;
 
   /* spacing */
@@ -131,6 +131,10 @@ a:hover { text-decoration: underline; }
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+/* D8: el anillo solo con teclado; con mouse no hay ruido visual. */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 #root {

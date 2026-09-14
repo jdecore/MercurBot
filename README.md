@@ -105,7 +105,7 @@ Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (serve
 ## Quality Gate (verificado)
 `pnpm build` ok · sin Tailwind/shadcn/lucide · solo Pixelarticons · sin `VITE_` secrets · sin backend tradicional (solo proxy mínimo) · PDF 100% local · RAG híbrido + citas verificables · responsive + a11y AA · ErrorBoundary + empty states.
 
-Fases 0–34 completadas (ver `AGENTS.md` §42/§43): split chat|documento, cita→resaltado, gráficas SVG verificadas y chart-full bajo demanda.
+Fases 0–36 completadas (ver `AGENTS.md` §42/§43): split chat|documento, cita→resaltado, gráficas SVG verificadas, chart-full bajo demanda y hardening post-auditoría triple (QA+seguridad+diseño).
 
 ---
 *Construido con pnpm, CSS nativo, Radix, pdfjs y chat SSE propio. Sin atajos. Sin humo. Solo producto.*

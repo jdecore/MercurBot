@@ -420,6 +420,19 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     setMascotaMood('escuchando')
     setStatus('submitted')
 
+    // Sin índice no hay qué buscar: respuesta local honesta sin quemar cuota
+    // de IA (PDF escaneado sin texto o indexación fallida). El LLM sin
+    // fragmentos solo puede responder en genérico.
+    if (pdfDoc && ragClient.getState().chunkCount === 0) {
+      const msg =
+        'No pude extraer texto de este documento — parece un PDF escaneado (solo imágenes). ' +
+        'Copixi necesita texto para analizar: súbelo con texto seleccionable o pásalo por un OCR antes de cargarlo.'
+      setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: msg } : m)))
+      setStatus('done')
+      setMascotaMood('neutro')
+      return
+    }
+
     // Fase 4 — Pipeline de búsqueda: híbrido (Top15 vec + Top15 léxico → RRF → Top3)
     // o fallback léxico Top3 directo. Ver src/lib/ragPipeline.ts + rag.worker.ts.
     let ragHits: RagPipelineHit[] = []
