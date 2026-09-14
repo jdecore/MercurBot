@@ -4,20 +4,27 @@
    (el woff2 con <i> vacíos no renderizaba ningún glifo). */
 
 :root {
-  /* colors — Fase A: papel/tinta naturales (un solo acento terracota) */
-  --color-bg: #FAF6EF;
-  --color-surface: #F5EEE1;
-  --color-surface-2: #EDE4D3;
-  --color-text: #1C1917;
-  --color-muted: #5E6A5E;
-  --color-primary: #B34A24;
-  --color-primary-hover: #A8441F;
-  --color-accent: #166534;
-  --color-accent-hover: #14532d;
-  --color-border: #E2D8C3;
-  --color-success: #166534;
+  /* colors — "Mercado al Atardecer": papel archivo + azul despacho + mango,
+     selva y jamaica tropicales pero formales (plan de rediseño aprobado) */
+  --color-bg: #EDEDE9;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #E2E2DB;
+  --color-text: #191B18;
+  --color-muted: #5A5E58;
+  --color-primary: #1D3A5F;
+  --color-primary-hover: #162A44;
+  --color-on-primary: #FFFFFF;
+  --color-accent: #A85B12;
+  --color-accent-hover: #8F5A00;
+  --color-on-accent: #FFFFFF;
+  --color-border: #D5D5CB;
+  --color-success: #1E6B45;
   --color-warning: #8a5a00;
-  --color-danger: #e02424;
+  --color-danger: #9E2B47;
+  /* softs derivados (auto-adaptan a oscuro por referenciar tokens) */
+  --color-danger-soft: color-mix(in srgb, var(--color-danger) 9%, var(--color-surface));
+  --color-warning-soft: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
 
   /* spacing */
   --space-xs: 4px;
@@ -104,17 +111,21 @@
    Los componentes usan var(--color-*) así que la mayoría cambia solo. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #171310;
-    --color-surface: #221C15;
-    --color-surface-2: #2C241A;
-    --color-text: #F1E8D9;
-    --color-muted: #A89E8C;
-    --color-primary: #E0784A;
-    --color-primary-hover: #E8865A;
-    --color-border: #3A3126;
+    --color-bg: #141715;
+    --color-surface: #1F2421;
+    --color-surface-2: #2A312C;
+    --color-text: #ECEEE8;
+    --color-muted: #A9AEA2;
+    --color-primary: #7FA8D0;
+    --color-primary-hover: #93B9DA;
+    --color-on-primary: #141715;
+    --color-accent: #E0A038;
+    --color-accent-hover: #EDB457;
+    --color-on-accent: #141715;
+    --color-border: #39413A;
     --color-success: #4ade80;
     --color-warning: #fbbf24;
-    --color-danger: #f87171;
+    --color-danger: #F87171;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.45), 0 10px 15px rgba(0, 0, 0, 0.35);
     color-scheme: dark;

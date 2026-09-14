@@ -719,7 +719,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     </span>
                     {lastAiMsg.citations.map((c, idx) => (
                       <details key={idx} className="citation-badge citation-details">
-                        <summary title={c.snippet}><Icon name="file" size={12} /> Pág. {c.pageNumber}</summary>
+                        <summary title={c.snippet}><Icon name="file" size={14} /> Pág. {c.pageNumber}</summary>
                         <div className="citation-snippet">
                           <q>{c.snippet}</q>
                           {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
@@ -759,10 +759,10 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 )}
                 <div className="ai-actions-row">
                   <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label="Copiar respuesta">
-                    <Icon name="copy" size={13} /> Copiar
+                    <Icon name="copy" size={14} /> Copiar
                   </button>
                   <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && handleDownloadMd(lastAiMsg)} aria-label="Descargar respuesta en Markdown">
-                    <Icon name="download" size={13} /> .md
+                    <Icon name="download" size={14} /> .md
                   </button>
                   {lastAiMsg && copiedId === lastAiMsg.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
                 </div>
@@ -844,7 +844,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                       </span>
                       {m.citations.map((c, idx) => (
                         <details key={idx} className="citation-badge citation-details">
-                          <summary title={c.snippet}><Icon name="file" size={12} /> Pág. {c.pageNumber}</summary>
+                          <summary title={c.snippet}><Icon name="file" size={14} /> Pág. {c.pageNumber}</summary>
                           <div className="citation-snippet">
                             <q>{c.snippet}</q>
                             {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
@@ -865,7 +865,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   {m.role === 'assistant' && (
                     <div className="ai-actions-row">
                       <button type="button" className="ai-action-btn" onClick={() => void handleCopy(m.id, m.content)} aria-label="Copiar respuesta">
-                        <Icon name="copy" size={13} /> Copiar
+                        <Icon name="copy" size={14} /> Copiar
                       </button>
                       {copiedId === m.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
                     </div>
@@ -976,11 +976,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
           />
           {loading ? (
             <button type="button" className="btn btn-primary btn-dock" onClick={stop} aria-label="Detener">
-              <Icon name="close" size={15} /> Detener
+              <Icon name="close" size={16} /> Detener
             </button>
           ) : (
             <button type="submit" className="btn btn-primary btn-dock" disabled={!input.trim()} aria-label="Enviar">
-              <Icon name="send" size={15} /> Enviar
+              <Icon name="send" size={16} /> Enviar
             </button>
           )}
         </form>

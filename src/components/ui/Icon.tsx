@@ -51,6 +51,9 @@ interface IconProps extends SVGProps<SVGSVGElement> {
 /**
  * Iconos Pixelarticons como SVG inline (AGENTS.md §18: solo Pixelarticons).
  * Sustituye al woff2 con <i> vacíos, que no renderizaba ningún glifo.
+ *
+ * Escala del rediseño Fase 5: 14 denso (inline, chips, summaries),
+ * 16 UI (botones), 18+ destacado (alertas, emblema del dropzone).
  */
 export function Icon({ name, size = 16, ...props }: IconProps) {
   const C = MAP[name]
