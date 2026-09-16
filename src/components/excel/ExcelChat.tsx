@@ -652,7 +652,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   }, [messages])
 
   const cleanedAi = useMemo(() => {
-    const empty = { text: '', chart: null as ChartSpec | null, dropped: 0, total: 0, rejected: false, chartPages: null as number[] | null }
+    const empty = { text: '', chart: null as ChartSpec | null, dropped: 0, total: 0, rejected: false, noChart: false, chartPages: null as number[] | null }
     if (!lastAiMsg) return empty
     const { text, chart: rawChart } = splitChartBlock(lastAiMsg.content)
     // Fase D: ninguna cifra llega al SVG sin existir en el documento.
@@ -665,6 +665,10 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       dropped: v.dropped,
       total: v.total,
       rejected: rawChart !== null && v.spec === null,
+      // El mensaje vino del botón Generar gráfica pero el modelo no devolvió
+      // bloque chart-json (sin cifras comparables): aviso honesto en vez de
+      // silencio, para que no parezca que el botón no hizo nada.
+      noChart: rawChart === null && pages !== undefined,
       chartPages: pages ?? null,
     }
   }, [lastAiMsg])
@@ -757,6 +761,12 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     Gráfica descartada: los datos no se verificaron en el documento.
                   </div>
                 )}
+                {cleanedAi.noChart && (
+                  <div className="chart-notice" role="status">
+                    El modelo no encontró cifras comparables en el alcance analizado y no devolvió gráfica.
+                    Prueba con un documento con tablas o cifras por página.
+                  </div>
+                )}
                 <div className="ai-actions-row">
                   <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label="Copiar respuesta">
                     <Icon name="copy" size={14} /> Copiar
@@ -833,6 +843,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             const msgPages = m.chartPages ?? undefined
             const msgVer = msgSplit?.chart ? verifyChartSpec(msgSplit.chart, (p) => ragClient.getPageTexts(p), msgPages) : null
             const msgRejected = !!msgSplit?.chart && !msgVer?.spec
+            const msgNoChart = m.role === 'assistant' && !msgSplit?.chart && msgPages !== undefined
             return (
               <div key={i} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
                 <div className="excel-msg-body">
@@ -888,6 +899,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   {msgRejected && (
                     <div className="chart-notice chart-rejected" role="status">
                       Gráfica descartada: los datos no se verificaron en el documento.
+                    </div>
+                  )}
+                  {msgNoChart && (
+                    <div className="chart-notice" role="status">
+                      El modelo no encontró cifras comparables en el alcance analizado y no devolvió gráfica.
                     </div>
                   )}
                 </div>

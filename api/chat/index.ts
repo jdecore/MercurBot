@@ -109,7 +109,9 @@ function getContentType(req: any): string {
 
 // Primary: Gemini. If it fails (e.g. tokens/quota exhausted, model unavailable),
 // it automatically falls back to OpenRouter (nvidia/nemotron-3.5-lightning:free).
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite'
+// Default a un modelo real de la familia 2.x: el valor anterior
+// (gemini-3.5-flash-lite) no existe y provocaba 404 del proveedor → 502.
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash'
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'nvidia/nemotron-3.5-lightning:free'
 
 const EXCEL_SYSTEM = `Eres compe, un analista experto en documentos PDF. Responde en español, de forma concisa, educada y práctica.

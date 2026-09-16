@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import './App.css'
 import { parseAnyFile, validateAnyFile } from './data/universalParser'
 import { DashboardProvider, useDashboard } from './state/DashboardContext'
@@ -385,33 +386,55 @@ function MainDashboard() {
                 : hasDocument ? `${robotName} listo${userName ? `, ${userName}` : ''}. Pregúntame lo que quieras de tu documento.` : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)}
             />
             <div className="customizer-toggle-row">
-              <button
-                type="button"
-                className="btn btn-secondary small"
-                onClick={() => setCustomizerOpen((o) => !o)}
-                aria-expanded={customizerOpen}
-                title="Cambiar la cara del robot"
-              >
-                ⚙ Personalizar robot
-              </button>
+              <Dialog.Root open={customizerOpen} onOpenChange={setCustomizerOpen}>
+                <Dialog.Trigger asChild>
+                  <button
+                    type="button"
+                    className="btn btn-secondary small"
+                    title="Cambiar la cara del robot"
+                  >
+                    ⚙ Personalizar robot
+                  </button>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Overlay className="customizer-overlay" />
+                  <Dialog.Content
+                    className="customizer-card"
+                    aria-describedby={undefined}
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                  >
+                    <div className="customizer-card-head">
+                      <div>
+                        <Dialog.Title className="customizer-card-title">
+                          Personaliza a {robotName || 'tu robot'}
+                        </Dialog.Title>
+                        <p className="customizer-card-sub">
+                          El nombre define su diseño base; cada rasgo se ajusta a mano. Todo se guarda en este navegador.
+                        </p>
+                      </div>
+                      <Dialog.Close className="btn btn-secondary small" aria-label="Cerrar personalización">
+                        ✕ Cerrar
+                      </Dialog.Close>
+                    </div>
+                    <MascotCustomizer
+                      face={mascotFace}
+                      robot={mascotRobot}
+                      name={blobatarName}
+                      robotName={robotName}
+                      config={robotConfig}
+                      onChange={(face, robot, name, rName, cfg) => {
+                        setMascotFace(face)
+                        setMascotRobot(robot)
+                        setBlobatarName(name)
+                        setRobotName(rName)
+                        setRobotConfig(cfg)
+                        savePreferences({ ...getPreferences(), mascotFace: face, mascotRobot: robot, blobatarName: name, robotName: rName, robotConfig: cfg })
+                      }}
+                    />
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
             </div>
-            {customizerOpen && (
-              <MascotCustomizer
-                face={mascotFace}
-                robot={mascotRobot}
-                name={blobatarName}
-                robotName={robotName}
-                config={robotConfig}
-                onChange={(face, robot, name, rName, cfg) => {
-                  setMascotFace(face)
-                  setMascotRobot(robot)
-                  setBlobatarName(name)
-                  setRobotName(rName)
-                  setRobotConfig(cfg)
-                  savePreferences({ ...getPreferences(), mascotFace: face, mascotRobot: robot, blobatarName: name, robotName: rName, robotConfig: cfg })
-                }}
-              />
-            )}
           </div>
 
           {/* Interactive PDF Processing Banner with Cancel */}
@@ -481,7 +504,11 @@ function MainDashboard() {
 
       <OnboardingTour
         open={tourOpen}
-        onOpenChange={setTourOpen}
+        // Saltar también cuenta como visto: sin esto el tour reaparecía en
+        // cada visita y su overlay bloqueaba toda la UI (incluido el botón
+        // Generar gráfica) hasta completarlo. Reabrir con ¿Cómo funciona?
+        // sigue disponible porque ese botón fija tourOpen en true.
+        onOpenChange={(open) => { if (!open) setOnboarded(); setTourOpen(open) }}
         initialUserName={userName}
         initialRobotName={robotName}
         onFinish={finishOnboarding}

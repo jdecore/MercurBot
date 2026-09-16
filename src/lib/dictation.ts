@@ -35,7 +35,7 @@ export interface DictationInstance {
   interimResults: boolean
   continuous: boolean
   maxAlternatives: number
-  onresult: ((e: { results: DictationResultList }) => void) | null
+  onresult: ((e: { results: DictationResultList; resultIndex?: number }) => void) | null
   onend: (() => void) | null
   onerror: ((e: { error: string }) => void) | null
   start: () => void
@@ -106,6 +106,7 @@ export function useDictation(opts: UseDictationOpts = {}) {
   const [dictationError, setDictationError] = useState<string | null>(null)
   const recRef = useRef<DictationInstance | null>(null)
   const finalRef = useRef('')
+  const seenFinalRef = useRef(0) // nº de segmentos finales ya acumulados (anti-duplicado)
   const timerRef = useRef<number | null>(null)
   const onFinalRef = useRef(onFinalText)
   useEffect(() => {
@@ -142,6 +143,7 @@ export function useDictation(opts: UseDictationOpts = {}) {
       /* sin TTS */
     }
     finalRef.current = ''
+    seenFinalRef.current = 0
     setInterim('')
     const rec = new Ctor()
     rec.lang = lang
@@ -149,17 +151,22 @@ export function useDictation(opts: UseDictationOpts = {}) {
     rec.continuous = true
     rec.maxAlternatives = 1
     rec.onresult = (e) => {
+      // La lista de resultados es acumulativa y cada evento re-emite lo ya
+      // visto: se reconstruye el texto final desde cero para no duplicar
+      // (bug anterior: finalRef += por evento). resultIndex vive en el
+      // EVENTO según la spec; se acepta en ambos sitios.
+      const from = e.resultIndex ?? e.results.resultIndex ?? 0
       let interimText = ''
-      for (let i = e.results.resultIndex ?? 0; i < e.results.length; i++) {
+      let finalText = ''
+      for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i]
         const transcript = r[0]?.transcript ?? ''
-        if (r.isFinal) {
-          finalRef.current += transcript
-          onFinalRef.current?.(finalRef.current.trim())
-        } else {
-          interimText += transcript
-        }
+        if (r.isFinal) finalText += transcript
+        else if (i >= from) interimText += transcript
       }
+      finalRef.current = finalText
+      seenFinalRef.current = e.results.length
+      if (finalText.trim()) onFinalRef.current?.(finalText.trim())
       setInterim(interimText)
     }
     rec.onerror = (e) => {

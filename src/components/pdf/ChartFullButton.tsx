@@ -95,6 +95,16 @@ export function ChartFullButton({
       if (!res.ok) {
         if (res.status === 429) throw new Error('Límite de peticiones alcanzado. Espera un minuto.')
         if (res.status === 413) throw new Error('Documento demasiado grande incluso tras la pre-selección.')
+        if (res.status === 404)
+          throw new Error(
+            'No hay backend /api en este entorno (Vite solo sirve el frontend). ' +
+              'En local usa `vercel dev` o `pnpm dev:api` para levantar /api/chat.',
+          )
+        if (res.status === 502)
+          throw new Error(
+            'La IA no respondió (502). Revisa la clave del proveedor (GEMINI_API_KEY válida u OPENROUTER_API_KEY) ' +
+              'y el modelo configurado (GEMINI_MODEL=gemini-2.0-flash). Reintenta en unos segundos.',
+          )
         throw new Error(`El servicio falló (${res.status}). Reintenta en unos segundos.`)
       }
       const data = (await res.json()) as { text?: string; analyzedPages?: number[]; error?: string }

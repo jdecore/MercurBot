@@ -30,7 +30,7 @@ Un **analista de documentos con IA**: subes un PDF y conversas con él, con cada
 1. Carga un PDF (drag & drop, 30 MB) — solo PDF, sin otros formatos
 2. Extracción de páginas + indexado local (MiniSearch inmediato, vectores MiniLM en Web Worker con OPFS)
 3. Pregunta en lenguaje natural → respuesta en streaming con citas `[Pág. N]` clicables: abren el visor embebido en esa página. Al abrir, la IA te recibe con un briefing de 3 puntos clicables (generado una vez, sin bloquear)
-4. Copia la respuesta o descárgala en `.md`; biblioteca de recientes (OPFS) para re-abrir sin re-subir; buscar-en-documento por páginas; historial por documento; dictado por voz + lectura de respuestas (TTS); mascota con voz y cara personalizable (colapsable con ⚙)
+4. Copia la respuesta o descárgala en `.md`; biblioteca de recientes (OPFS) para re-abrir sin re-subir; buscar-en-documento por páginas; historial por documento; dictado por voz + lectura de respuestas (TTS); mascota con voz y cara personalizable (tarjeta modal: 19 diseños por semilla, ojos, accesorios y 7 unidades base)
 5. Vista split chat | documento: las citas `[Pág. N]` abren la página en el panel lateral y **resaltan el fragmento fuente** (con aviso honesto si no se localiza)
 6. Gráficas verificadas: si preguntas por comparaciones/evoluciones con cifras, la IA devuelve chart-JSON y la app lo dibuja en SVG propio — cada cifra se verifica contra el documento (lo no verificado se elimina con aviso; sin verificación no hay gráfica). Botón **Generar gráfica** en el panel para analizar el documento completo bajo tu orden (con consentimiento inline, alcance visible y cancelación)
 
@@ -62,7 +62,7 @@ El motor tabular (profiler/statistics/transformations/anomalyDetection/chartAdap
 - **Briefing + voz (Fase 24):** al indexar, `mode:'summary'` genera la tarjeta "Este documento en 3 puntos" (clicable al visor, degradado silencioso); el dock tiene dictado por voz (Web Speech API `es-ES`, sin deps, oculto sin soporte).
 
 ### Estado y UI
-`src/state/DashboardContext.tsx` (fuente única mínima: `error`, `loading`, `pdfDoc`). Mascota única personalizable (260px, 7 unidades o Blobatar, TTS nativo, panel colapsable), modo oscuro automático (`prefers-color-scheme`, solo tokens), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta naranja/negro/blanco).
+`src/state/DashboardContext.tsx` (fuente única mínima: `error`, `loading`, `pdfDoc`). Mascota única personalizable (robot por semilla con 19 diseños + 7 unidades base o Blobatar, tarjeta de personalización modal, TTS nativo), modo oscuro automático (`prefers-color-scheme`, solo tokens), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta tropical-formal "Mercado al Atardecer": papel `#EDEDE9`, azul despacho, mango, selva, jamaica).
 
 ---
 
@@ -105,7 +105,7 @@ Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (serve
 ## Quality Gate (verificado)
 `pnpm build` ok · sin Tailwind/shadcn/lucide · solo Pixelarticons · sin `VITE_` secrets · sin backend tradicional (solo proxy mínimo) · PDF 100% local · RAG híbrido + citas verificables · responsive + a11y AA · ErrorBoundary + empty states.
 
-Fases 0–36 completadas (ver `AGENTS.md` §42/§43): split chat|documento, cita→resaltado, gráficas SVG verificadas, chart-full bajo demanda y hardening post-auditoría triple (QA+seguridad+diseño).
+Fases 0–42 completadas (ver `AGENTS.md` §42/§43): split chat|documento, cita→resaltado, gráficas SVG verificadas, chart-full bajo demanda, hardening post-auditoría triple (QA+seguridad+diseño), rediseño "Mercado al Atardecer" (tokens tropicales, CTA mango, iconos 14/16/18/22, QA visual 13/13 AA) y tarjeta modal de personalización del robot.
 
 ---
 *Construido con pnpm, CSS nativo, Radix, pdfjs y chat SSE propio. Sin atajos. Sin humo. Solo producto.*

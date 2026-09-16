@@ -32,6 +32,12 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    proxy: {
+      // En local, `pnpm dev` solo sirve el frontend: /api/* se reenvía al
+      // backend (vercel dev en :3000). Sin backend corriendo, /api/chat
+      // dará 404/ECONNREFUSED y la UI muestra el aviso accionable.
+      '/api': { target: 'http://localhost:3000', changeOrigin: true },
+    },
     fs: {
       deny: ['/api/**'],
     },

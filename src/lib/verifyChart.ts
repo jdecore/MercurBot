@@ -46,6 +46,7 @@ export function verifyChartSpec(
     const total = chart.data.length
     const allowed = allowedPages && allowedPages.length > 0 ? new Set(allowedPages) : null
     const cache = new Map<number, string[]>()
+    const numCache = new Map<number, number[]>()
     const tokensFor = (page: number): string[] => {
       const hit = cache.get(page)
       if (hit) return hit
@@ -61,10 +62,38 @@ export function verifyChartSpec(
       cache.set(page, toks)
       return toks
     }
+  /** Números de la página como floats (para tolerancia de redondeo). */
+  const numbersFor = (page: number): number[] => {
+    const hit = numCache.get(page)
+    if (hit) return hit
+    const nums: number[] = []
+    try {
+      for (const t of tokensFor(page)) {
+        const n = Number(t)
+        if (Number.isFinite(n)) nums.push(n)
+      }
+    } catch {
+      /* página ilegible → sin números */
+    }
+    numCache.set(page, nums)
+    return nums
+  }
+  /**
+   * Tolerancia de redondeo del modelo: exacto primero; si falla, se acepta
+   * si alguna cifra del documento está dentro de ±(0.5 + 0.5%·|value|).
+   * Cubre redondeos típicos (100.4→100, 12.345→12.35) sin aceptar inventos
+   * (100 nunca se verifica con 100.000: difieren en 4 órdenes de magnitud).
+   */
+  const isVerified = (value: number, page: number): boolean => {
+    const canon = canonNumberToken(String(value))
+    const toks = tokensFor(page)
+    if (toks.includes(canon)) return true
+    if (!Number.isFinite(value)) return false
+    const tol = 0.5 + 0.005 * Math.abs(value)
+    return numbersFor(page).some((n) => Math.abs(n - value) <= tol)
+  }
     const kept = chart.data.filter(
-      (d) =>
-        (!allowed || allowed.has(d.sourcePage)) &&
-        tokensFor(d.sourcePage).includes(canonNumberToken(String(d.value))),
+      (d) => (!allowed || allowed.has(d.sourcePage)) && isVerified(d.value, d.sourcePage),
     )
     const dropped = total - kept.length
     if (kept.length < 2) return { spec: null, verified: 0, dropped: total, total }

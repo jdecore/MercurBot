@@ -88,8 +88,8 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
 
   return (
     <div className="mascot-customizer" role="group" aria-label="Personalizar mascota">
-      <div className="mascot-customizer-row">
-        <span className="mascot-customizer-label">Cara:</span>
+      <section className="customizer-section" aria-label="Cara de la mascota">
+        <h3 className="customizer-section-title">Cara</h3>
         <div className="mascot-face-toggle" role="radiogroup" aria-label="Cara de la mascota">
           <button
             type="button"
@@ -110,40 +110,43 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
             <Icon name="user" size={14} /> Mi avatar
           </button>
         </div>
-      </div>
+      </section>
 
       {face === 'robot' && (
         <>
-          <div className="mascot-customizer-preview" aria-hidden>
-            <Mascota variant={robot} config={config} mood="neutro" size={120} />
+          <div className="customizer-hero" aria-hidden>
+            <Mascota variant={robot} config={config} mood="neutro" size={140} />
+            <p className="customizer-hero-name">{sanitizeRobotName(robotDraft || robotName)}</p>
           </div>
 
-          <div className="mascot-customizer-row">
-            <label className="mascot-name-field">
-              <span className="mascot-customizer-label">Mi robot se llama:</span>
-              <input
-                type="text"
-                value={robotDraft}
-                maxLength={MAX_NAME}
-                placeholder={DEFAULT_ROBOT_NAME}
-                onChange={(e) => setRobotDraft(e.target.value)}
-                onBlur={applyRobotName}
-                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                aria-label="Nombre del robot (define su diseño base)"
-              />
-            </label>
-            <button
-              type="button"
-              className="btn btn-secondary small"
-              onClick={surprise}
-              title="Generar otro diseño desde el nombre"
-            >
-              🎲 Sorpréndeme
-            </button>
-          </div>
+          <section className="customizer-section" aria-label="Nombre del robot">
+            <h3 className="customizer-section-title">Mi robot se llama</h3>
+            <div className="mascot-customizer-row">
+              <label className="mascot-name-field">
+                <input
+                  type="text"
+                  value={robotDraft}
+                  maxLength={MAX_NAME}
+                  placeholder={DEFAULT_ROBOT_NAME}
+                  onChange={(e) => setRobotDraft(e.target.value)}
+                  onBlur={applyRobotName}
+                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                  aria-label="Nombre del robot (define su diseño base)"
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-secondary small"
+                onClick={surprise}
+                title="Generar otro diseño desde el nombre"
+              >
+                <Icon name="reload" size={14} /> Sorpréndeme
+              </button>
+            </div>
+          </section>
 
-          <div className="mascot-customizer-row">
-            <span className="mascot-customizer-label">Diseño:</span>
+          <section className="customizer-section" aria-label="Diseño del robot">
+            <h3 className="customizer-section-title">Diseño</h3>
             <div className="mascot-design-picker" role="radiogroup" aria-label="Diseño del robot">
               {ROBOT_DESIGN_LIST.map((d) => {
                 const selected = config.color === d.id
@@ -169,10 +172,10 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
                 )
               })}
             </div>
-          </div>
+          </section>
 
-          <div className="mascot-customizer-row">
-            <span className="mascot-customizer-label">Ojos:</span>
+          <section className="customizer-section" aria-label="Ojos del robot">
+            <h3 className="customizer-section-title">Ojos</h3>
             <div className="mascot-face-toggle" role="radiogroup" aria-label="Ojos del robot">
               {EYES_OPTIONS.map((o) => (
                 <button
@@ -187,10 +190,10 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="mascot-customizer-row">
-            <span className="mascot-customizer-label">Extra:</span>
+          <section className="customizer-section" aria-label="Accesorio del robot">
+            <h3 className="customizer-section-title">Extra</h3>
             <div className="mascot-face-toggle" role="radiogroup" aria-label="Accesorio del robot">
               {ACCESSORY_OPTIONS.map((o) => (
                 <button
@@ -205,10 +208,10 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="mascot-customizer-row">
-            <span className="mascot-customizer-label">Unidad base:</span>
+          <section className="customizer-section" aria-label="Unidad base del robot">
+            <h3 className="customizer-section-title">Unidad base</h3>
             <div className="mascot-unit-picker" role="radiogroup" aria-label="Unidad base del robot">
               {(Object.keys(ROBOT_UNITS) as RobotUnitId[]).map((id) => {
                 const meta = ROBOT_UNITS[id]
@@ -231,29 +234,31 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
                 )
               })}
             </div>
-          </div>
+          </section>
         </>
       )}
 
       {face === 'blobatar' && (
-        <div className="mascot-customizer-row">
-          <span className="mascot-avatar-preview" aria-hidden>
-            <Blobatar name={sanitize(draft || name)} size={40} />
-          </span>
-          <label className="mascot-name-field">
-            <span className="mascot-customizer-label">Nombre del avatar:</span>
-            <input
-              type="text"
-              value={draft}
-              maxLength={MAX_NAME}
-              placeholder={DEFAULT_BLOBATAR_NAME}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={applyName}
-              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-              aria-label="Nombre del avatar (define su apariencia)"
-            />
-          </label>
-        </div>
+        <section className="customizer-section" aria-label="Nombre del avatar">
+          <h3 className="customizer-section-title">Mi avatar</h3>
+          <div className="mascot-customizer-row">
+            <span className="mascot-avatar-preview" aria-hidden>
+              <Blobatar name={sanitize(draft || name)} size={40} />
+            </span>
+            <label className="mascot-name-field">
+              <input
+                type="text"
+                value={draft}
+                maxLength={MAX_NAME}
+                placeholder={DEFAULT_BLOBATAR_NAME}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={applyName}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                aria-label="Nombre del avatar (define su apariencia)"
+              />
+            </label>
+          </div>
+        </section>
       )}
     </div>
   )
