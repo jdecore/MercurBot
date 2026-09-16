@@ -105,6 +105,11 @@ export function ChartFullButton({
             'La IA no respondió (502). Revisa la clave del proveedor (GEMINI_API_KEY válida u OPENROUTER_API_KEY) ' +
               'y el modelo configurado (GEMINI_MODEL=gemini-2.0-flash). Reintenta en unos segundos.',
           )
+        if (res.status === 504)
+          throw new Error(
+            'La generación tardó demasiado y el servidor la cortó (504). Suele pasar con documentos grandes: ' +
+              'reintenta en unos segundos (a veces el segundo intento responde más rápido) o prueba con un PDF más corto.',
+          )
         throw new Error(`El servicio falló (${res.status}). Reintenta en unos segundos.`)
       }
       const data = (await res.json()) as { text?: string; analyzedPages?: number[]; error?: string }

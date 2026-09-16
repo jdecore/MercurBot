@@ -6,7 +6,7 @@
   "functions": {
     "api/chat/index.ts": {
       "includeFiles": "api/**",
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
   "headers": [

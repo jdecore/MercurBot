@@ -1,5 +1,5 @@
 /**
- * Copixi — Unified Vercel Function (Gemini + OpenRouter fallback)
+ * Copixi — Unified Vercel Function (Gemini + Groq + OpenRouter fallback)
  *
  * AGENTS.md §11: Minimal proxy. Protects keys, validates input, rate-limits.
  * Handles three shapes:

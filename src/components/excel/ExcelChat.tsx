@@ -703,6 +703,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     <span>El endpoint <code>/api/chat</code> no está respondiendo en este entorno (si estás en <code>vite dev</code>, asegúrate de correr con Vercel CLI o configurar la API).</span>
                   ) : error.includes('500') || error.includes('GEMINI_API_KEY') || error.includes('502') ? (
                     <span>El servicio de IA falló o falta configurar <code>GEMINI_API_KEY</code> en tu servidor o Vercel. Reintenta en unos segundos.</span>
+                  ) : error.includes('504') ? (
+                    <span>El servidor tardó demasiado en responder (504, timeout). Reintenta en unos segundos; si usaste Generar gráfica con un documento grande, prueba de nuevo o con un PDF más corto.</span>
                   ) : error.includes('fetch') || error.includes('Failed to fetch') || error.includes('NetworkError') ? (
                     <span>Sin conexión con el servidor. Revisa tu internet y que la app esté desplegada con <code>/api/chat</code> disponible.</span>
                   ) : (
