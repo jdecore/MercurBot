@@ -17,7 +17,6 @@ import { PdfProcessingCard, type PdfProcessingState } from './components/dashboa
 import { PdfViewerDialog, PdfViewerPanel } from './components/pdf/PdfViewer'
 import { BriefingCard } from './components/pdf/BriefingCard'
 import { Sidebar } from './components/layout/Sidebar'
-import { EngineStatus } from './components/layout/EngineStatus'
 import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
 
@@ -348,6 +347,14 @@ function MainDashboard() {
   // centrada original.
   const showSplit = hasDocument && pdfFile !== null && panelVisible
 
+  const blurActive = () => {
+    // El drawer es un Dialog modal: Radix oculta el fondo con aria-hidden al
+    // cerrar. Si el foco queda en un botón del drawer, el navegador bloquea
+    // el aria-hidden (warning) — se cede el foco antes de cerrar.
+    const el = document.activeElement as HTMLElement | null
+    if (el && typeof el.blur === 'function') el.blur()
+  }
+
   const sidebar = (
     <Sidebar
       currentId={currentLibId}
@@ -356,16 +363,23 @@ function MainDashboard() {
       userName={userName}
       robotName={robotName}
       onNewAnalysis={newAnalysis}
-      onOpenDoc={(doc) => void openLibraryDoc(doc.id)}
+      onUpload={() => inputRef.current?.click()}
+      onOpenDoc={(doc) => {
+        blurActive()
+        setSidebarOpen(false)
+        void openLibraryDoc(doc.id)
+      }}
       onRemoved={() => {
         setCurrentLibId(null)
         setLibraryToken((t) => t + 1)
       }}
       onCustomize={() => {
+        blurActive()
         setSidebarOpen(false)
         setCustomizerOpen(true)
       }}
       onHowItWorks={() => {
+        blurActive()
         setSidebarOpen(false)
         setTourOpen(true)
       }}
@@ -385,47 +399,24 @@ function MainDashboard() {
         </aside>
 
         <div className="app-main">
-      {/* Floating Minimal Controls Bar */}
-      <div className="canvas-top-bar" role="navigation" aria-label="Controles rápidos">
-        <button
-          type="button"
-          className="btn btn-secondary small sidebar-toggle"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Abrir navegación"
-          aria-expanded={sidebarOpen}
-        >
-          <Icon name="menu" size={16} />
-        </button>
-        <div className="canvas-brand" aria-label="Copixi AI">
-          <span className="brand-mark" aria-hidden>◈</span>
-          <span className="brand-title">Copixi</span>
-          <span className="brand-sub">tu lector de PDFs</span>
-        </div>
-
-        <div className="canvas-actions">
-          {hasDocument && pdfDoc && (
-            <div className="dataset-pill" title={pdfDoc.filename}>
-              <Icon name="file" size={14} />
-              <span>Leyendo: {pdfDoc.filename} · {pdfDoc.totalPages} págs</span>
-            </div>
-          )}
-          <EngineStatus />
           <button
             type="button"
-            className="btn btn-secondary small"
-            onClick={() => inputRef.current?.click()}
+            className="btn btn-secondary small fab-menu"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Abrir navegación"
+            aria-expanded={sidebarOpen}
           >
-            <Icon name="upload" size={14} /> Cargar PDF
+            <Icon name="menu" size={16} />
           </button>
           <input
             ref={inputRef}
             type="file"
             accept=".pdf,application/pdf"
             hidden
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) parseFile(f) }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) parseFile(f); e.target.value = '' }}
+            aria-hidden
+            tabIndex={-1}
           />
-        </div>
-      </div>
 
       <main className={`main-canvas${showSplit ? ' wide' : ''}`} id="main-content">
         <section

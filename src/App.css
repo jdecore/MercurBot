@@ -13,7 +13,6 @@
 .dock-attach-btn svg,
 .ai-action-btn svg,
 .citation-badge svg,
-.dataset-pill svg,
 .error-badge-row svg {
   display: block;
   flex: none;
@@ -100,27 +99,7 @@ summary svg {
   justify-content: center;
 }
 
-/* Floating minimal top controls */
-.canvas-top-bar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  padding: 12px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  backdrop-filter: blur(10px);
-  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
-}
-.canvas-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 750;
-  font-size: 15px;
-  letter-spacing: -0.02em;
-}
+/* Marca Copixi (sidebar + drawer) */
 .brand-mark {
   width: 28px;
   height: 28px;
@@ -131,26 +110,6 @@ summary svg {
   place-items: center;
   font-size: 14px;
   box-shadow: 0 2px 5px color-mix(in srgb, var(--color-primary) 25%, transparent);
-}
-.canvas-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.dataset-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 2px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-muted);
-  max-width: 320px;
-}
-.dataset-pill span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .btn-upload-excel {
   display: inline-flex;
@@ -1764,13 +1723,6 @@ button.citation-inline:focus-visible {
   .canvas-wrapper {
     background-color: var(--color-bg);
   }
-  .canvas-top-bar {
-    background: var(--color-bg);
-    border-bottom-color: var(--color-border);
-  }
-  .dataset-pill {
-    background: var(--color-surface-2);
-  }
   .speech-bubble,
   .excel-dock-input,
   .card,
@@ -1871,9 +1823,6 @@ button.citation-inline:focus-visible {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-.app-main .canvas-top-bar {
-  position: sticky;
 }
 .sidebar-brand {
   display: flex;
@@ -2049,9 +1998,6 @@ button.citation-inline:focus-visible {
   flex-wrap: wrap;
   gap: 6px;
 }
-.sidebar-toggle {
-  display: none;
-}
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -2089,9 +2035,6 @@ button.citation-inline:focus-visible {
   }
   .app-sidebar {
     display: none;
-  }
-  .sidebar-toggle {
-    display: inline-flex;
   }
 }
 
@@ -2182,4 +2125,19 @@ button.citation-inline:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .engine-dot.busy { animation: none; }
+}
+
+/* Sin top-bar: el menú vive en el sidebar; en mobile un botón flotante. */
+.fab-menu {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 50;
+  box-shadow: var(--shadow-md);
+}
+@media (max-width: 900px) {
+  .fab-menu {
+    display: inline-flex;
+  }
 }

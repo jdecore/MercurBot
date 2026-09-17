@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { listLibrary, removeFromLibrary, type LibDoc } from '../../lib/docLibrary'
 import { Icon } from '../ui/Icon'
+import { EngineStatus } from './EngineStatus'
 
 interface SidebarProps {
   currentId: string | null
@@ -9,6 +10,7 @@ interface SidebarProps {
   userName: string
   robotName: string
   onNewAnalysis: () => void
+  onUpload: () => void
   onOpenDoc: (doc: LibDoc) => void
   onRemoved: () => void
   onCustomize: () => void
@@ -40,6 +42,7 @@ export function Sidebar({
   userName,
   robotName,
   onNewAnalysis,
+  onUpload,
   onOpenDoc,
   onRemoved,
   onCustomize,
@@ -58,8 +61,12 @@ export function Sidebar({
 
   return (
     <div className="sidebar-body">
+      <EngineStatus />
       <button type="button" className="btn btn-primary sidebar-new" onClick={onNewAnalysis}>
         <Icon name="plus" size={16} /> Nuevo análisis
+      </button>
+      <button type="button" className="btn btn-secondary sidebar-new" onClick={onUpload}>
+        <Icon name="upload" size={16} /> Cargar PDF
       </button>
 
       <nav className="sidebar-section" aria-label="Documentos recientes">
