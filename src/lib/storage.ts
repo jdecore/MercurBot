@@ -131,6 +131,8 @@ export type ChatHistoryMsg = {
   content: string
   citations?: { pageNumber: number; snippet: string; matchType?: string }[]
   searchMode?: 'hybrid' | 'lexical_only'
+  /** Etiqueta del proveedor+modelo que respondió (píldora UI). */
+  model?: string
   /** Fase E: páginas analizadas por el chart-full (rango del verificador). */
   chartPages?: number[]
 }

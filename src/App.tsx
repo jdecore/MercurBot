@@ -38,6 +38,7 @@ function MainDashboard() {
   const [tourOpen, setTourOpen] = useState(() => !hasOnboarded())
   const [pdfProcessing, setPdfProcessing] = useState<PdfProcessingState | null>(null)
   const [briefing, setBriefing] = useState<string | null>(null)
+  const [briefingModel, setBriefingModel] = useState<string | undefined>(undefined)
   const [briefingLoading, setBriefingLoading] = useState(false)
   const briefingReqRef = useRef(0)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
@@ -63,6 +64,7 @@ function MainDashboard() {
     }
     briefingReqRef.current++ // el briefing en vuelo ya no corresponde
     setBriefing(null)
+    setBriefingModel(undefined)
     setBriefingLoading(false)
     setPdfProcessing(null)
     setLoading(false)
@@ -80,6 +82,7 @@ function MainDashboard() {
   const loadBriefing = useCallback(async (doc: { filename: string; totalPages: number; chunks: { length: number }; fullText: string }) => {
     const my = ++briefingReqRef.current
     setBriefing(null)
+    setBriefingModel(undefined)
     setBriefingLoading(true)
     try {
       const sample = doc.fullText.replace(/\s+/g, ' ').trim().slice(0, 4000)
@@ -97,9 +100,12 @@ function MainDashboard() {
           },
         }),
       })
-      const json = (await res.json()) as { text?: string; error?: string }
+      const json = (await res.json()) as { text?: string; model?: string; error?: string }
       if (my !== briefingReqRef.current) return
-      if (res.ok && json.text?.trim()) setBriefing(json.text.trim())
+      if (res.ok && json.text?.trim()) {
+        setBriefing(json.text.trim())
+        if (typeof json.model === 'string' && json.model) setBriefingModel(json.model)
+      }
     } catch {
       /* degradado silencioso */
     } finally {
@@ -119,7 +125,7 @@ function MainDashboard() {
     }
     abortControllerRef.current = null
     setLoading(true); setError(null)
-    setBriefing(null); setBriefingLoading(false)
+    setBriefing(null); setBriefingModel(undefined); setBriefingLoading(false)
 
     try {
       const controller = new AbortController()
@@ -446,7 +452,7 @@ function MainDashboard() {
           <div className={showSplit ? 'doc-split' : 'doc-stack'}>
             <div className="doc-chat-col">
               {(briefing || briefingLoading) && (
-                <BriefingCard text={briefing} loading={briefingLoading} />
+                <BriefingCard text={briefing} loading={briefingLoading} model={briefingModel} />
               )}
 
               {hasDocument && pdfFile && !panelVisible && (

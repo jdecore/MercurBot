@@ -18,6 +18,8 @@ export interface ChartFullResultDetail {
   analyzedPages: number[]
   truncated: boolean
   totalPages: number
+  /** Etiqueta del proveedor+modelo que respondió (píldora UI). */
+  model?: string
 }
 
 type CfState = 'idle' | 'confirm' | 'working' | 'error'
@@ -102,7 +104,7 @@ export function ChartFullButton({
           )
         if (res.status === 502)
           throw new Error(
-            'La IA no respondió (502). Revisa la clave del proveedor (GEMINI_API_KEY válida u OPENROUTER_API_KEY) ' +
+            'La IA no respondió (502). Revisa las claves del proveedor (GEMINI_API_KEY, GROQ_API_KEY u OPENROUTER_API_KEY válidas) ' +
               'y el modelo configurado (GEMINI_MODEL=gemini-2.0-flash). Reintenta en unos segundos.',
           )
         if (res.status === 504)
@@ -112,7 +114,7 @@ export function ChartFullButton({
           )
         throw new Error(`El servicio falló (${res.status}). Reintenta en unos segundos.`)
       }
-      const data = (await res.json()) as { text?: string; analyzedPages?: number[]; error?: string }
+      const data = (await res.json()) as { text?: string; analyzedPages?: number[]; model?: string; error?: string }
       if (!data.text || typeof data.text !== 'string') {
         throw new Error(data.error ?? 'El modelo no devolvió análisis. Reintenta.')
       }
@@ -124,6 +126,7 @@ export function ChartFullButton({
             analyzedPages: Array.isArray(data.analyzedPages) ? data.analyzedPages : selection.analyzedPages,
             truncated: selection.truncated,
             totalPages,
+            model: typeof data.model === 'string' ? data.model : undefined,
           },
         }),
       )

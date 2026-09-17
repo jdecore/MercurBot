@@ -57,6 +57,17 @@ function cleanAI(text: string): string {
   return text
 }
 
+// Píldora que indica qué proveedor+modelo generó la respuesta
+// (el backend lo informa en el evento `start` del SSE y en los JSON).
+export function ModelPill({ model }: { model?: string }) {
+  if (!model) return null
+  return (
+    <span className="model-pill" title={`Generado por ${model}`}>
+      ✦ {model}
+    </span>
+  )
+}
+
 // La voz lee solo la primera frase: suena humano en vez de recitar el informe.
 function firstSentence(text: string): string {
   const clean = text.replace(/\s+/g, ' ').trim()
@@ -348,7 +359,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       setMessages((prev) => [
         ...prev,
         { id: `u-cf-${now}`, role: 'user', content: `Generar gráfica del documento${scope}` },
-        { id: `a-cf-${now}`, role: 'assistant', content: d.text, chartPages: d.analyzedPages },
+        { id: `a-cf-${now}`, role: 'assistant', content: d.text, chartPages: d.analyzedPages, model: d.model },
       ])
       setMascotaMood('exito')
     }
@@ -505,6 +516,9 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       const decoder = new TextDecoder()
       let buffer = ''
       let acc = ''
+      // El backend anuncia el proveedor+modelo en el evento `start`
+      // (píldora UI). Se guarda en el mensaje al llegar cada delta.
+      let streamModel: string | undefined
 
       while (true) {
         // Si el documento cambió a mitad del streaming, corta y descarta.
@@ -524,13 +538,18 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
           const payload = line.slice(5).trim()
           if (!payload) continue
           try {
-            const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string }
-            if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
+            const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string; model?: string }
+            if (evt.type === 'start' && typeof evt.model === 'string' && evt.model) {
+              streamModel = evt.model
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantMsg.id ? { ...m, model: streamModel } : m))
+              )
+            } else if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
               acc += evt.delta
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantMsg.id
-                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode }
+                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode, model: streamModel ?? m.model }
                     : m
                 )
               )
@@ -558,13 +577,15 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
         const payload = tail.slice(5).trim()
         if (payload) {
           try {
-            const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string }
-            if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
+            const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string; model?: string }
+            if (evt.type === 'start' && typeof evt.model === 'string' && evt.model) {
+              streamModel = evt.model
+            } else if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
               acc += evt.delta
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantMsg.id
-                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode }
+                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode, model: streamModel ?? m.model }
                     : m
                 )
               )
@@ -702,7 +723,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   ) : error.includes('404') ? (
                     <span>El endpoint <code>/api/chat</code> no está respondiendo en este entorno (si estás en <code>vite dev</code>, asegúrate de correr con Vercel CLI o configurar la API).</span>
                   ) : error.includes('500') || error.includes('GEMINI_API_KEY') || error.includes('502') ? (
-                    <span>El servicio de IA falló o falta configurar <code>GEMINI_API_KEY</code> en tu servidor o Vercel. Reintenta en unos segundos.</span>
+                    <span>El servicio de IA falló o falta configurar una key en tu servidor o Vercel (<code>GEMINI_API_KEY</code>, <code>GROQ_API_KEY</code> u <code>OPENROUTER_API_KEY</code>). Reintenta en unos segundos.</span>
                   ) : error.includes('504') ? (
                     <span>El servidor tardó demasiado en responder (504, timeout). Reintenta en unos segundos; si usaste Generar gráfica con un documento grande, prueba de nuevo o con un PDF más corto.</span>
                   ) : error.includes('fetch') || error.includes('Failed to fetch') || error.includes('NetworkError') ? (
@@ -770,6 +791,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   </div>
                 )}
                 <div className="ai-actions-row">
+                  <ModelPill model={lastAiMsg?.model} />
                   <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label="Copiar respuesta">
                     <Icon name="copy" size={14} /> Copiar
                   </button>
@@ -877,6 +899,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   )}
                   {m.role === 'assistant' && (
                     <div className="ai-actions-row">
+                      <ModelPill model={m.model} />
                       <button type="button" className="ai-action-btn" onClick={() => void handleCopy(m.id, m.content)} aria-label="Copiar respuesta">
                         <Icon name="copy" size={14} /> Copiar
                       </button>

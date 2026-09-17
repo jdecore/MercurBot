@@ -13,7 +13,8 @@
  *     enviar el texto (máx. 250 KB) al proveedor de IA; nada se persiste.
  *
  * Generation uses the official @google/generative-ai SDK (Gemini). If it fails
- * or no key is set, it falls back to OpenRouter (OpenAI-compatible). The chat
+ * or no key is set, it falls back to Groq and then OpenRouter (both
+ * OpenAI-compatible). The chat
  * response is a plain SSE string (no streaming Response object) so Vercel never
  * surfaces a broken stream as FUNCTION_INVOCATION_FAILED.
  *
@@ -108,10 +109,11 @@ function getContentType(req: any): string {
 }
 
 // Primary: Gemini. If it fails (e.g. tokens/quota exhausted, model unavailable),
-// it automatically falls back to OpenRouter (nvidia/nemotron-3.5-lightning:free).
+// it automatically falls back to Groq and then OpenRouter.
 // Default a un modelo real de la familia 2.x: el valor anterior
 // (gemini-3.5-flash-lite) no existe y provocaba 404 del proveedor → 502.
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash'
+const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || 'qwen/qwen3-32b'
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'nvidia/nemotron-3.5-lightning:free'
 
 const EXCEL_SYSTEM = `Eres compe, un analista experto en documentos PDF. Responde en español, de forma concisa, educada y práctica.
@@ -124,6 +126,7 @@ Reglas:
 - Copixi solo trabaja con PDFs: si el usuario pregunta por Excel, CSV u otros formatos, indícale amablemente que suba el contenido como PDF.
 - Si el contexto incluye fragmentos recuperados por RAG, fundaméntate en ellos y cita las páginas con el formato [Pág. N].
 - No inventes información ni datos que no figuren en los fragmentos provistos.
+- Responde SIEMPRE en español y entrega solo la respuesta final: nunca muestres tu razonamiento interno (nada de bloques <think>, ni "thinking process", ni análisis previo en inglés). Nada de preámbulos meta sobre tu tarea.
 
 Gráficas (solo cuando aporten valor):
 - Si la pregunta pide comparar cifras o ver una evolución Y los fragmentos contienen esos números, cierra tu respuesta con un bloque chart-json con este formato EXACTO:
@@ -173,6 +176,18 @@ function buildContextBlock(context: unknown): string {
 
 // ---- Generation ----
 
+// Los modelos de razonamiento (Qwen3 en Groq, etc.) pueden devolver su
+// traza interna (<think>…</think> o "thinking process" en inglés). Eso nunca
+// debe llegar al usuario: se recorta aquí, en el servidor, para todos los
+// proveedores y modos (chat, summary, chart-full).
+function stripThinking(text: string): string {
+  return String(text ?? '')
+    .replace(/<think>[\s\S]*?(<\/think>|$)/gi, '')
+    .replace(/<thinking>[\s\S]*?(<\/thinking>|$)/gi, '')
+    .replace(/^here's a thinking process:[\s\S]*?(?=\n\n[A-ZÁÉÍÓÚÑ])/i, '')
+    .trim()
+}
+
 async function genGemini(prompt: string, system: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY?.trim()
   if (!key) throw new Error('no GEMINI_API_KEY')
@@ -180,6 +195,33 @@ async function genGemini(prompt: string, system: string): Promise<string> {
   const model = genAI.getGenerativeModel({ model: GEMINI_MODEL, systemInstruction: system })
   const res = await model.generateContent(prompt)
   return res.response.text()
+}
+
+async function genGroq(prompt: string, system: string): Promise<string> {
+  const key = process.env.GROQ_API_KEY?.trim()
+  if (!key) throw new Error('no GROQ_API_KEY')
+  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: 2048,
+      temperature: 0.5,
+    }),
+  })
+  if (!r.ok) {
+    const t = await r.text()
+    throw new Error(`groq ${r.status}: ${t.slice(0, 200)}`)
+  }
+  const j = (await r.json()) as { choices?: { message?: { content?: string } }[] }
+  return j.choices?.[0]?.message?.content ?? ''
 }
 
 async function genOpenRouter(prompt: string, system: string): Promise<string> {
@@ -199,7 +241,7 @@ async function genOpenRouter(prompt: string, system: string): Promise<string> {
         { role: 'system', content: system },
         { role: 'user', content: prompt },
       ],
-      max_tokens: 1024,
+      max_tokens: 2048,
       temperature: 0.5,
     }),
   })
@@ -211,26 +253,43 @@ async function genOpenRouter(prompt: string, system: string): Promise<string> {
   return j.choices?.[0]?.message?.content ?? ''
 }
 
-async function generate(prompt: string, system: string): Promise<string> {
+export interface GenResult {
+  text: string
+  /** Etiqueta corta del proveedor+modelo que respondió (para la píldora UI). */
+  model: string
+}
+
+async function generate(prompt: string, system: string): Promise<GenResult> {
   const errors: string[] = []
   // Gemini first (only if its key is actually configured, to avoid a misleading error)
   if (process.env.GEMINI_API_KEY?.trim()) {
     try {
-      return await genGemini(prompt, system)
+      const text = stripThinking(await genGemini(prompt, system))
+      return { text, model: `Gemini · ${GEMINI_MODEL}` }
     } catch (e) {
       errors.push(`gemini: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  // Groq fallback (used if Gemini is missing or fails: quota, model, network)
+  if (process.env.GROQ_API_KEY?.trim()) {
+    try {
+      const text = stripThinking(await genGroq(prompt, system))
+      return { text, model: `Groq · ${GROQ_MODEL}` }
+    } catch (e) {
+      errors.push(`groq: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
   // OpenRouter fallback (used if Gemini is missing or fails: quota, model, network)
   if (process.env.OPENROUTER_API_KEY?.trim()) {
     try {
-      return await genOpenRouter(prompt, system)
+      const text = stripThinking(await genOpenRouter(prompt, system))
+      return { text, model: `OpenRouter · ${OPENROUTER_MODEL}` }
     } catch (e) {
       errors.push(`openrouter: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
   if (errors.length === 0) {
-    throw new Error('No AI provider configured (set GEMINI_API_KEY or OPENROUTER_API_KEY).')
+    throw new Error('No AI provider configured (set GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY).')
   }
   const publicMsg = process.env.NODE_ENV !== 'production' ? errors.join(' | ') : 'AI provider error.'
   throw new Error(publicMsg)
@@ -238,10 +297,10 @@ async function generate(prompt: string, system: string): Promise<string> {
 
 // ---- SSE helpers (plain string response, Vercel-safe) ----
 
-function sseChatText(text: string): string {
+function sseChatText(text: string, model?: string): string {
   const id = `msg-${Date.now()}`
   const chunks = [
-    `data: ${JSON.stringify({ type: 'start', messageId: id })}`,
+    `data: ${JSON.stringify({ type: 'start', messageId: id, model: model ?? null })}`,
     `data: ${JSON.stringify({ type: 'text-start', id })}`,
     `data: ${JSON.stringify({ type: 'text-delta', delta: text })}`,
     `data: ${JSON.stringify({ type: 'text-end', id })}`,
@@ -421,9 +480,10 @@ export default async function handler(req: any, res?: any): Promise<Response | v
         const prompt = isPdf
           ? `Resume este documento PDF en español en exactamente 3 puntos clave. Empieza cada punto con la información directa (sin introducciones). Cita la página de cada dato con el formato [Pág. N]. No inventes datos. Texto plano con "-" por punto, sin JSON.\n\nContexto: ${ctxStr}`
           : `Genera un resumen en español en 3-5 bullets concisos + 1 insight accionable sobre este dataset. Cita números reales del contexto. No inventes columnas. Texto plano, sin JSON.\n\nContexto: ${ctxStr}`
-        const text = (await generate(prompt, EXCEL_SYSTEM)).trim()
+        const out = await generate(prompt, EXCEL_SYSTEM)
+        const text = out.text.trim()
         if (!text) return respond.json(200, { error: 'Empty summary' })
-        return respond.json(200, { text })
+        return respond.json(200, { text, model: out.model })
       }
 
       const text = typeof body.text === 'string' ? body.text : ''
@@ -435,7 +495,8 @@ export default async function handler(req: any, res?: any): Promise<Response | v
         return respond.json(400, { error: 'text too large (max 8000 chars, send truncated)' })
       }
       const prompt = `Extrae datos tabulares de este documento "${filename}". Texto (truncado):\n"""${text}"""\n\nInstrucciones: Si hay tabla, retorna JSON array de objetos con keys = columnas normalizadas (lowercase, sin espacios). Valores string o number. Si no hay tabla pero hay datos estructurados, inventa columnas razonables y extrae hasta 30 filas. Si no hay datos tabulares, retorna []. Responde SOLO con el JSON array, sin markdown ni explicación.`
-      const raw = await generate(prompt, EXCEL_SYSTEM)
+      const out = await generate(prompt, EXCEL_SYSTEM)
+      const raw = out.text
       const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()
       let rows: unknown = null
       try {
@@ -445,9 +506,9 @@ export default async function handler(req: any, res?: any): Promise<Response | v
         rows = null
       }
       if (!rows) {
-        return respond.json(200, { text: raw, rows: null, error: 'No valid JSON array extracted' })
+        return respond.json(200, { text: raw, rows: null, model: out.model, error: 'No valid JSON array extracted' })
       }
-      return respond.json(200, { rows })
+      return respond.json(200, { rows, model: out.model })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'
@@ -486,10 +547,11 @@ export default async function handler(req: any, res?: any): Promise<Response | v
         ? `Páginas analizadas: ${analyzedPages.join(', ')} (de ${Math.floor(totalPages)} totales; pre-selección de las páginas con más cifras).`
         : `Páginas analizadas: ${analyzedPages.join(', ')} (documento íntegro).`
       const docText = clean.map((p) => `[Pág. ${p.page}]:\n"""${p.text}"""`).join('\n\n')
-      const prompt = `Analiza este documento PDF "${filename}" y devuelve LA comparación o evolución numérica más relevante en forma de gráfica, más 2-3 líneas de lectura en español.\n\n${scope}\n\nBasa cada cifra SOLO en el texto siguiente; el sourcePage de cada dato debe ser una de las páginas analizadas.\n\n${docText}\n\nCierra con el bloque chart-json (chartType bar|line, máx. 12 puntos, value SOLO cifras literales del texto — prohibido calcular, redondear o estimar). Si no hay cifras comparables, responde solo texto sin bloque. Cita páginas con [Pág. N] en la lectura.`
-      const text = (await generate(prompt, EXCEL_SYSTEM)).trim()
+      const prompt = `Analiza este documento PDF "${filename}" y devuelve LA comparación o evolución numérica más relevante en forma de gráfica, más 2-3 líneas de lectura en español.\n\n${scope}\n\nBasa cada cifra SOLO en el texto siguiente; el sourcePage de cada dato debe ser una de las páginas analizadas.\n\n${docText}\n\nResponde solo la lectura final en español y cierra con el bloque chart-json (chartType bar|line, máx. 12 puntos, value SOLO cifras literales del texto — prohibido calcular, redondear o estimar). Sin razonamiento visible ni bloques <think>. Si no hay cifras comparables, responde solo texto sin bloque. Cita páginas con [Pág. N] en la lectura.`
+      const out = await generate(prompt, EXCEL_SYSTEM)
+      const text = out.text.trim()
       if (!text) return respond.json(200, { error: 'Empty chart-full response' })
-      return respond.json(200, { text, analyzedPages })
+      return respond.json(200, { text, analyzedPages, model: out.model })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'
@@ -510,8 +572,8 @@ export default async function handler(req: any, res?: any): Promise<Response | v
   const prompt = `${conversation}${contextBlock}`
 
   try {
-    const text = await generate(prompt, EXCEL_SYSTEM)
-    return respond.sse(sseChatText(text))
+    const out = await generate(prompt, EXCEL_SYSTEM)
+    return respond.sse(sseChatText(out.text, out.model))
   } catch (err) {
     // H1: en producción no se expone el error crudo del proveedor (puede
     // traer nombres de modelo, cuota o fragmentos internos). Igual que

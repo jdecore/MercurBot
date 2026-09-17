@@ -57,7 +57,7 @@ El motor tabular (profiler/statistics/transformations/anomalyDetection/chartAdap
 
 ### Capa de IA — chat propio + RAG local
 - **Frontend:** `ExcelChat.tsx` — cliente de chat propio y ligero (fetch + SSE `text-delta` a `/api/chat`, sin SDK externo). Ante cada consulta corre el pipeline RAG e inyecta los fragmentos con página.
-- **Backend único:** `api/chat.ts` — SDK oficial `@google/generative-ai` (Gemini) primario y fallback OpenRouter, 4 modos (chat SSE, `summary`, `extract`, `chart-full`), rate-limit 20/min, `GEMINI_API_KEY` solo en server. Por defecto solo recibe 3 fragmentos; el texto completo (máx. 250 KB) viaja únicamente con `chart-full`, bajo orden explícita del usuario con consentimiento inline (Fase E).
+- **Backend único:** `api/chat.ts` — SDK oficial `@google/generative-ai` (Gemini) primario y fallbacks Groq → OpenRouter (ambos OpenAI-compatible, sin deps nuevas), 4 modos (chat SSE, `summary`, `extract`, `chart-full`), rate-limit 20/min, keys solo en server. Por defecto solo recibe 3 fragmentos; el texto completo (máx. 250 KB) viaja únicamente con `chart-full`, bajo orden explícita del usuario con consentimiento inline (Fase E).
 - **Pipeline de búsqueda RAG (Fases 14 + 24):** `src/lib/ragPipeline.ts` (`runRagPipeline`): modo híbrido Top 15 vectorial + Top 15 MiniSearch → fusión RRF (k=60) → Top 3 (lógica en `src/workers/rag.worker.ts`; embeddings MiniLM `Xenova/all-MiniLM-L6-v2` en Web Worker con persistencia OPFS); fallback Top 3 MiniSearch directo (`ragClient.searchMainThread` + watchdog con conmutación). Desde la Fase 24 el `docId` es la huella estable del archivo (`src/lib/fileHash.ts`), así que los vectores se recuperan de OPFS sin recompute al reabrir. `api/chat.ts` topea a 3 fragmentos de ≤1200 chars con formato `[Fragmento i | Pág. N]` e instruye citar `[Pág. N]`; `ExcelChat.tsx` renderiza citas inline en el streaming + badges expandibles con snippet/matchType e indica el modo (híbrida vs. léxica).
 - **Briefing + voz (Fase 24):** al indexar, `mode:'summary'` genera la tarjeta "Este documento en 3 puntos" (clicable al visor, degradado silencioso); el dock tiene dictado por voz (Web Speech API `es-ES`, sin deps, oculto sin soporte).
 
@@ -73,7 +73,7 @@ El motor tabular (profiler/statistics/transformations/anomalyDetection/chartAdap
 | Framework / Lenguaje | React 19 · TypeScript · Vite · pnpm |
 | Estilos / UI | Native CSS + tokens · Radix UI · Pixelarticons (SVG inline, sin webfont) |
 | PDF / RAG | pdfjs-dist · MiniSearch · @xenova/transformers (MiniLM) |
-| IA | Gemini / OpenRouter vía `api/chat.ts` · streaming SSE con citas |
+| IA | Gemini / Groq / OpenRouter vía `api/chat.ts` · streaming SSE con citas |
 | Avatar | Blobatar (`blobatar` + `@blobatar/react`, ~14 KB, MIT, cero dependencias) |
 | Backend | Vercel Function única (`api/chat.ts`) |
 
@@ -87,7 +87,7 @@ pnpm dev      # http://localhost:5173 — sube un PDF y pregunta
 pnpm build    # tsc -b + vite build
 ```
 
-Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (server-only, nunca `VITE_`). Sin key la lectura e indexado locales funcionan; el chat y el briefing necesitan key (con fallback a OpenRouter si existe `OPENROUTER_API_KEY`).
+Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (server-only, nunca `VITE_`). Sin key la lectura e indexado locales funcionan; el chat y el briefing necesitan key (cadena: Gemini → Groq si existe `GROQ_API_KEY` → OpenRouter si existe `OPENROUTER_API_KEY`).
 
 **Deploy Vercel (2 min):** importa repo → Framework Vite → env `GEMINI_API_KEY` → `api/chat.ts` auto-detectada vía `vercel.json`.
 

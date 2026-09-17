@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { sanitizeRichText } from '../excel/ExcelChat'
+import { sanitizeRichText, ModelPill } from '../excel/ExcelChat'
 
 const PAGE_CITE_RE = /\[P[áa]g\.?\s*(\d+)\]|\[P[áa]gina\s*(\d+)\]|\[p\.\s*(\d+)\]/gi
 
@@ -40,6 +40,7 @@ function renderWithCites(text: string, keyPrefix: string): React.ReactNode[] {
 interface BriefingCardProps {
   text: string | null
   loading: boolean
+  model?: string
 }
 
 /**
@@ -47,7 +48,7 @@ interface BriefingCardProps {
  * Muestra los 3 puntos clave del documento con citas clicables al visor.
  * Si la generación falla, App no la monta (degradado silencioso).
  */
-export function BriefingCard({ text, loading }: BriefingCardProps) {
+export function BriefingCard({ text, loading, model }: BriefingCardProps) {
   const points = useMemo(() => {
     if (!text) return []
     return text
@@ -64,6 +65,7 @@ export function BriefingCard({ text, loading }: BriefingCardProps) {
       <div className="briefing-head">
         <span className="briefing-sparkle" aria-hidden>✦</span>
         <strong>Este documento en 3 puntos</strong>
+        <ModelPill model={model} />
       </div>
       {loading ? (
         <div className="briefing-loading">
