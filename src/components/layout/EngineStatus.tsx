@@ -11,8 +11,9 @@ interface EngineInfo {
  * Estado honesto del motor (arriba-derecha, en vez de créditos falsos):
  * modo RAG local + modelo real que generó la última respuesta.
  * Solo lectura: el fallback de modelo lo decide /api/chat por keys.
+ * `compact` para el rail contraído: solo el punto con tooltip.
  */
-export function EngineStatus() {
+export function EngineStatus({ compact = false }: { compact?: boolean }) {
   const { pdfDoc } = useDashboard()
   const docId = pdfDoc?.docId ?? null
   const [info, setInfo] = useState<EngineInfo>({ mode: null, model: null, streaming: false })
@@ -35,16 +36,32 @@ export function EngineStatus() {
   }
 
   if (!pdfDoc) {
+    const idleTitle = 'Carga un PDF para activar la búsqueda local'
+    if (compact) {
+      return (
+        <span className="engine-status compact" title={idleTitle} aria-label={idleTitle} role="status">
+          <span className="engine-dot idle" aria-hidden />
+        </span>
+      )
+    }
     return (
-      <span className="engine-status" title="Carga un PDF para activar la búsqueda local">
+      <span className="engine-status" title={idleTitle}>
         <span className="engine-dot idle" aria-hidden />
         100% local
       </span>
     )
   }
   if (info.streaming) {
+    const busyTitle = 'La IA está leyendo los fragmentos de tu PDF'
+    if (compact) {
+      return (
+        <span className="engine-status compact" role="status" title={busyTitle} aria-label="pensando…">
+          <span className="engine-dot busy" aria-hidden />
+        </span>
+      )
+    }
     return (
-      <span className="engine-status" role="status" title="La IA está leyendo los fragmentos de tu PDF">
+      <span className="engine-status" role="status" title={busyTitle}>
         <span className="engine-dot busy" aria-hidden />
         pensando…
       </span>
@@ -54,6 +71,13 @@ export function EngineStatus() {
   const title = info.mode
     ? `Búsqueda ${info.mode === 'hybrid' ? 'combinada (vectorial + léxica)' : 'literal'} en tu dispositivo${info.model ? ` · última respuesta: ${info.model}` : ''}`
     : 'Documento indexado en tu dispositivo. Pregunta para ver el modelo en uso.'
+  if (compact) {
+    return (
+      <span className="engine-status compact" title={title} aria-label={`${modeLabel}${info.model ? ` · ${info.model}` : ''}`} role="status">
+        <span className={`engine-dot${info.mode ? ' ready' : ''}`} aria-hidden />
+      </span>
+    )
+  }
   return (
     <span className="engine-status" title={title}>
       <span className={`engine-dot${info.mode ? ' ready' : ''}`} aria-hidden />

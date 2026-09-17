@@ -9,6 +9,8 @@ interface SidebarProps {
   hasDocument: boolean
   userName: string
   robotName: string
+  collapsed: boolean
+  onToggleRail: () => void
   onNewAnalysis: () => void
   onUpload: () => void
   onOpenDoc: (doc: LibDoc) => void
@@ -41,6 +43,8 @@ export function Sidebar({
   hasDocument,
   userName,
   robotName,
+  collapsed,
+  onToggleRail,
   onNewAnalysis,
   onUpload,
   onOpenDoc,
@@ -57,6 +61,46 @@ export function Sidebar({
   const removeDoc = async (id: string) => {
     setDocs(await removeFromLibrary(id))
     onRemoved()
+  }
+
+  // Rail contraído estilo Copilot: mismos accesos, solo iconos con tooltip.
+  // Recientes no se hojea a ciegas: su icono expande el menú.
+  if (collapsed) {
+    return (
+      <div className="sidebar-body rail-body">
+        <EngineStatus compact />
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onNewAnalysis} title="Nuevo análisis" aria-label="Nuevo análisis">
+          <Icon name="plus" size={16} />
+        </button>
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onUpload} title="Cargar PDF" aria-label="Cargar PDF">
+          <Icon name="upload" size={16} />
+        </button>
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleRail} title="Recientes — expandir menú" aria-label="Recientes — expandir menú" aria-expanded={false}>
+          <Icon name="file" size={16} />
+        </button>
+        <div className="sidebar-footer rail-footer">
+          <button
+            type="button"
+            className="btn btn-secondary rail-btn"
+            onClick={onCustomize}
+            title={`${userName || 'Lector local'} · Personalizar ${robotName}`}
+            aria-label={`${userName || 'Lector local'} · Personalizar ${robotName}`}
+          >
+            <Icon name="user" size={16} />
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary rail-btn"
+            onClick={onToggleRail}
+            title="Expandir menú"
+            aria-label="Expandir menú"
+            aria-expanded={false}
+          >
+            <Icon name="chevron-right" size={16} />
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -132,6 +176,16 @@ export function Sidebar({
           </button>
           <button type="button" className="btn btn-secondary small" onClick={onHowItWorks}>
             ¿Cómo funciona?
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary small"
+            onClick={onToggleRail}
+            title="Contraer menú (solo iconos)"
+            aria-label="Contraer menú (solo iconos)"
+            aria-expanded={true}
+          >
+            <Icon name="chevron-left" size={14} /> Contraer
           </button>
         </div>
       </div>

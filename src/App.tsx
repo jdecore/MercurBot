@@ -52,6 +52,19 @@ function MainDashboard() {
   const [libraryToken, setLibraryToken] = useState(0)
   const [customizerOpen, setCustomizerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [railCollapsed, setRailCollapsed] = useState(() => getPreferences().sidebarCollapsed)
+
+  const toggleRail = useCallback(() => {
+    setRailCollapsed((prev) => {
+      const next = !prev
+      try {
+        savePreferences({ ...getPreferences(), sidebarCollapsed: next })
+      } catch {
+        /* storage lleno o bloqueado: el modo igual aplica en la sesión */
+      }
+      return next
+    })
+  }, [])
   const abortControllerRef = useRef<AbortController | null>(null)
   const skipLibrarySaveRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -362,6 +375,8 @@ function MainDashboard() {
       hasDocument={hasDocument}
       userName={userName}
       robotName={robotName}
+      collapsed={railCollapsed}
+      onToggleRail={toggleRail}
       onNewAnalysis={newAnalysis}
       onUpload={() => inputRef.current?.click()}
       onOpenDoc={(doc) => {
@@ -388,8 +403,8 @@ function MainDashboard() {
 
   return (
     <div className="canvas-wrapper">
-      <div className="app-shell">
-        <aside className="app-sidebar" aria-label="Navegación principal">
+      <div className={`app-shell${railCollapsed ? ' rail' : ''}`}>
+        <aside className={`app-sidebar${railCollapsed ? ' rail' : ''}`} aria-label="Navegación principal">
           <div className="sidebar-brand" aria-label="Copixi AI">
             <span className="brand-mark" aria-hidden>◈</span>
             <span className="brand-title">Copixi</span>

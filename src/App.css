@@ -2141,3 +2141,47 @@ button.citation-inline:focus-visible {
     display: inline-flex;
   }
 }
+
+/* Rail contraíble estilo Copilot: mismos accesos, 64px solo iconos.
+   El drawer mobile (<900px) siempre muestra el menú completo. */
+.app-shell {
+  transition: grid-template-columns 200ms ease;
+}
+.app-shell.rail {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+.app-sidebar.rail {
+  padding: 16px 10px;
+  align-items: center;
+}
+.app-sidebar.rail .sidebar-brand {
+  border-bottom: 0;
+  padding: 2px 0 6px;
+  justify-content: center;
+}
+.app-sidebar.rail .brand-title,
+.app-sidebar.rail .brand-sub {
+  display: none;
+}
+.rail-body {
+  align-items: center;
+  gap: 10px;
+}
+.rail-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+}
+.engine-status.compact {
+  padding: 5px;
+  max-width: none;
+}
+.rail-footer {
+  align-items: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell {
+    transition: none;
+  }
+}

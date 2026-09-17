@@ -41,6 +41,8 @@ export type Preferences = {
   robotName: string
   /** Diseño del robot: 6 diseños base + mezcla libre rasgo por rasgo. */
   robotConfig: RobotConfig
+  /** Sidebar contraído estilo Copilot (rail de iconos). Persiste entre visitas. */
+  sidebarCollapsed: boolean
 }
 
 const KEY_ANALYSES = 'copixi:saved_analyses'
@@ -109,6 +111,7 @@ const DEFAULT_PREFS: Preferences = {
   userName: '',
   robotName: DEFAULT_ROBOT_NAME,
   robotConfig: { color: brasita.color, eyes: brasita.eyes, accessory: brasita.accessory },
+  sidebarCollapsed: false,
 }
 export function getPreferences(): Preferences {
   if (typeof localStorage === 'undefined') return DEFAULT_PREFS

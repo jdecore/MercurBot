@@ -20,6 +20,8 @@ import { Plus } from 'pixelarticons/react/Plus.js'
 import { Menu } from 'pixelarticons/react/Menu.js'
 import { Chart } from 'pixelarticons/react/Chart.js'
 import { Lock } from 'pixelarticons/react/Lock.js'
+import { ChevronLeft } from 'pixelarticons/react/ChevronLeft.js'
+import { ChevronRight } from 'pixelarticons/react/ChevronRight.js'
 import { Robot } from 'pixelarticons/react/Robot.js'
 import { User } from 'pixelarticons/react/User.js'
 
@@ -45,6 +47,8 @@ const MAP = {
   menu: Menu,
   chart: Chart,
   lock: Lock,
+  'chevron-left': ChevronLeft,
+  'chevron-right': ChevronRight,
   robot: Robot,
   user: User,
 } as const
