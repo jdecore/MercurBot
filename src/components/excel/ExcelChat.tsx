@@ -405,6 +405,24 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     }
   }, [messages, docId, status])
 
+  // Tocar al robot compacto re-lee la última respuesta (evento copixi:reread
+  // desde App). Solo lee: no reenvía nada ni gasta cuota.
+  const lastAiTextRef = useRef('')
+  useEffect(() => {
+    const last = [...messages].reverse().find((m) => m.role === 'assistant' && m.content)
+    lastAiTextRef.current = last ? stripChartBlock(cleanAI(last.content)) : ''
+  }, [messages])
+  useEffect(() => {
+    const handler = () => {
+      const t = lastAiTextRef.current.trim()
+      if (!t) return
+      setMascotaMood('hablando')
+      speak(firstSentence(t))
+    }
+    window.addEventListener('copixi:reread', handler)
+    return () => window.removeEventListener('copixi:reread', handler)
+  }, [])
+
   // EngineStatus (top-bar): publica modo RAG + modelo de la última
   // respuesta + streaming. Solo lectura, sin backend (§8, §11).
   useEffect(() => {
@@ -1010,10 +1028,15 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
           </div>
         )}
         {pdfDoc && messages.length === 0 && !loading && (
-          <div className="excel-starters-row" role="group" aria-label="Preguntas sugeridas">
-            {['Resume este documento en 3 puntos', '¿Cuál es la idea principal?', 'Lista las cifras clave con su página'].map((s) => (
-              <button key={s} type="button" className="suggestion-chip" onClick={() => setInput(s)}>
-                {s}
+          <div className="excel-starters-row" role="group" aria-label="Capacidades: preguntas sugeridas">
+            {[
+              { label: 'Resumir en 3 puntos', query: 'Resume este documento en 3 puntos' },
+              { label: 'Preguntar con citas', query: '¿Cuáles son los puntos clave? Cita las páginas' },
+              { label: 'Buscar en el documento', query: '¿Qué dice el documento sobre ' },
+              { label: 'Graficar cifras', query: '¿Qué cifras comparables trae el documento? Incluye las páginas' },
+            ].map((s) => (
+              <button key={s.label} type="button" className="suggestion-chip" onClick={() => setInput(s.query)}>
+                {s.label}
               </button>
             ))}
           </div>

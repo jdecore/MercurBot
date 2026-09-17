@@ -299,6 +299,44 @@ function MainDashboard() {
     }
   }, [])
 
+  // El chat publica moods vía `copixi:mascota-mood` (pensando, escuchando,
+  // exito, hablando…): este puente los lleva al estado del robot.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const m = (e as CustomEvent<MascotaMood>).detail
+      if (typeof m !== 'string') return
+      setMascotaMood(m)
+      if (m === 'neutro') setMascotaSubtitulo('')
+    }
+    window.addEventListener('copixi:mascota-mood', handler as EventListener)
+    return () => window.removeEventListener('copixi:mascota-mood', handler as EventListener)
+  }, [])
+
+  // Robot con sueño: si no hay actividad del chat en 5 min con documento
+  // cargado, el robot se duerme (solo visual; cualquier evento lo despierta
+  // porque ExcelChat publica `copixi:engine-status` en cada cambio).
+  useEffect(() => {
+    if (!hasDocument) return
+    let timer: number | null = null
+    const arm = () => {
+      if (timer !== null) window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        setMascotaMood('dormido')
+        setMascotaSubtitulo('')
+      }, 5 * 60 * 1000)
+    }
+    const wake = () => {
+      arm()
+      setMascotaMood((m) => (m === 'dormido' ? 'neutro' : m))
+    }
+    arm()
+    window.addEventListener('copixi:engine-status', wake as EventListener)
+    return () => {
+      window.removeEventListener('copixi:engine-status', wake as EventListener)
+      if (timer !== null) window.clearTimeout(timer)
+    }
+  }, [hasDocument])
+
   // Re-abrir un PDF de la biblioteca sin volver a subirlo.
   const openLibraryDoc = useCallback(async (id: string) => {
     const meta = listLibrary().find((d) => d.id === id)
@@ -441,22 +479,31 @@ function MainDashboard() {
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
         >
-          {/* Top Stage: robot único personalizable (más grande) */}
-          <div className="mascot-stage">
+          {/* Top Stage: robot único personalizable. Con documento se compacta
+              (72px en fila) para devolver espacio vertical al chat; sin
+              documento mantiene el héroe grande de bienvenida. */}
+          <div className={`mascot-stage${hasDocument ? ' compact' : ''}`}>
             <Mascota
               variant={mascotFace === 'blobatar' ? 'blobatar' : mascotRobot}
               avatarName={blobatarName}
               config={mascotFace === 'robot' ? robotConfig : undefined}
               mood={mascotaMood}
-              subtitulo={mascotaSubtitulo}
-              size={180}
-              onClick={() => speak(mascotFace === 'blobatar'
-                ? `¡Hola! Soy ${blobatarName || DEFAULT_BLOBATAR_NAME}, tu avatar analista. Carga tu documento PDF para comenzar.`
-                : hasDocument ? `${robotName} listo${userName ? `, ${userName}` : ''}. Pregúntame lo que quieras de tu documento.` : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)}
+              subtitulo={hasDocument ? '' : mascotaSubtitulo}
+              size={hasDocument ? 72 : 180}
+              onClick={() => {
+                if (hasDocument) {
+                  // Re-lee la última respuesta en voz alta (la sirve ExcelChat).
+                  window.dispatchEvent(new CustomEvent('copixi:reread'))
+                  return
+                }
+                speak(mascotFace === 'blobatar'
+                  ? `¡Hola! Soy ${blobatarName || DEFAULT_BLOBATAR_NAME}, tu avatar analista. Carga tu documento PDF para comenzar.`
+                  : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)
+              }}
             />
             <p className="mascot-greeting" aria-live="polite">
               {hasDocument && pdfDoc
-                ? `${robotName} ya leyó ${pdfDoc.filename} — pregúntale lo que quieras.`
+                ? (mascotaSubtitulo || `${robotName} ya leyó ${pdfDoc.filename} — pregúntale lo que quieras. Toca al robot para escuchar la última respuesta.`)
                 : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName} — sube un PDF y lo leemos juntos.`}
             </p>
             <div className="customizer-toggle-row">

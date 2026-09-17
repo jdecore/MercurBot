@@ -25,13 +25,6 @@ function fmtSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-const CAPABILITIES = [
-  { icon: 'message' as const, label: 'Resumir en 3 puntos' },
-  { icon: 'search' as const, label: 'Preguntar con citas [Pág. N]' },
-  { icon: 'file' as const, label: 'Buscar en el documento' },
-  { icon: 'chart' as const, label: 'Graficar cifras verificadas' },
-]
-
 /**
  * Sidebar estilo QwenWork, contenido honesto (sin backend §5.4/§31):
  * Nuevo análisis + Recientes reales (OPFS) + Capacidades locales +
@@ -147,20 +140,9 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="sidebar-section" aria-label="Capacidades">
-        <h2 className="sidebar-heading">Capacidades</h2>
-        <ul className="sidebar-caps">
-          {CAPABILITIES.map((c) => (
-            <li key={c.label}>
-              <Icon name={c.icon} size={14} />
-              <span>{c.label}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="sidebar-privacy">
-          <Icon name="lock" size={14} /> Tu PDF nunca sale de este navegador.
-        </p>
-      </div>
+      <p className="sidebar-privacy">
+        <Icon name="lock" size={14} /> Tu PDF nunca sale de este navegador.
+      </p>
 
       <div className="sidebar-footer">
         <div className="sidebar-user" title={userName || 'Lector local'}>

@@ -17,6 +17,11 @@
   --color-accent: #E3A008;
   --color-accent-hover: #C98A00;
   --color-on-accent: #1C1A10;
+  /* Tinta de acento: el maracuyá brillante como primer plano sobre claro
+     falla AA (1.82). Este mostaza quemado pasa (5.31 gris / 6.59 blanco).
+     Regla: accent = solo rellenos con on-accent encima; accent-ink = texto,
+     bordes, focos y puntos sobre fondo claro. */
+  --color-accent-ink: #7C5600;
   --color-tropical: #0E7C6B;
   --color-tropical-hover: #0A5F53;
   --color-on-tropical: #FFFFFF;
@@ -125,6 +130,7 @@
     --color-accent: #F5B301;
     --color-accent-hover: #FFC53D;
     --color-on-accent: #1C1A10;
+    --color-accent-ink: #F5B301;
     --color-tropical: #3DD598;
     --color-tropical-hover: #6EE7B7;
     --color-on-tropical: #10231D;
