@@ -110,11 +110,11 @@ function getContentType(req: any): string {
 
 // Primary: Gemini. If it fails (e.g. tokens/quota exhausted, model unavailable),
 // it automatically falls back to Groq and then OpenRouter.
-// Default a un modelo real de la familia 2.x: el valor anterior
-// (gemini-3.5-flash-lite) no existe y provocaba 404 del proveedor → 502.
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash'
-const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || 'qwen/qwen3-32b'
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'nvidia/nemotron-3.5-lightning:free'
+// Modelos elegidos por el usuario (2026-09-18): si alguno falla o la key no
+// tiene acceso, la cadena de fallbacks lo cubre y el error queda enmascarado.
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite'
+const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || 'qwen/qwen3.8-27b'
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'z-ai/glm-5.2:free'
 
 const EXCEL_SYSTEM = `Eres compe, un analista experto en documentos PDF. Responde en español, de forma concisa, educada y práctica.
 
@@ -220,8 +220,12 @@ async function genGroq(prompt: string, system: string): Promise<string> {
         { role: 'system', content: system },
         { role: 'user', content: prompt },
       ],
-      max_tokens: 2048,
-      temperature: 0.5,
+      // Parámetros pedidos para qwen3.8 (temperature 0.6, top_p 0.95, 2048
+      // tokens). Sin stream ni reasoning_effort: el servidor responde texto
+      // completo y el SSE al cliente es de un solo chunk por diseño.
+      max_completion_tokens: 2048,
+      temperature: 0.6,
+      top_p: 0.95,
     }),
   })
   if (!r.ok) {
