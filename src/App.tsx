@@ -16,7 +16,8 @@ import { ragClient } from './lib/ragClient'
 import { PdfProcessingCard, type PdfProcessingState } from './components/dashboard/PdfProcessingCard'
 import { PdfViewerDialog, PdfViewerPanel } from './components/pdf/PdfViewer'
 import { BriefingCard } from './components/pdf/BriefingCard'
-import { DocLibrary } from './components/pdf/DocLibrary'
+import { Sidebar } from './components/layout/Sidebar'
+import { EngineStatus } from './components/layout/EngineStatus'
 import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
 
@@ -51,6 +52,7 @@ function MainDashboard() {
   const [currentLibId, setCurrentLibId] = useState<string | null>(null)
   const [libraryToken, setLibraryToken] = useState(0)
   const [customizerOpen, setCustomizerOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const skipLibrarySaveRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -314,15 +316,86 @@ function MainDashboard() {
     if (file) parseFile(file)
   }, [parseFile])
 
+  // "Nuevo análisis" del sidebar: vuelve al estado vacío sin borrar la
+  // biblioteca. El historial del chat es por documento y se recarga solo.
+  const newAnalysis = useCallback(() => {
+    try {
+      abortControllerRef.current?.abort()
+    } catch {
+      /* ignore */
+    }
+    abortControllerRef.current = null
+    briefingReqRef.current++
+    setPdfDoc(null)
+    setPdfFile(null)
+    setBriefing(null)
+    setBriefingModel(undefined)
+    setBriefingLoading(false)
+    setPdfProcessing(null)
+    setError(null)
+    setLoading(false)
+    setPanelHighlight(null)
+    setPanelVisible(true)
+    setPanelPage(1)
+    setCurrentLibId(null)
+    setSidebarOpen(false)
+    setMascotaMood('neutro')
+    setMascotaSubtitulo('')
+  }, [setError, setLoading, setPdfDoc])
+
   // Fase A — split layout: con documento y panel visible, chat a la
   // izquierda y PDF a la derecha; sin documento (o panel oculto), vista
   // centrada original.
   const showSplit = hasDocument && pdfFile !== null && panelVisible
 
+  const sidebar = (
+    <Sidebar
+      currentId={currentLibId}
+      refreshToken={libraryToken}
+      hasDocument={hasDocument}
+      userName={userName}
+      robotName={robotName}
+      onNewAnalysis={newAnalysis}
+      onOpenDoc={(doc) => void openLibraryDoc(doc.id)}
+      onRemoved={() => {
+        setCurrentLibId(null)
+        setLibraryToken((t) => t + 1)
+      }}
+      onCustomize={() => {
+        setSidebarOpen(false)
+        setCustomizerOpen(true)
+      }}
+      onHowItWorks={() => {
+        setSidebarOpen(false)
+        setTourOpen(true)
+      }}
+    />
+  )
+
   return (
     <div className="canvas-wrapper">
+      <div className="app-shell">
+        <aside className="app-sidebar" aria-label="Navegación principal">
+          <div className="sidebar-brand" aria-label="Copixi AI">
+            <span className="brand-mark" aria-hidden>◈</span>
+            <span className="brand-title">Copixi</span>
+            <span className="brand-sub">tu lector de PDFs</span>
+          </div>
+          {sidebar}
+        </aside>
+
+        <div className="app-main">
       {/* Floating Minimal Controls Bar */}
       <div className="canvas-top-bar" role="navigation" aria-label="Controles rápidos">
+        <button
+          type="button"
+          className="btn btn-secondary small sidebar-toggle"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Abrir navegación"
+          aria-expanded={sidebarOpen}
+        >
+          <Icon name="menu" size={16} />
+        </button>
         <div className="canvas-brand" aria-label="Copixi AI">
           <span className="brand-mark" aria-hidden>◈</span>
           <span className="brand-title">Copixi</span>
@@ -336,6 +409,7 @@ function MainDashboard() {
               <span>Leyendo: {pdfDoc.filename} · {pdfDoc.totalPages} págs</span>
             </div>
           )}
+          <EngineStatus />
           <button
             type="button"
             className="btn btn-secondary small"
@@ -343,23 +417,6 @@ function MainDashboard() {
           >
             <Icon name="upload" size={14} /> Cargar PDF
           </button>
-          <button
-            type="button"
-            className="btn btn-secondary small"
-            onClick={() => setTourOpen(true)}
-            title="Qué es Copixi y cómo se usa"
-          >
-            ¿Cómo funciona?
-          </button>
-          <DocLibrary
-            currentId={currentLibId}
-            refreshToken={libraryToken}
-            onOpen={(doc) => void openLibraryDoc(doc.id)}
-            onRemoved={() => {
-              setCurrentLibId(null)
-              setLibraryToken((t) => t + 1)
-            }}
-          />
           <input
             ref={inputRef}
             type="file"
@@ -391,6 +448,11 @@ function MainDashboard() {
                 ? `¡Hola! Soy ${blobatarName || DEFAULT_BLOBATAR_NAME}, tu avatar analista. Carga tu documento PDF para comenzar.`
                 : hasDocument ? `${robotName} listo${userName ? `, ${userName}` : ''}. Pregúntame lo que quieras de tu documento.` : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)}
             />
+            <p className="mascot-greeting" aria-live="polite">
+              {hasDocument && pdfDoc
+                ? `${robotName} ya leyó ${pdfDoc.filename} — pregúntale lo que quieras.`
+                : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName} — sube un PDF y lo leemos juntos.`}
+            </p>
             <div className="customizer-toggle-row">
               <Dialog.Root open={customizerOpen} onOpenChange={setCustomizerOpen}>
                 <Dialog.Trigger asChild>
@@ -495,6 +557,30 @@ function MainDashboard() {
           </div>
         </section>
       </main>
+        </div>{/* /.app-main */}
+      </div>{/* /.app-shell */}
+
+      <Dialog.Root open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="sidebar-overlay" />
+          <Dialog.Content
+            className="sidebar-drawer"
+            aria-label="Navegación principal"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+          >
+            <div className="sidebar-drawer-head">
+              <div className="sidebar-brand" aria-label="Copixi AI">
+                <span className="brand-mark" aria-hidden>◈</span>
+                <span className="brand-title">Copixi</span>
+              </div>
+              <Dialog.Close className="btn btn-secondary small" aria-label="Cerrar navegación">
+                ✕ Cerrar
+              </Dialog.Close>
+            </div>
+            {sidebar}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <PdfViewerDialog
         open={viewer.open}

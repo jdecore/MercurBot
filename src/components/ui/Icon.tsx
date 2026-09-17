@@ -16,6 +16,10 @@ import { Search } from 'pixelarticons/react/Search.js'
 import { Copy } from 'pixelarticons/react/Copy.js'
 import { Download } from 'pixelarticons/react/Download.js'
 import { Mic } from 'pixelarticons/react/Mic.js'
+import { Plus } from 'pixelarticons/react/Plus.js'
+import { Menu } from 'pixelarticons/react/Menu.js'
+import { Chart } from 'pixelarticons/react/Chart.js'
+import { Lock } from 'pixelarticons/react/Lock.js'
 import { Robot } from 'pixelarticons/react/Robot.js'
 import { User } from 'pixelarticons/react/User.js'
 
@@ -37,6 +41,10 @@ const MAP = {
   copy: Copy,
   download: Download,
   mic: Mic,
+  plus: Plus,
+  menu: Menu,
+  chart: Chart,
+  lock: Lock,
   robot: Robot,
   user: User,
 } as const

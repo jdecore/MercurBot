@@ -78,6 +78,12 @@ function firstSentence(text: string): string {
   return (m ? m[0] : clean.slice(0, 180)).trim()
 }
 
+// Nombre corto para el placeholder del dock (sin .pdf, máx. 28 chars).
+function truncateName(name: string): string {
+  const base = name.replace(/\.pdf$/i, '')
+  return base.length > 28 ? `${base.slice(0, 27)}…` : base
+}
+
 // Minimal, dependency-free markdown: **bold**, *italic*, `code`.
 function renderInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = []
@@ -376,6 +382,25 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       saveChatHistory(docId, messages)
     }
   }, [messages, docId, status])
+
+  // EngineStatus (top-bar): publica modo RAG + modelo de la última
+  // respuesta + streaming. Solo lectura, sin backend (§8, §11).
+  useEffect(() => {
+    let last: ChatMsg | null = null
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant' && messages[i].content) {
+        last = messages[i]
+        break
+      }
+    }
+    window.dispatchEvent(new CustomEvent('copixi:engine-status', {
+      detail: {
+        mode: last?.searchMode ?? null,
+        model: last?.model ?? null,
+        streaming: status === 'submitted' || status === 'streaming',
+      },
+    }))
+  }, [messages, status])
 
   async function handleCopy(id: string, text: string) {
     const ok = await copyText(stripChartBlock(cleanAI(text)))
@@ -951,6 +976,25 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       )}
 
       <div className="excel-dock">
+        {!pdfDoc && messages.length === 0 && (
+          <div className="excel-starters" role="group" aria-label="Cómo empezar">
+            <p className="excel-starters-title">Sube un PDF y pregunta con tus palabras — cada respuesta cita su página.</p>
+            {onOpenFilePicker && (
+              <button type="button" className="suggestion-chip" onClick={onOpenFilePicker}>
+                <Icon name="upload" size={14} /> Subir mi PDF
+              </button>
+            )}
+          </div>
+        )}
+        {pdfDoc && messages.length === 0 && !loading && (
+          <div className="excel-starters-row" role="group" aria-label="Preguntas sugeridas">
+            {['Resume este documento en 3 puntos', '¿Cuál es la idea principal?', 'Lista las cifras clave con su página'].map((s) => (
+              <button key={s} type="button" className="suggestion-chip" onClick={() => setInput(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
         <form className="excel-dock-input" onSubmit={submit}>
           {onOpenFilePicker && (
             <button
@@ -1014,7 +1058,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             className="excel-text-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={pdfDoc ? 'Pregúntale algo a tu documento…' : 'Sube un PDF y conversamos…'}
+            placeholder={pdfDoc ? `Pregunta sobre ${truncateName(pdfDoc.filename)}… (ej. Resume los 3 puntos clave)` : 'Sube un PDF y conversamos…'}
             aria-label="Escribe tu consulta"
             disabled={loading}
           />

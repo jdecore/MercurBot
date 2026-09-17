@@ -1846,3 +1846,340 @@ button.citation-inline:focus-visible {
   }
 }
 
+
+/* App shell QwenWork-honesto (Fase A): sidebar persistente + contenido.
+   Sin documento y con documento comparten el mismo shell. */
+.app-shell {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 0;
+}
+.app-sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow-y: auto;
+}
+.app-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.app-main .canvas-top-bar {
+  position: sticky;
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 750;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  padding: 2px 4px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+.sidebar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+}
+.sidebar-new {
+  width: 100%;
+}
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sidebar-heading {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0;
+  padding: 0 4px;
+}
+.sidebar-empty {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: 0;
+  padding: 0 4px;
+  line-height: 1.5;
+}
+.sidebar-recents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar-recents li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 8px;
+}
+.sidebar-recents li.is-current {
+  background: var(--color-accent-soft);
+}
+.sidebar-recent-item {
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.sidebar-recent-item:hover {
+  background: var(--color-surface-2);
+}
+.sidebar-recents li.is-current .sidebar-recent-item:hover {
+  background: transparent;
+}
+.sidebar-recent-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+}
+.sidebar-recent-size {
+  font-size: 11px;
+  color: var(--color-muted);
+  flex: none;
+}
+.sidebar-recent-remove {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.sidebar-recent-remove:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+.sidebar-caps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sidebar-caps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text);
+  padding: 0 4px;
+}
+.sidebar-caps svg {
+  color: var(--color-tropical);
+  flex: none;
+}
+.sidebar-privacy {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 4px 0 0;
+  padding: 0 4px;
+}
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+.sidebar-user-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.sidebar-user-names strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-user-names small {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.sidebar-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sidebar-toggle {
+  display: none;
+}
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 23, 21, 0.5);
+  z-index: 60;
+}
+.sidebar-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(300px, 86vw);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  z-index: 61;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.sidebar-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sidebar-drawer-head .sidebar-brand {
+  border-bottom: 0;
+  padding: 0;
+}
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-sidebar {
+    display: none;
+  }
+  .sidebar-toggle {
+    display: inline-flex;
+  }
+}
+
+/* Fase B: saludo QwenWork bajo la mascota + dock protagonista. */
+.mascot-greeting {
+  margin: 2px 0 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  max-width: 560px;
+}
+.excel-starters {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.excel-starters-title {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.excel-starters-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.excel-dock {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+}
+
+/* Fase C: EngineStatus — estado honesto RAG + modelo (solo lectura). */
+.engine-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  padding: 5px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+}
+.engine-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-muted);
+  opacity: 0.5;
+  flex: none;
+}
+.engine-dot.ready {
+  background: var(--color-tropical);
+  opacity: 1;
+}
+.engine-dot.busy {
+  background: var(--color-accent);
+  opacity: 1;
+  animation: engine-pulse 1.1s ease-in-out infinite;
+}
+.engine-model {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+  font-weight: 550;
+}
+@keyframes engine-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
+@media (max-width: 640px) {
+  .engine-status {
+    max-width: 150px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .engine-dot.busy { animation: none; }
+}
