@@ -21,18 +21,9 @@ function setMascotaMood(m: MascotaMood) {
 
 type ChatMsg = ChatHistoryMsg
 
-// Defense-in-depth: escapa entidades HTML y neutraliza javascript:/on* antes
-// de que el texto toque cualquier renderizado. React ya escapa por defecto,
-// pero el LLM puede generar contenido impredecible (HTML, event handlers).
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
+// Defense-in-depth: neutraliza javascript:/on* y etiquetas antes de que el
+// texto toque cualquier renderizado. React ya escapa por defecto, pero el LLM
+// puede generar contenido impredecible (HTML, event handlers).
 function neutralizeHtml(str: string): string {
   return str
     .replace(/javascript\s*:/gi, 'blocked:')
@@ -41,9 +32,12 @@ function neutralizeHtml(str: string): string {
 }
 
 // Sanitiza texto del LLM o del usuario antes de renderizar.
-// Aplica escape HTML + eliminación de etiquetas/eventos/URLs peligrosas.
+// Solo neutraliza etiquetas/eventos/URLs peligrosas: NO se escapan entidades
+// HTML porque todo se renderiza como nodos de texto React (que ya escapan).
+// Escapar aquí causaba doble-escape visible (&#39;, &quot;, &amp;) en cada
+// respuesta con apóstrofes, comillas o &.
 export function sanitizeRichText(text: string): string {
-  return escapeHtml(neutralizeHtml(text))
+  return neutralizeHtml(text)
 }
 
 // Strip the trailing JSON action block (e.g. {"action":"setFilter",...}) so it
@@ -66,6 +60,15 @@ export function ModelPill({ model }: { model?: string }) {
       ✦ {model}
     </span>
   )
+}
+
+// Etiqueta humana del tipo de coincidencia RAG (la UI es española,
+// el motor devuelve claves técnicas).
+export function matchTypeLabel(matchType?: string): string | null {
+  if (matchType === 'lexical') return 'literal'
+  if (matchType === 'vector') return 'semántica'
+  if (matchType === 'hybrid') return 'combinada'
+  return matchType || null
 }
 
 // La voz lee solo la primera frase: suena humano en vez de recitar el informe.
@@ -504,8 +507,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
         let detail = `HTTP ${res.status}`
         try {
           const j = (await res.json()) as { error?: string; detail?: string }
-          if (j?.error) detail = j.detail ? `${j.error}: ${j.detail}` : j.error
-        } catch { /* ignore */ }
+          if (j?.error) detail = `HTTP ${res.status} — ${j.detail ? `${j.error}: ${j.detail}` : j.error}`
+        } catch { /* cuerpo no-JSON (p. ej. 504 del gateway): se conserva HTTP status */ }
         throw new Error(detail)
       }
 
@@ -749,7 +752,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                         <summary title={c.snippet}><Icon name="file" size={14} /> Pág. {c.pageNumber}</summary>
                         <div className="citation-snippet">
                           <q>{c.snippet}</q>
-                          {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
+                          {matchTypeLabel(c.matchType) && <span className="citation-match"> · {matchTypeLabel(c.matchType)}</span>}
                           {' · '}
                           <button
                             type="button"
@@ -882,7 +885,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                           <summary title={c.snippet}><Icon name="file" size={14} /> Pág. {c.pageNumber}</summary>
                           <div className="citation-snippet">
                             <q>{c.snippet}</q>
-                            {c.matchType && <span className="citation-match"> · {c.matchType}</span>}
+                            {matchTypeLabel(c.matchType) && <span className="citation-match"> · {matchTypeLabel(c.matchType)}</span>}
                             {' · '}
                             <button
                               type="button"

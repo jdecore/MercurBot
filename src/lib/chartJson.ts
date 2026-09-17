@@ -107,7 +107,9 @@ export function splitChartBlock(text: string): { text: string; chart: ChartSpec 
     const body = (closeIdx === -1 ? text.slice(bodyStart) : text.slice(bodyStart, closeIdx)).trim()
     let spec: ChartSpec | null = null
     try {
-      spec = validateSpec(JSON.parse(stripControls(body)))
+      // Tolerancia a comas colgantes (el LLM las emite a menudo).
+      const json = stripControls(body).replace(/,(\s*[}\]])/g, '$1')
+      spec = validateSpec(JSON.parse(json))
     } catch {
       spec = null
     }

@@ -188,12 +188,19 @@ function stripThinking(text: string): string {
     .trim()
 }
 
+// Presupuesto por proveedor: si uno se cuelga (sin respuesta), se aborta y
+// se pasa al siguiente en vez de quemar los 60s de la Function en un 504.
+// Suma máxima 15+15+20 = 50s < maxDuration 60 → siempre hay respuesta JSON.
+const GEMINI_TIMEOUT_MS = 15_000
+const GROQ_TIMEOUT_MS = 15_000
+const OPENROUTER_TIMEOUT_MS = 20_000
+
 async function genGemini(prompt: string, system: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY?.trim()
   if (!key) throw new Error('no GEMINI_API_KEY')
   const genAI = new GoogleGenerativeAI(key)
   const model = genAI.getGenerativeModel({ model: GEMINI_MODEL, systemInstruction: system })
-  const res = await model.generateContent(prompt)
+  const res = await model.generateContent(prompt, { signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS) })
   return res.response.text()
 }
 
@@ -206,6 +213,7 @@ async function genGroq(prompt: string, system: string): Promise<string> {
       'content-type': 'application/json',
       authorization: `Bearer ${key}`,
     },
+    signal: AbortSignal.timeout(GROQ_TIMEOUT_MS),
     body: JSON.stringify({
       model: GROQ_MODEL,
       messages: [
@@ -235,6 +243,7 @@ async function genOpenRouter(prompt: string, system: string): Promise<string> {
       'HTTP-Referer': 'https://copixi.vercel.app',
       'X-Title': 'Copixi',
     },
+    signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS),
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
       messages: [
