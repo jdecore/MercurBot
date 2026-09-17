@@ -62,7 +62,7 @@ El motor tabular (profiler/statistics/transformations/anomalyDetection/chartAdap
 - **Briefing + voz (Fase 24):** al indexar, `mode:'summary'` genera la tarjeta "Este documento en 3 puntos" (clicable al visor, degradado silencioso); el dock tiene dictado por voz (Web Speech API `es-ES`, sin deps, oculto sin soporte).
 
 ### Estado y UI
-`src/state/DashboardContext.tsx` (fuente única mínima: `error`, `loading`, `pdfDoc`). Mascota única personalizable (robot por semilla con 19 diseños + 7 unidades base o Blobatar, tarjeta de personalización modal, TTS nativo), modo oscuro automático (`prefers-color-scheme`, solo tokens), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta tropical-formal "Mercado al Atardecer": papel `#EDEDE9`, azul despacho, mango, selva, jamaica).
+`src/state/DashboardContext.tsx` (fuente única mínima: `error`, `loading`, `pdfDoc`). Mascota única personalizable (robot por semilla con 19 diseños + 7 unidades base o Blobatar, tarjeta de personalización modal, TTS nativo), modo oscuro automático (`prefers-color-scheme`, solo tokens), Radix UI (a11y AA), Pixelarticons, CSS nativo con tokens `:root` (paleta "Gris + Maracuyá + Hoja", Fase 43: base gris neutra `#E7E7E3`, primario gris petróleo, acento amarillo maracuyá `#E3A008` solo donde actúa, apoyo verde hoja `#0E7C6B`).
 
 ---
 

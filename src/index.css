@@ -4,21 +4,24 @@
    (el woff2 con <i> vacíos no renderizaba ningún glifo). */
 
 :root {
-  /* colors — "Mercado al Atardecer": papel archivo + azul despacho + mango,
-     selva y jamaica tropicales pero formales (plan de rediseño aprobado) */
-  --color-bg: #EDEDE9;
+  /* colors — "Gris + Maracuyá + Hoja": base gris neutra, atención
+     amarillo maracuyá, apoyo verde hoja (Fase 43) */
+  --color-bg: #E7E7E3;
   --color-surface: #FFFFFF;
-  --color-surface-2: #E2E2DB;
-  --color-text: #191B18;
+  --color-surface-2: #DBDBD6;
+  --color-text: #1C1E1C;
   --color-muted: #5A5E58;
-  --color-primary: #1D3A5F;
-  --color-primary-hover: #162A44;
+  --color-primary: #2F3A3C;
+  --color-primary-hover: #232B2D;
   --color-on-primary: #FFFFFF;
-  --color-accent: #A85B12;
-  --color-accent-hover: #8F5A00;
-  --color-on-accent: #FFFFFF;
+  --color-accent: #E3A008;
+  --color-accent-hover: #C98A00;
+  --color-on-accent: #1C1A10;
+  --color-tropical: #0E7C6B;
+  --color-tropical-hover: #0A5F53;
+  --color-on-tropical: #FFFFFF;
   --color-border: #D5D5CB;
-  --color-success: #1E6B45;
+  --color-success: var(--color-tropical);
   --color-warning: #8a5a00;
   --color-danger: #9E2B47;
   /* softs derivados (auto-adaptan a oscuro por referenciar tokens) */
@@ -105,25 +108,28 @@
 }
 
 * { box-sizing: border-box; }
-*::selection { background: rgba(179, 74, 36, 0.18); }
+*::selection { background: rgba(227, 160, 8, 0.28); }
 
 /* Modo oscuro (P2): sigue al sistema, solo remapea tokens + superficies clave.
    Los componentes usan var(--color-*) así que la mayoría cambia solo. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #141715;
+    --color-bg: #161817;
     --color-surface: #1F2421;
     --color-surface-2: #2A312C;
     --color-text: #ECEEE8;
     --color-muted: #A9AEA2;
-    --color-primary: #7FA8D0;
-    --color-primary-hover: #93B9DA;
-    --color-on-primary: #141715;
-    --color-accent: #E0A038;
-    --color-accent-hover: #EDB457;
-    --color-on-accent: #141715;
+    --color-primary: #9AB3B5;
+    --color-primary-hover: #B4CACC;
+    --color-on-primary: #161817;
+    --color-accent: #F5B301;
+    --color-accent-hover: #FFC53D;
+    --color-on-accent: #1C1A10;
+    --color-tropical: #3DD598;
+    --color-tropical-hover: #6EE7B7;
+    --color-on-tropical: #10231D;
     --color-border: #39413A;
-    --color-success: #4ade80;
+    --color-success: var(--color-tropical);
     --color-warning: #fbbf24;
     --color-danger: #F87171;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -156,5 +162,5 @@ a:hover { text-decoration: underline; }
 
 /* scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 9999px; }
 ::-webkit-scrollbar-track { background: transparent; }
