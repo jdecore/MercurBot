@@ -1215,6 +1215,8 @@ Impact on: [privacidad §8: excepción consentida y documentada | seguridad: mis
 
 - **Modelos elegidos por el usuario (2026-09-18):** `api/chat/index.ts` — Gemini `gemini-3.5-flash-lite`, Groq `qwen/qwen3.8-27b` (temperature 0.6, top_p 0.95, max_completion_tokens 2048), OpenRouter `z-ai/glm-5.2:free`. Las env vars (`GEMINI_API_KEY`, `GROQ_API_KEY`/`GROQ_MODEL`, `OPENROUTER_API_KEY`) siguen mandando si existen en Vercel; estos son los defaults. Sin `stream` ni `reasoning_effort` en servidor (responde texto completo; el SSE al cliente es de un chunk por diseño). Nota: si un modelo no existe o la key no tiene acceso, la cadena de fallbacks lo cubre. `pnpm build` ok.
 
+- **Sin-gráfica honesto: pre-chequeo + aviso con conteo (2026-09-18):** ideas 1+3 del fallo "no hay cifras comparables". (1) `chartFull.ts` += `countSelectionFigures` (puro, nunca lanza; mismo regex de densidad que la pre-selección). (2) `ChartFullButton` muestra en la confirmación el aviso determinista en local antes de gastar la llamada: 0 cifras → "documento narrativo, probable sin gráfica"; 1–9 → "pocas cifras sueltas"; ≥10 → sin aviso (no bloquea, el usuario decide). (3) `ExcelChat.describeNoChart` (puro): el aviso sin-gráfica ahora dice alcance + conteo real vía `ragClient.getPageTexts` ("Analicé págs. 1–2 y no detecté cifras…" vs "detecté N sueltas sin serie comparable…"), en burbuja e historial. Verificado: heurística 0 en texto narrativo / 8 en tabular, `pnpm build` ok, `pnpm lint` 7 warnings preexistentes, sin nuevas deps (§34).
+
 ---
 
 *Última actualización: 2026-09-17 (Fase 44 shell QwenWork-honesto — sidebar + starters + EngineStatus; build ok) — Contrato vivo de Copixi. Cualquier desviación debe justificarse según §41.*

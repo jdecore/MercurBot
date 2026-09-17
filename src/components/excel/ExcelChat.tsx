@@ -9,7 +9,7 @@ import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } 
 import { useDictation, getDictationSupport } from '../../lib/dictation'
 import { splitChartBlock, stripChartBlock, type ChartSpec } from '../../lib/chartJson'
 import { verifyChartSpec } from '../../lib/verifyChart'
-import { formatPageRange } from '../../lib/chartFull'
+import { formatPageRange, countSelectionFigures } from '../../lib/chartFull'
 import type { ChartFullResultDetail } from '../pdf/ChartFullButton'
 
 // Fase C: gráfica SVG propia en chunk separado (no engorda el bundle inicial).
@@ -82,6 +82,28 @@ function firstSentence(text: string): string {
 function truncateName(name: string): string {
   const base = name.replace(/\.pdf$/i, '')
   return base.length > 28 ? `${base.slice(0, 27)}…` : base
+}
+
+// Idea 1 — aviso sin gráfica con contexto real: qué alcance se analizó y
+// cuántas cifras hay en local (heurística de tokens numéricos, la misma del
+// pre-chequeo). Distingue "documento narrativo" de "cifras sin serie".
+// Puro, nunca lanza; null si no aplica.
+function describeNoChart(pages: number[] | null | undefined): string | null {
+  if (!pages || pages.length === 0) return null
+  const range = formatPageRange(pages)
+  let n: number | null = null
+  try {
+    n = countSelectionFigures(pages.flatMap((p) => ragClient.getPageTexts(p)).map((t) => ({ text: t })))
+  } catch {
+    n = null
+  }
+  if (n === null) return `El modelo no encontró cifras comparables en ${range} y no devolvió gráfica.`
+  if (n === 0)
+    return `Analicé ${range} y no detecté cifras: el documento es narrativo y no hay serie que graficar. ` +
+      `Pídeme un resumen por etapas o por puntos en el chat.`
+  return `Analicé ${range} y detecté ${n} cifra${n === 1 ? '' : 's'} suelta${n === 1 ? '' : 's'}, ` +
+    `pero sin serie comparable para graficar (distintas unidades o sin evolución). ` +
+    `Prueba con un documento con tablas o pregúntame por los datos en el chat.`
 }
 
 // Minimal, dependency-free markdown: **bold**, *italic*, `code`.
@@ -701,13 +723,14 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   }, [messages])
 
   const cleanedAi = useMemo(() => {
-    const empty = { text: '', chart: null as ChartSpec | null, dropped: 0, total: 0, rejected: false, noChart: false, chartPages: null as number[] | null }
+    const empty = { text: '', chart: null as ChartSpec | null, dropped: 0, total: 0, rejected: false, noChart: false, chartPages: null as number[] | null, noChartText: null as string | null }
     if (!lastAiMsg) return empty
     const { text, chart: rawChart } = splitChartBlock(lastAiMsg.content)
     // Fase D: ninguna cifra llega al SVG sin existir en el documento.
     // Fase E: chartPages restringe al rango analizado bajo demanda.
     const pages = lastAiMsg.chartPages ?? undefined
     const v = verifyChartSpec(rawChart, (p) => ragClient.getPageTexts(p), pages)
+    const noChart = rawChart === null && pages !== undefined
     return {
       text: cleanAI(text),
       chart: v.spec,
@@ -715,10 +738,11 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       total: v.total,
       rejected: rawChart !== null && v.spec === null,
       // El mensaje vino del botón Generar gráfica pero el modelo no devolvió
-      // bloque chart-json (sin cifras comparables): aviso honesto en vez de
-      // silencio, para que no parezca que el botón no hizo nada.
-      noChart: rawChart === null && pages !== undefined,
+      // bloque chart-json (sin cifras comparables): aviso honesto con
+      // contexto real (idea 1) en vez de silencio.
+      noChart,
       chartPages: pages ?? null,
+      noChartText: noChart ? describeNoChart(pages) : null,
     }
   }, [lastAiMsg])
 
@@ -812,10 +836,9 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     Gráfica descartada: los datos no se verificaron en el documento.
                   </div>
                 )}
-                {cleanedAi.noChart && (
+                {cleanedAi.noChart && cleanedAi.noChartText && (
                   <div className="chart-notice" role="status">
-                    El modelo no encontró cifras comparables en el alcance analizado y no devolvió gráfica.
-                    Prueba con un documento con tablas o cifras por página.
+                    {cleanedAi.noChartText}
                   </div>
                 )}
                 <div className="ai-actions-row">
@@ -956,7 +979,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   )}
                   {msgNoChart && (
                     <div className="chart-notice" role="status">
-                      El modelo no encontró cifras comparables en el alcance analizado y no devolvió gráfica.
+                      {describeNoChart(msgPages ?? undefined) ?? 'El modelo no encontró cifras comparables en el alcance analizado y no devolvió gráfica.'}
                     </div>
                   )}
                 </div>

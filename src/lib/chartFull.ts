@@ -44,6 +44,27 @@ function numberDensity(text: string): number {
   }
 }
 
+/**
+ * Conteo de cifras en una selección (ideas 1+3): cuántos tokens numéricos
+ * hay en las páginas que se van a analizar / se analizaron. Sirve para el
+ * pre-chequeo honesto ("documento narrativo, casi sin cifras") y para el
+ * aviso con contexto real cuando el modelo no devuelve gráfica.
+ * Puro, nunca lanza.
+ */
+export function countSelectionFigures(pages: { text: string }[] | null | undefined): number {
+  try {
+    if (!Array.isArray(pages)) return 0
+    let n = 0
+    for (const p of pages) {
+      if (!p || typeof p.text !== 'string') continue
+      n += numberDensity(p.text)
+    }
+    return n
+  } catch {
+    return 0
+  }
+}
+
 export function selectChartFullPages(
   all: { pageNumber: number; text: string }[],
   maxChars = CHART_FULL_MAX_CHARS,

@@ -1313,6 +1313,16 @@ button.citation-inline:focus-visible {
   color: var(--color-muted);
   margin: 0 0 10px;
 }
+.chart-full-warning {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
 .chart-full-error {
   font-size: 13px;
   color: var(--color-danger);
@@ -2096,6 +2106,12 @@ button.citation-inline:focus-visible {
   background: var(--color-muted);
   opacity: 0.5;
   flex: none;
+}
+.engine-dot.idle {
+  background: var(--color-tropical);
+  opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-tropical) 25%, transparent),
+    0 0 8px color-mix(in srgb, var(--color-tropical) 60%, transparent);
 }
 .engine-dot.ready {
   background: var(--color-tropical);

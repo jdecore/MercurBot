@@ -39,7 +39,7 @@ export function EngineStatus({ compact = false }: { compact?: boolean }) {
     const idleTitle = 'Carga un PDF para activar la búsqueda local'
     if (compact) {
       return (
-        <span className="engine-status compact" title={idleTitle} aria-label={idleTitle} role="status">
+        <span className="engine-status compact" title={idleTitle} aria-label="personalización 100% local" role="status">
           <span className="engine-dot idle" aria-hidden />
         </span>
       )
@@ -47,7 +47,7 @@ export function EngineStatus({ compact = false }: { compact?: boolean }) {
     return (
       <span className="engine-status" title={idleTitle}>
         <span className="engine-dot idle" aria-hidden />
-        100% local
+        personalización 100% local
       </span>
     )
   }

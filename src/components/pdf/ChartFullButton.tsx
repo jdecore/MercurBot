@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PdfPageText } from '../../data/extractors/pdf'
-import { selectChartFullPages, formatPageRange, type ChartFullSelection } from '../../lib/chartFull'
+import { selectChartFullPages, formatPageRange, countSelectionFigures, type ChartFullSelection } from '../../lib/chartFull'
 
 /**
  * Botón "Generar gráfica" del panel (Fase E): análisis con el documento
@@ -104,8 +104,8 @@ export function ChartFullButton({
           )
         if (res.status === 502)
           throw new Error(
-            'La IA no respondió (502). Revisa las claves del proveedor (GEMINI_API_KEY, GROQ_API_KEY u OPENROUTER_API_KEY válidas) ' +
-              'y el modelo configurado (GEMINI_MODEL=gemini-2.0-flash). Reintenta en unos segundos.',
+            'La IA no respondió (502). Revisa las claves del proveedor en Vercel ' +
+              '(GEMINI_API_KEY, GROQ_API_KEY u OPENROUTER_API_KEY) y reintenta en unos segundos.',
           )
         if (res.status === 504)
           throw new Error(
@@ -150,6 +150,17 @@ export function ChartFullButton({
       : `Se analizará el documento íntegro (${totalPages} págs.).`
     : ''
 
+  // Idea 3 — pre-chequeo determinista en local, antes de gastar la llamada:
+  // si el alcance casi no trae cifras, la gráfica probablemente no saldrá.
+  // Se avisa en la confirmación, no se bloquea (el usuario decide).
+  const figCount = sel ? countSelectionFigures(sel.pages) : 0
+  const figWarning =
+    sel && sel.pages.length > 0 && figCount === 0
+      ? 'Aviso: no detecté cifras en este alcance — el documento parece narrativo y es probable que no salga gráfica. Puedes enviarlo igual o pedirme un resumen por etapas en el chat.'
+      : sel && sel.pages.length > 0 && figCount < 10
+        ? `Aviso: solo detecté ${figCount} cifra${figCount === 1 ? '' : 's'} en este alcance — puede no haber serie comparable para graficar.`
+        : null
+
   return (
     <div className="chart-full">
       {(state === 'idle' || state === 'confirm') && (
@@ -172,6 +183,9 @@ export function ChartFullButton({
             Nada se guarda en servidores salvo el proveedor de IA.
           </p>
           <p className="chart-full-scope">{scopeLine}</p>
+          {figWarning && (
+            <p className="chart-full-warning" role="status">{figWarning}</p>
+          )}
           <div className="chart-full-row">
             <button type="button" className="btn btn-secondary small" onClick={cancelAll}>
               Cancelar
