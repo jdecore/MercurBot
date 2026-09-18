@@ -106,6 +106,7 @@ function PdfViewerBody({ file, page, onPageChange, enabled, highlight }: PdfView
   const textLayerRef = useRef<HTMLDivElement>(null)
   const textLayerObjRef = useRef<InstanceType<typeof pdfjsLib.TextLayer> | null>(null)
   const renderSeqRef = useRef(0)
+  const docLoadSeqRef = useRef(0)
   const highlightRef = useRef(highlight)
   useEffect(() => {
     highlightRef.current = highlight
@@ -121,6 +122,7 @@ function PdfViewerBody({ file, page, onPageChange, enabled, highlight }: PdfView
   useEffect(() => {
     if (!enabled || !file) return
     let cancelled = false
+    const seq = ++docLoadSeqRef.current
     setLoadError(null)
     setNumPages(0)
     ;(async () => {
@@ -128,7 +130,7 @@ function PdfViewerBody({ file, page, onPageChange, enabled, highlight }: PdfView
         const data = await file.arrayBuffer()
         const task = pdfjsLib.getDocument({ data })
         const doc = await task.promise
-        if (cancelled) {
+        if (cancelled || seq !== docLoadSeqRef.current) {
           await destroyDoc(doc)
           return
         }
@@ -136,11 +138,13 @@ function PdfViewerBody({ file, page, onPageChange, enabled, highlight }: PdfView
         docRef.current = doc
         setNumPages(doc.numPages)
       } catch (err) {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : 'No se pudo abrir el PDF.')
+        if (!cancelled && seq === docLoadSeqRef.current) setLoadError(err instanceof Error ? err.message : 'No se pudo abrir el PDF.')
       }
     })()
     return () => {
       cancelled = true
+      // Destroy the previous document this effect opened (captured before
+      // the async load). A newer effect will have its own prevDoc.
       void destroyDoc(docRef.current)
       docRef.current = null
     }
@@ -270,33 +274,32 @@ function PdfViewerBody({ file, page, onPageChange, enabled, highlight }: PdfView
               <div ref={textLayerRef} className="pdf-text-layer" aria-hidden="true" />
             </div>
           </div>
+          {numPages > 0 && (
+            <div className="pdf-viewer-nav">
+              <button
+                type="button"
+                className="btn btn-secondary small"
+                onClick={() => go(safePage - 1)}
+                disabled={safePage <= 1}
+                aria-label="Página anterior"
+              >
+                ← Anterior
+              </button>
+              <span className="pdf-viewer-counter" aria-live="polite">
+                {safePage} / {numPages}
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary small"
+                onClick={() => go(safePage + 1)}
+                disabled={safePage >= numPages}
+                aria-label="Página siguiente"
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
         </>
-      )}
-
-      {numPages > 0 && (
-        <div className="pdf-viewer-nav">
-          <button
-            type="button"
-            className="btn btn-secondary small"
-            onClick={() => go(safePage - 1)}
-            disabled={safePage <= 1}
-            aria-label="Página anterior"
-          >
-            ← Anterior
-          </button>
-          <span className="pdf-viewer-counter" aria-live="polite">
-            {safePage} / {numPages}
-          </span>
-          <button
-            type="button"
-            className="btn btn-secondary small"
-            onClick={() => go(safePage + 1)}
-            disabled={safePage >= numPages}
-            aria-label="Página siguiente"
-          >
-            Siguiente →
-          </button>
-        </div>
       )}
     </>
   )

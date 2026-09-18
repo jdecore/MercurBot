@@ -1221,4 +1221,6 @@ Impact on: [privacidad §8: excepción consentida y documentada | seguridad: mis
 
 ---
 
-*Última actualización: 2026-09-17 (Fase 44 shell QwenWork-honesto — sidebar + starters + EngineStatus; build ok) — Contrato vivo de Copixi. Cualquier desviación debe justificarse según §41.*
+- **QA destructivo live + fixes (2026-09-18):** test con Chromium headless contra `https://copixi.vercel.app/` (carga desktop+mobile, upload PDF 2 págs, indexado, pregunta con cifras, gráfica, modo oscuro, mobile con doc). Hallazgos: (1) **BUG REAL — scroll horizontal en mobile con gráfica:** la tabla `sr-only` de `ChartCard` (accesibilidad) en `table-layout:auto` ignora `width:1px` y el contenido nowrap la expandía a 657px → página a 714px. Fix: lista `<ul class="sr-only">` (1px real, legible por SR) + blindaje global `table.sr-only{display:block}`. (2) `theme-color` desactualizado (mango pre-Fase 43) → `#2F3A3C`/`#161817`. (3) `og:image` era el favicon SVG (no renderiza en scrapers) → `public/og-cover.png` 1200×630 + `summary_large_image`. Seguridad re-verificada: guards 403/405/413/415/400/429 correctos, sin `VITE_` secrets, CSP/HSTS/X-Frame/X-Content-Type presentes, rate-limit con purga, origen con whitelist exacta. Sin nuevas deps (playwright-core solo andamiaje temporal, retirado).
+
+*Última actualización: 2026-09-18 (QA destructivo live + fixes sr-only/theme-color/og-cover; build ok) — Contrato vivo de Copixi. Cualquier desviación debe justificarse según §41.*

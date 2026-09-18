@@ -5,7 +5,7 @@ const PAGE_CITE_RE = /\[P[áa]g\.?\s*(\d+)\]|\[P[áa]gina\s*(\d+)\]|\[p\.\s*(\d+
 
 function gotoPage(page: number) {
   if (Number.isFinite(page) && page > 0) {
-    window.dispatchEvent(new CustomEvent('copixi:goto-page', { detail: page }))
+    window.dispatchEvent(new CustomEvent('copixi:goto-page', { detail: { page } }))
   }
 }
 

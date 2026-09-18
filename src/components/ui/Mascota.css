@@ -3,7 +3,7 @@
    Ciencia → Biología Computacional → Datos → IA → Tecnología → Productos → Ecosistemas
    ========================================================================= */
 
-#mascota.robot-eve {
+.mascota-root.robot-eve {
   --robot-size: 200px;
   --mouse-x: 0px;
   --mouse-y: 0px;
@@ -46,9 +46,9 @@
   z-index: 1;
 }
 
-#mascota.mood-hablando .robot-habitat-aura,
-#mascota.mood-feliz .robot-habitat-aura,
-#mascota.mood-exito .robot-habitat-aura {
+.mascota-root.mood-hablando .robot-habitat-aura,
+.mascota-root.mood-feliz .robot-habitat-aura,
+.mascota-root.mood-exito .robot-habitat-aura {
   opacity: 0.3;
   animation: auraPulse 2s ease-in-out infinite alternate;
 }
@@ -326,27 +326,27 @@
   box-shadow: 0 0 8px var(--unit-primary);
 }
 
-#mascota.mood-feliz .robot-cheeks,
-#mascota.mood-exito .robot-cheeks {
+.mascota-root.mood-feliz .robot-cheeks,
+.mascota-root.mood-exito .robot-cheeks {
   opacity: 0.7;
 }
 
 /* Expresiones según Mood */
-#mascota.mood-feliz .friendly-eye,
-#mascota.mood-exito .friendly-eye {
+.mascota-root.mood-feliz .friendly-eye,
+.mascota-root.mood-exito .friendly-eye {
   height: 20px;
   border-radius: 50% 50% 10% 10%;
   transform: translateY(-2px);
 }
 
-#mascota.mood-duda .friendly-eye.left {
+.mascota-root.mood-duda .friendly-eye.left {
   transform: translateY(-3px) rotate(-6deg);
 }
-#mascota.mood-duda .friendly-eye.right {
+.mascota-root.mood-duda .friendly-eye.right {
   transform: translateY(2px) scaleY(0.85);
 }
 
-#mascota.mood-dormido .friendly-eye {
+.mascota-root.mood-dormido .friendly-eye {
   height: 6px;
   border-radius: 3px;
 }
@@ -361,7 +361,7 @@
   height: 10px;
   z-index: 6;
 }
-#mascota.mood-hablando .visor-audio-wave {
+.mascota-root.mood-hablando .visor-audio-wave {
   display: flex;
 }
 .wave-bar {
@@ -478,7 +478,7 @@
 }
 
 /* ==================== SUBTÍTULOS ==================== */
-#subtitulos {
+.mascota-subtitles {
   position: absolute;
   bottom: -28px;
   background: rgba(15, 23, 42, 0.85);
@@ -534,7 +534,7 @@
    respeta prefers-reduced-motion). Aquí solo layout + customizer nativo.
    ========================================================================= */
 
-#mascota.robot-eve.face-blobatar {
+.mascota-root.robot-eve.face-blobatar {
   --unit-primary: #ff6b00;
   --unit-accent: #ff8c2f;
 }
@@ -545,7 +545,7 @@
   transition: transform 200ms ease;
 }
 
-#mascota.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
+.mascota-root.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
   transform: scale(1.04);
 }
 
@@ -813,7 +813,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #mascota.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
+  .mascota-root.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
     transform: none;
   }
 }
@@ -860,8 +860,8 @@
   box-shadow: 0 0 6px rgba(201, 138, 107, 0.6);
 }
 
-#mascota.mood-feliz .robot-cheeks,
-#mascota.mood-exito .robot-cheeks {
+.mascota-root.mood-feliz .robot-cheeks,
+.mascota-root.mood-exito .robot-cheeks {
   opacity: 0.85;
 }
 

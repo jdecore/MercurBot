@@ -80,9 +80,8 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     const displayName = (avatarName ?? '').trim() || DEFAULT_BLOBATAR_NAME
     return (
       <div
-        id="mascota"
+        className={`mascota-root robot-eve face-blobatar ${moodClass}`}
         ref={rootRef}
-        className={`robot-eve face-blobatar ${moodClass}`}
         onClick={onClick}
         style={{
           ...(size ? { ['--robot-size' as string]: `${size}px` } : {}),
@@ -94,7 +93,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           <Blobatar name={displayName} animate="hover" size={size ?? 180} />
         </div>
 
-        {subtitulo && <div id="subtitulos">{subtitulo}</div>}
+        {subtitulo && <div className="mascota-subtitles">{subtitulo}</div>}
       </div>
     )
   }
@@ -113,9 +112,8 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
   return (
     <div
-      id="mascota"
+      className={`mascota-root robot-eve ${unitClass} ${moodClass}`}
       ref={rootRef}
-      className={`robot-eve ${unitClass} ${moodClass}`}
       onClick={onClick}
       style={{
         ...(size ? { ['--robot-size' as string]: `${size}px` } : {}),
@@ -238,7 +236,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
         <div className="robot-shadow" aria-hidden />
       </div>
 
-      {subtitulo && <div id="subtitulos">{subtitulo}</div>}
+      {subtitulo && <div className="mascota-subtitles">{subtitulo}</div>}
     </div>
   )
 }

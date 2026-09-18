@@ -61,9 +61,12 @@ export function setOnboarded(): void {
   localStorage.setItem(KEY_ONBOARDED, '1')
 }
 
-function safeParse<T>(raw: string | null, fallback: T): T {
+function safeParse<T>(raw: string | null, fallback: T, validate?: (v: unknown) => v is T): T {
   if (!raw) return fallback
-  try { return JSON.parse(raw) as T } catch { return fallback }
+  try {
+    const v = JSON.parse(raw)
+    return validate ? (validate(v) ? v : fallback) : (v as T)
+  } catch { return fallback }
 }
 
 // Analyses

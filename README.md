@@ -105,7 +105,7 @@ Requisitos: Node 20+, pnpm 11.22.0. `.env.example` trae `GEMINI_API_KEY=` (serve
 ## Quality Gate (verificado)
 `pnpm build` ok · sin Tailwind/shadcn/lucide · solo Pixelarticons · sin `VITE_` secrets · sin backend tradicional (solo proxy mínimo) · PDF 100% local · RAG híbrido + citas verificables · responsive + a11y AA · ErrorBoundary + empty states.
 
-Fases 0–42 completadas (ver `AGENTS.md` §42/§43): split chat|documento, cita→resaltado, gráficas SVG verificadas, chart-full bajo demanda, hardening post-auditoría triple (QA+seguridad+diseño), rediseño "Mercado al Atardecer" (tokens tropicales, CTA mango, iconos 14/16/18/22, QA visual 13/13 AA) y tarjeta modal de personalización del robot.
+Fases 0–45 completadas (ver `AGENTS.md` §42/§43): split chat|documento, cita→resaltado, gráficas SVG verificadas, chart-full bajo demanda, hardening post-auditoría triple (QA+seguridad+diseño), rediseño "Mercado al Atardecer", paleta "Gris + Maracuyá + Hoja", shell con sidebar contraíble, tarjeta modal de personalización del robot y QA destructivo live (overflow `sr-only` en mobile corregido, og-cover PNG).
 
 ---
 *Construido con pnpm, CSS nativo, Radix, pdfjs y chat SSE propio. Sin atajos. Sin humo. Solo producto.*

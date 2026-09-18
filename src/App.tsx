@@ -54,6 +54,11 @@ function MainDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(() => getPreferences().sidebarCollapsed)
 
+  // Track setTimeout IDs to clear them on unmount (prevents state updates on
+  // unmounted components and memory leaks from lingering closures).
+  const cancelTimeoutRef = useRef<number | null>(null)
+  const onboardingTimeoutRef = useRef<number | null>(null)
+
   const toggleRail = useCallback(() => {
     setRailCollapsed((prev) => {
       const next = !prev
@@ -85,7 +90,9 @@ function MainDashboard() {
     setMascotaMood('duda')
     setMascotaSubtitulo('Lectura cancelada.')
     speak('Lectura cancelada.')
-    setTimeout(() => {
+    if (cancelTimeoutRef.current !== null) clearTimeout(cancelTimeoutRef.current)
+    cancelTimeoutRef.current = window.setTimeout(() => {
+      cancelTimeoutRef.current = null
       setMascotaMood('neutro')
       setMascotaSubtitulo('')
     }, 4000)
@@ -93,11 +100,17 @@ function MainDashboard() {
 
   // Briefing proactivo (Fase 24C): 1 llamada tras indexar; si falla, sin tarjeta.
   // Con contador de petición: un briefing tardío nunca pisa a un documento nuevo.
+  // Abortable: si el componente se desmonta o el usuario cambia de doc, se cancela.
+  const briefingAbortRef = useRef<AbortController | null>(null)
   const loadBriefing = useCallback(async (doc: { filename: string; totalPages: number; chunks: { length: number }; fullText: string }) => {
     const my = ++briefingReqRef.current
     setBriefing(null)
     setBriefingModel(undefined)
     setBriefingLoading(true)
+    // Cancel any previous in-flight briefing fetch.
+    briefingAbortRef.current?.abort()
+    const ctrl = new AbortController()
+    briefingAbortRef.current = ctrl
     try {
       const sample = doc.fullText.replace(/\s+/g, ' ').trim().slice(0, 4000)
       const res = await fetch('/api/chat', {
@@ -113,6 +126,7 @@ function MainDashboard() {
             sample,
           },
         }),
+        signal: ctrl.signal,
       })
       const json = (await res.json()) as { text?: string; model?: string; error?: string }
       if (my !== briefingReqRef.current) return
@@ -121,7 +135,7 @@ function MainDashboard() {
         if (typeof json.model === 'string' && json.model) setBriefingModel(json.model)
       }
     } catch {
-      /* degradado silencioso */
+      /* degradado silencioso (AbortError incluido) */
     } finally {
       if (my === briefingReqRef.current) setBriefingLoading(false)
     }
@@ -260,7 +274,9 @@ function MainDashboard() {
     setMascotaMood('feliz')
     setMascotaSubtitulo(hello)
     speak(hello)
-    setTimeout(() => {
+    if (onboardingTimeoutRef.current !== null) clearTimeout(onboardingTimeoutRef.current)
+    onboardingTimeoutRef.current = window.setTimeout(() => {
+      onboardingTimeoutRef.current = null
       setMascotaMood('neutro')
       setMascotaSubtitulo('')
     }, 6000)
@@ -336,6 +352,15 @@ function MainDashboard() {
       if (timer !== null) window.clearTimeout(timer)
     }
   }, [hasDocument])
+
+  // Cleanup timeouts on unmount to prevent state updates on unmounted component.
+  useEffect(() => {
+    return () => {
+      if (cancelTimeoutRef.current !== null) clearTimeout(cancelTimeoutRef.current)
+      if (onboardingTimeoutRef.current !== null) clearTimeout(onboardingTimeoutRef.current)
+      briefingAbortRef.current?.abort()
+    }
+  }, [])
 
   // Re-abrir un PDF de la biblioteca sin volver a subirlo.
   const openLibraryDoc = useCallback(async (id: string) => {

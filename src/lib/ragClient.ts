@@ -195,6 +195,15 @@ class RagClient {
 
     // If worker is running, attempt search with Watchdog timeout
     if (this.worker) {
+      // Deduplicate: if an identical query is already in-flight, resolve the
+      // pending one with fallback first to avoid overwriting its resolver.
+      const pending = this.searchResolvers.get(query)
+      if (pending) {
+        this.searchResolvers.delete(query)
+        this.lastSearchUsedFallback = true
+        pending(this.searchMainThread(query, topK))
+      }
+
       return new Promise<RagSearchResultItem[]>((resolve) => {
         const timer = setTimeout(() => {
           console.warn('[RagClient] Worker Watchdog timeout excedido. Conmutando a búsqueda léxica local.')
@@ -205,6 +214,7 @@ class RagClient {
 
         this.searchResolvers.set(query, (results) => {
           clearTimeout(timer)
+          this.searchResolvers.delete(query)
           resolve(results)
         })
 

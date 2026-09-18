@@ -86,7 +86,7 @@ export default function ChartCard({ spec }: { spec: ChartSpec }) {
                   >
                     <title>{`${d.label}: ${fmtFull.format(d.value)}`}</title>
                   </rect>
-                  <text x={x(i)} y={yTop - 6} textAnchor="middle" className="chart-value">
+                  <text x={x(i)} y={Math.max(PAD.t + 12, yTop - 6)} textAnchor="middle" className="chart-value">
                     {fmtCompact.format(d.value)}
                   </text>
                 </g>
@@ -105,7 +105,7 @@ export default function ChartCard({ spec }: { spec: ChartSpec }) {
                 <circle cx={x(i)} cy={y(d.value)} r={4.5} className="chart-dot">
                   <title>{`${d.label}: ${fmtFull.format(d.value)}`}</title>
                 </circle>
-                <text x={x(i)} y={y(d.value) - 10} textAnchor="middle" className="chart-value">
+                <text x={x(i)} y={Math.max(PAD.t + 12, y(d.value) - 10)} textAnchor="middle" className="chart-value">
                   {fmtCompact.format(d.value)}
                 </text>
               </g>
@@ -126,17 +126,16 @@ export default function ChartCard({ spec }: { spec: ChartSpec }) {
           </text>
         ))}
       </svg>
-      <table className="sr-only">
-        <caption>{ariaSummary}</caption>
-        <tbody>
-          {spec.data.map((d, i) => (
-            <tr key={i}>
-              <th scope="row">{d.label}</th>
-              <td>{fmtFull.format(d.value)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Lista sr-only (no tabla): las tablas en auto-layout ignoran
+          width:1px y el contenido nowrap expandía la página a ~714px en
+          mobile (scroll horizontal). La lista es 1px real y legible por SR. */}
+      <ul className="sr-only" aria-label={ariaSummary}>
+        {spec.data.map((d, i) => (
+          <li key={i}>
+            {d.label}: {fmtFull.format(d.value)}
+          </li>
+        ))}
+      </ul>
       <div className="chart-sources" aria-label="Páginas de origen de los datos">
         <span className="chart-sources-label">Datos de:</span>
         {pages.map((p) => (

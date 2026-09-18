@@ -108,7 +108,11 @@ export function splitChartBlock(text: string): { text: string; chart: ChartSpec 
     let spec: ChartSpec | null = null
     try {
       // Tolerancia a comas colgantes (el LLM las emite a menudo).
-      const json = stripControls(body).replace(/,(\s*[}\]])/g, '$1')
+      // Regex conservador: solo elimina coma seguida de whitespace+closing
+      // bracket. No toca comas dentro de strings porque el bracket de cierre
+      // de string ("} o ']") precedido de coma sería ",  }" con espacio,
+      // que es casi siempre una coma colgante real en JSON de chart data.
+      const json = stripControls(body).replace(/,\s*([}\]])/g, '$1')
       spec = validateSpec(JSON.parse(json))
     } catch {
       spec = null

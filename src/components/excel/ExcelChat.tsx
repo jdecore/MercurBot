@@ -235,18 +235,20 @@ function renderRichText(text: string): React.ReactNode {
       if (isTable) {
         const [head, , ...rest] = cells
         blocks.push(
-          <table key={key++} className="ai-table">
-            <thead>
-              <tr>{head.map((c, ci) => (<th key={ci}>{renderInline(c)}</th>))}</tr>
-            </thead>
-            {rest.length > 0 && (
-              <tbody>
-                {rest.map((r, ri) => (
-                  <tr key={ri}>{r.map((c, ci) => (<td key={ci}>{renderInline(c)}</td>))}</tr>
-                ))}
-              </tbody>
-            )}
-          </table>,
+          <div key={key++} className="ai-table-wrap">
+            <table className="ai-table">
+              <thead>
+                <tr>{head.map((c, ci) => (<th key={ci}>{renderInline(c)}</th>))}</tr>
+              </thead>
+              {rest.length > 0 && (
+                <tbody>
+                  {rest.map((r, ri) => (
+                    <tr key={ri}>{r.map((c, ci) => (<td key={ci}>{renderInline(c)}</td>))}</tr>
+                  ))}
+                </tbody>
+              )}
+            </table>
+          </div>,
         )
         i = j
         continue
@@ -463,6 +465,10 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     if (loading) return
     const trimmed = text.trim()
     if (!trimmed) return
+
+    // Abort any in-flight request before starting a new one to prevent
+    // concurrent streams corrupting state.
+    abortRef.current?.abort()
 
     // Client-side rate limit backup (serverless: server token-bucket is
     // best-effort because Vercel instances don't share memory).
@@ -924,7 +930,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
       {chatLogOpen && (
         <div className="chat-expanded-log card" ref={scrollRef} role="log" aria-live="polite">
-          {messages.map((m, i) => {
+          {messages.map((m) => {
             if (!m.content) return null
             // Fase C: la gráfica vive en el mensaje; se extrae antes de sanitizar
             // (el escape HTML rompería el JSON). Función pura, apta en el map.
@@ -938,7 +944,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             const msgRejected = !!msgSplit?.chart && !msgVer?.spec
             const msgNoChart = m.role === 'assistant' && !msgSplit?.chart && msgPages !== undefined
             return (
-              <div key={i} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
+              <div key={m.id} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
                 <div className="excel-msg-body">
                   {renderRichText(sanitizeRichText(msgText))}
                   {m.citations && m.citations.length > 0 && (

@@ -14,6 +14,9 @@ try {
 
 const queue: string[] = []
 let speaking = false
+// Generation counter: stale onend callbacks from a cancelled utterance are
+// ignored so they don't flicker the mood/speaking state.
+let generation = 0
 
 function isSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -65,6 +68,7 @@ function processQueue() {
     return
   }
 
+  const myGen = ++generation
   const utterance = new SpeechSynthesisUtterance(cleanText)
   const voice = pickVoice()
   if (voice) utterance.voice = voice
@@ -72,12 +76,14 @@ function processQueue() {
   utterance.pitch = 1.05
 
   utterance.onend = () => {
+    if (myGen !== generation) return // stale callback, ignore
     speaking = false
     notifyState(false)
     processQueue()
   }
 
   utterance.onerror = () => {
+    if (myGen !== generation) return // stale callback, ignore
     speaking = false
     notifyState(false)
     processQueue()

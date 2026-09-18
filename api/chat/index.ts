@@ -98,6 +98,7 @@ function isAllowedOrigin(origin: string): boolean {
   // H2: whitelist exacta. El comodín *.vercel.app permitía que cualquiera
   // desplegara evil.vercel.app y abusara la cuota desde navegadores ajenos.
   // Previews de Vercel: si se necesitan, añadir su host exacto aquí.
+  // Same-origin requests (no Origin header) are allowed; cross-origin must match.
   return ALLOWED_ORIGINS.includes(origin)
 }
 
@@ -365,7 +366,9 @@ async function readBody(req: any, maxBytes = MAX_BODY_BYTES): Promise<any> {
     try {
       return await req.json()
     } catch {
-      // If req.json() fails (e.g. because of size), fall through to manual
+      // On Web API Request, req.on doesn't exist — return error instead of
+      // falling through to the Legacy Node path which would hang forever.
+      throw new Error('Invalid JSON body')
     }
   }
   // Legacy Node runtime or fallback

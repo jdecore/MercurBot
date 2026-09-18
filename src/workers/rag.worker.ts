@@ -134,17 +134,22 @@ async function saveVectorsToOPFS(docId: string, vectors: Map<string, Float32Arra
     const fileHandle = await dir.getFileHandle(`${docId}.bin`, { create: true })
     const writable = await fileHandle.createWritable()
 
-    // Write entry count + vector dim
-    const first = vectors.values().next().value as Float32Array | undefined
-    const header = new Uint32Array([vectors.size, first?.length ?? 0])
-    await writable.write(header)
+    try {
+      // Write entry count + vector dim
+      const first = vectors.values().next().value as Float32Array | undefined
+      const header = new Uint32Array([vectors.size, first?.length ?? 0])
+      await writable.write(header)
 
-    for (const [chunkId, vec] of vectors) {
-      const idBytes = new TextEncoder().encode(chunkId.padEnd(64, ' '))
-      await writable.write(idBytes)
-      await writable.write(vec as unknown as BufferSource)
+      for (const [chunkId, vec] of vectors) {
+        const idBytes = new TextEncoder().encode(chunkId.padEnd(64, ' '))
+        await writable.write(idBytes)
+        await writable.write(vec as unknown as BufferSource)
+      }
+      await writable.close()
+    } catch (err) {
+      try { await writable.abort() } catch { /* ignore */ }
+      throw err
     }
-    await writable.close()
   } catch (err) {
     console.warn('[RAG Worker] OPFS write skipped or unavailable', err)
   }
