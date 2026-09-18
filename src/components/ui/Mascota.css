@@ -351,6 +351,69 @@
   border-radius: 3px;
 }
 
+/* ==================== BOCA — LÍNEA POR MOOD ==================== */
+.robot-mouth {
+  position: absolute;
+  bottom: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18%;
+  height: 3px;
+  background: var(--unit-accent);
+  border-radius: 2px;
+  opacity: 0.7;
+  transition: all 300ms ease;
+  z-index: 6;
+}
+/* Neutro: línea recta */
+.mascota-root.mood-neutro .robot-mouth {
+  width: 18%;
+  height: 3px;
+  border-radius: 2px;
+  transform: translateX(-50%) rotate(0deg);
+}
+/* Feliz / Éxito: sonrisa */
+.mascota-root.mood-feliz .robot-mouth,
+.mascota-root.mood-exito .robot-mouth {
+  width: 22%;
+  height: 10px;
+  border-radius: 0 0 12px 12px;
+  background: transparent;
+  border-bottom: 3px solid var(--unit-accent);
+  border-left: 3px solid var(--unit-accent);
+  border-right: 3px solid var(--unit-accent);
+  opacity: 0.85;
+}
+/* Duda: línea quebrada ~ */
+.mascota-root.mood-duda .robot-mouth {
+  width: 20%;
+  height: 8px;
+  background: transparent;
+  border-bottom: 3px solid var(--unit-accent);
+  border-radius: 0;
+  transform: translateX(-50%) skewX(-12deg);
+  opacity: 0.75;
+}
+/* Sorpresa: ó small */
+.mascota-root.mood-sorpresa .robot-mouth {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  border: 3px solid var(--unit-accent);
+  opacity: 0.8;
+}
+/* Dormido: línea plana con opacidad baja */
+.mascota-root.mood-dormido .robot-mouth {
+  width: 14%;
+  height: 2px;
+  opacity: 0.4;
+}
+/* Hablando: la onda de audio oculta la boca */
+.mascota-root.mood-hablando .robot-mouth {
+  opacity: 0;
+}
+
 /* ==================== AUDIO ONDA AL HABLAR ==================== */
 .visor-audio-wave {
   position: absolute;

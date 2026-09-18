@@ -207,6 +207,9 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
                 <span className="cheek right" />
               </div>
 
+              {/* Boca — línea que cambia por mood */}
+              <div className="robot-mouth" aria-hidden />
+
               {/* Onda de audio al hablar */}
               <div className="visor-audio-wave" aria-hidden>
                 <span className="wave-bar" />
