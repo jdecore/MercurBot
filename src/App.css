@@ -2243,3 +2243,6 @@ button.citation-inline:focus-visible {
   transform: scale(2.2) translateY(-6%);
   transform-origin: center 42%;
 }
+.mascot-stage.compact .mascota-root .robot-head {
+  transform: rotate(var(--head-rot)) scale(1.3);
+}
