@@ -951,9 +951,9 @@ table.sr-only { display: block; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-tropical) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-tropical) 30%, transparent);
+  color: var(--color-tropical);
   font-size: 11px;
   font-weight: 650;
   padding: 2px 8px;
@@ -962,7 +962,8 @@ table.sr-only { display: block; }
   transition: all 150ms ease;
 }
 .citation-badge:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-tropical);
+  background: color-mix(in srgb, var(--color-tropical) 18%, var(--color-surface));
 }
 /* Fase 4 — citas inline [Pág. N] dentro del texto en streaming */
 .citation-inline {
@@ -1069,13 +1070,13 @@ button.citation-inline:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px dashed var(--color-border);
-  background: var(--color-surface-2);
+  border: 1px solid color-mix(in srgb, var(--color-tropical) 30%, transparent);
+  background: color-mix(in srgb, var(--color-tropical) 10%, var(--color-surface));
   border-radius: 999px;
   padding: 2px 9px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--color-tropical);
   white-space: nowrap;
   max-width: 100%;
   overflow: hidden;
@@ -2090,11 +2091,11 @@ button.citation-inline:focus-visible {
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--color-tropical);
   padding: 5px 11px;
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--color-tropical) 30%, transparent);
   border-radius: 999px;
-  background: var(--color-surface);
+  background: color-mix(in srgb, var(--color-tropical) 10%, var(--color-surface));
   white-space: nowrap;
   max-width: 320px;
   overflow: hidden;

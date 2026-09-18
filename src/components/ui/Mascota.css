@@ -55,7 +55,7 @@
 
 /* ==================== CABEZA FLOTANTE AMIGABLE ==================== */
 .robot-head {
-  width: 68%;
+  width: 88%;
   aspect-ratio: 1.25 / 1;
   position: relative;
   z-index: 10;
