@@ -2222,5 +2222,23 @@ button.citation-inline:focus-visible {
   display: none;
 }
 .mascot-stage.compact .mascota-root {
-  filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--color-accent) 14%, transparent));
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--color-accent) 14%, transparent));
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.mascot-stage.compact .mascota-root .robot-habitat-aura,
+.mascot-stage.compact .mascota-root .robot-body,
+.mascot-stage.compact .mascota-root .robot-arm,
+.mascot-stage.compact .mascota-root .robot-shadow,
+.mascot-stage.compact .mascota-root .robot-thruster-glow,
+.mascot-stage.compact .mascota-root .mascota-subtitles {
+  display: none;
+}
+.mascot-stage.compact .mascota-root .robot-container {
+  transform: scale(2.2) translateY(-6%);
+  transform-origin: center 42%;
 }
