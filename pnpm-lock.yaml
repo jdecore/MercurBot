@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@blobatar/react':
-        specifier: ^2.7.0
-        version: 2.7.0(blobatar@2.7.0(react@19.2.8))(react@19.2.8)
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
@@ -26,9 +23,6 @@ importers:
       '@xenova/transformers':
         specifier: ^2.17.2
         version: 2.17.2
-      blobatar:
-        specifier: ^2.7.0
-        version: 2.7.0(react@19.2.8)
       minisearch:
         specifier: ^7.2.0
         version: 7.2.0
@@ -68,12 +62,6 @@ importers:
         version: 8.2.2(@types/node@24.13.3)(esbuild@0.27.0)(tsx@4.21.0)
 
 packages:
-
-  '@blobatar/react@2.7.0':
-    resolution: {integrity: sha512-rysDM1+2qoeIwIezVw/em+ZxOMyqqjqJOGNEvtOOU1nFp0jmzyEjlXtJTDM6xPKamq59pq6wcG9+mHIUZV572A==}
-    peerDependencies:
-      blobatar: 2.x
-      react: '>=18'
 
   '@esbuild/aix-ppc64@0.27.0':
     resolution: {integrity: sha512-KuZrd2hRjz01y5JK9mEBSD3Vj3mbCvemhT466rSuJYeE/hjuBrHfjjcjMdTm/sz7au+++sdbJZJmuBwQLuw68A==}
@@ -953,17 +941,6 @@ packages:
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
 
-  blobatar@2.7.0:
-    resolution: {integrity: sha512-tL1p2J3dXE/Z9U/ITwHqU7HBHmTH+Am+hif1J1hWAhvFT1VYC2HG+eXtN7081yuY+L2lrp9bs/VaF7dVH3S2jw==}
-    peerDependencies:
-      react: '>=18'
-      vue: '>=3'
-    peerDependenciesMeta:
-      react:
-        optional: true
-      vue:
-        optional: true
-
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
@@ -1441,11 +1418,6 @@ packages:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
 snapshots:
-
-  '@blobatar/react@2.7.0(blobatar@2.7.0(react@19.2.8))(react@19.2.8)':
-    dependencies:
-      blobatar: 2.7.0(react@19.2.8)
-      react: 19.2.8
 
   '@esbuild/aix-ppc64@0.27.0':
     optional: true
@@ -2061,10 +2033,6 @@ snapshots:
       buffer: 5.7.1
       inherits: 2.0.4
       readable-stream: 3.6.2
-
-  blobatar@2.7.0(react@19.2.8):
-    optionalDependencies:
-      react: 19.2.8
 
   buffer@5.7.1:
     dependencies:

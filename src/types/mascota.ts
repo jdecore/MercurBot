@@ -21,7 +21,7 @@ export type RobotUnitId =
   | 'vektor'   // Unit V-06: Producto & Estrategia
   | 'gaia';    // Unit E-07: Ecosistemas & Orquestación
 
-export type MascotVariant = RobotUnitId | 'gryph' | 'robot' | 'buho' | 'fenix' | 'kitsune1' | 'blobatar';
+export type MascotVariant = RobotUnitId | 'gryph' | 'robot' | 'buho' | 'fenix' | 'kitsune1';
 
 export interface RobotMetadata {
   id: RobotUnitId;

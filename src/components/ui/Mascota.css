@@ -409,9 +409,17 @@
   height: 2px;
   opacity: 0.4;
 }
-/* Hablando: la onda de audio oculta la boca */
+/* Hablando: la onda de audio oculta la boca (excepto en compact) */
 .mascota-root.mood-hablando .robot-mouth {
   opacity: 0;
+}
+.mascot-stage.compact .mascota-root.mood-hablando .robot-mouth {
+  opacity: 0.85;
+  animation: mouthTalk 0.4s infinite ease-in-out alternate;
+}
+@keyframes mouthTalk {
+  from { height: 8px; border-radius: 0 0 10px 10px; }
+  to   { height: 4px; border-radius: 2px; }
 }
 
 /* ==================== AUDIO ONDA AL HABLAR ==================== */
@@ -580,27 +588,6 @@
 @keyframes waveBounce {
   from { height: 2px; }
   to { height: 12px; }
-}
-
-/* =========================================================================
-   BLOBATAR FACE — avatar personalizable determinista (Fase 15)
-   La animación (respirar/parpadear) la provee blobatar/motion.css (CSS puro,
-   respeta prefers-reduced-motion). Aquí solo layout + customizer nativo.
-   ========================================================================= */
-
-.mascota-root.robot-eve.face-blobatar {
-  --unit-primary: #ff6b00;
-  --unit-accent: #ff8c2f;
-}
-
-.robot-container.blobatar-face {
-  justify-content: center;
-  filter: drop-shadow(0 8px 20px rgba(255, 107, 0, 0.22));
-  transition: transform 200ms ease;
-}
-
-.mascota-root.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
-  transform: scale(1.04);
 }
 
 /* Tarjeta modal del personalizador (rediseño: card con secciones) */
@@ -817,6 +804,51 @@
 
 /* Preview retirado en el rediseño a tarjeta (ahora .customizer-hero). */
 
+/* ==================== TEMAS RÁPIDOS ==================== */
+.theme-picker {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 560px;
+}
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+.theme-btn:hover {
+  border-color: var(--theme-color, var(--color-border));
+  background: color-mix(in srgb, var(--theme-color, var(--color-primary)) 8%, var(--color-surface));
+}
+.theme-btn.active {
+  border-color: var(--theme-color, var(--color-primary));
+  background: color-mix(in srgb, var(--theme-color, var(--color-primary)) 12%, var(--color-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-color, var(--color-primary)) 20%, transparent);
+}
+.theme-btn:focus-visible {
+  outline: 2px solid var(--color-accent-ink);
+  outline-offset: 2px;
+}
+.theme-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+.theme-label {
+  line-height: 1;
+}
+
 /* Pastillas de los 6 diseños (cada una con su color) */
 .mascot-design-picker {
   display: inline-flex;
@@ -864,12 +896,6 @@
   border-radius: 50%;
   background: var(--design-color);
   flex: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mascota-root.robot-eve.face-blobatar:hover .robot-container.blobatar-face {
-    transform: none;
-  }
 }
 
 /* =========================================================================
@@ -1099,11 +1125,145 @@
   opacity: 0.92;
 }
 
+/* ==================== P1: IDLE ANIMATIONS ==================== */
+
+/* Hover: encogimiento sutil */
+.robot-container {
+  transition: transform 200ms ease;
+}
+.mascota-root:hover .robot-container {
+  transform: scale(1.04);
+}
+/* En compact, el hover no sobreescribe el scale del compact */
+.mascot-stage.compact .mascota-root:hover .robot-container {
+  transform: scale(2.2) translateY(-6%);
+}
+
+/* ==================== P2: MOOD PARTICLES ==================== */
+
+/* Contenedor de partículas */
+.mood-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  overflow: visible;
+}
+
+/* Estilo base de partícula */
+.particle {
+  position: absolute;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0;
+  animation: particleFloat 1.2s ease-out forwards;
+}
+
+/* Éxito: estrellas ✦ */
+.mood-exito .particle { color: var(--color-tropical); }
+/* Confusión: signos ? */
+.mood-duda .particle { color: var(--color-primary); font-size: 16px; }
+/* Dormido: ZZZ */
+.mood-dormido .particle { color: var(--color-muted); font-size: 12px; font-style: italic; }
+
+/* Posiciones de las partículas (5 slots) */
+.particle:nth-child(1) { left: 10%; top: -5%; animation-delay: 0s; }
+.particle:nth-child(2) { left: 70%; top: 0%; animation-delay: 0.15s; }
+.particle:nth-child(3) { left: 30%; top: -10%; animation-delay: 0.3s; }
+.particle:nth-child(4) { left: 85%; top: -8%; animation-delay: 0.45s; }
+.particle:nth-child(5) { left: 50%; top: -15%; animation-delay: 0.6s; }
+
+@keyframes particleFloat {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+  20%  { opacity: 1; transform: translateY(-6px) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.6); }
+}
+
+/* ==================== P3: ADVANCED ANIMATIONS ==================== */
+
+/* Error: sacudida fuerte */
+.mascota-root.mood-enojado {
+  animation: shakeHard 0.5s ease-in-out;
+}
+@keyframes shakeHard {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px) rotate(-2deg); }
+  30% { transform: translateX(5px) rotate(1.5deg); }
+  45% { transform: translateX(-4px) rotate(-1deg); }
+  60% { transform: translateX(3px) rotate(0.5deg); }
+  75% { transform: translateX(-2px); }
+}
+
+/* Éxito: salto */
+.mascota-root.mood-exito {
+  animation: bounceUp 0.5s ease-out;
+}
+@keyframes bounceUp {
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-10px); }
+  50%  { transform: translateY(-4px); }
+  70%  { transform: translateY(-7px); }
+  100% { transform: translateY(0); }
+}
+
+/* Hablando: cabeza asiente */
+.mascota-root.mood-hablando .robot-head {
+  animation: headBob 0.8s ease-in-out infinite alternate;
+}
+@keyframes headBob {
+  0%   { transform: rotate(var(--head-rot)) translateY(0); }
+  100% { transform: rotate(var(--head-rot)) translateY(-2px); }
+}
+
+/* Pensando: ojos giratorios (pupils) */
+.mascota-root.mood-pensando .eye-pupil {
+  animation: thinkEyes 2s linear infinite;
+}
+@keyframes thinkEyes {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(3px, -2px); }
+  50%  { transform: translate(0, -3px); }
+  75%  { transform: translate(-3px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Dormido: ZZZ pulsantes */
+.mascota-root.mood-dormido {
+  animation: sleepPulse 3s ease-in-out infinite;
+}
+@keyframes sleepPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Confusión: ojos bizcos */
+.mascota-root.mood-duda .friendly-eye.left {
+  transform: translateY(-3px) rotate(-3deg);
+}
+.mascota-root.mood-duda .friendly-eye.right {
+  transform: translateY(2px) rotate(2deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .friendly-eye {
     animation: none;
   }
   .robot-container {
     animation: none;
+  }
+  .mascota-root.mood-enojado,
+  .mascota-root.mood-exito,
+  .mascota-root.mood-dormido,
+  .mascota-root.mood-hablando .robot-head,
+  .mascota-root.mood-pensando .eye-pupil {
+    animation: none;
+  }
+  .mascota-root.mood-duda .friendly-eye.left,
+  .mascota-root.mood-duda .friendly-eye.right {
+    transform: none;
+  }
+  .particle {
+    animation: none;
+    opacity: 0;
   }
 }

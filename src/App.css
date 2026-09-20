@@ -1563,6 +1563,122 @@ button.citation-inline:focus-visible {
   outline-offset: 2px;
 }
 
+/* Onboarding — paso 1: estilo */
+.onboard-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin: 10px 0 4px;
+  text-align: center;
+}
+.onboard-theme-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+.onboard-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: all 150ms ease;
+}
+.onboard-theme-btn:hover {
+  border-color: var(--theme-color, var(--color-border));
+}
+.onboard-theme-btn.active {
+  border-color: var(--theme-color, var(--color-primary));
+  background: color-mix(in srgb, var(--theme-color, var(--color-primary)) 12%, var(--color-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-color, var(--color-primary)) 20%, transparent);
+}
+.onboard-theme-emoji { font-size: 14px; }
+.onboard-eyes-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+.onboard-eye-btn {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: all 150ms ease;
+}
+.onboard-eye-btn:hover {
+  border-color: var(--color-primary);
+}
+.onboard-eye-btn.active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+.onboard-random-btn {
+  display: block;
+  margin: 8px auto 0;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  transition: all 150ms ease;
+}
+.onboard-random-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* ==================== CUSTOMIZER TABS ==================== */
+.customizer-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 12px;
+}
+.customizer-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  border-bottom: 2px solid transparent;
+  transition: all 150ms ease;
+}
+.customizer-tab:hover {
+  color: var(--color-text);
+}
+.customizer-tab.active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-primary);
+}
+.customizer-tab:focus-visible {
+  outline: 2px solid var(--color-accent-ink);
+  outline-offset: -2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pdf-viewer-content {
     transform: translate(-50%, -50%);
@@ -2236,6 +2352,7 @@ button.citation-inline:focus-visible {
 .mascot-stage.compact .mascota-root .robot-arm,
 .mascot-stage.compact .mascota-root .robot-shadow,
 .mascot-stage.compact .mascota-root .robot-thruster-glow,
+.mascot-stage.compact .mascota-root .visor-audio-wave,
 .mascot-stage.compact .mascota-root .mascota-subtitles {
   display: none;
 }

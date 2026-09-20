@@ -53,6 +53,22 @@ export const ROBOT_DESIGNS: Record<RobotColorId, RobotDesign> = {
 
 export const ROBOT_DESIGN_LIST: RobotDesign[] = Object.values(ROBOT_DESIGNS)
 
+/** Temas prearmados: 1 clic aplica color + ojos + accesorio. */
+export interface QuickTheme {
+  id: string
+  label: string
+  emoji: string
+  config: RobotConfig
+}
+export const QUICK_THEMES: QuickTheme[] = [
+  { id: 'tecnico',    label: 'Técnico',    emoji: '🔥', config: { color: 'brasita',  eyes: 'visor',  accessory: 'antenna' } },
+  { id: 'amigable',   label: 'Amigable',   emoji: '🌿', config: { color: 'musgo',    eyes: 'happy',  accessory: 'tuft' } },
+  { id: 'misterioso', label: 'Misterioso', emoji: '🌙', config: { color: 'tinta',    eyes: 'sleepy', accessory: 'none' } },
+  { id: 'energetico', label: 'Energético', emoji: '☀️', config: { color: 'mostaza',  eyes: 'round',  accessory: 'fins' } },
+  { id: 'creativo',   label: 'Creativo',   emoji: '🌸', config: { color: 'ciruela',  eyes: 'big',    accessory: 'bow' } },
+  { id: 'profesional',label: 'Profesional',emoji: '🧊', config: { color: 'petroleo', eyes: 'visor',  accessory: 'headphones' } },
+]
+
 export const MAX_ROBOT_NAME = 24
 
 export function sanitizeRobotName(raw: string, fallback = 'Copi'): string {

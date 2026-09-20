@@ -5,10 +5,10 @@ import { parseAnyFile, validateAnyFile } from './data/universalParser'
 import { DashboardProvider, useDashboard } from './state/DashboardContext'
 import { Mascota } from './components/ui/Mascota'
 import { Icon } from './components/ui/Icon'
-import { MascotCustomizer, type MascotFace } from './components/ui/MascotCustomizer'
+import { MascotCustomizer } from './components/ui/MascotCustomizer'
 import { ExcelChat } from './components/excel/ExcelChat'
 import { speak } from './lib/tts'
-import { getPreferences, savePreferences, DEFAULT_BLOBATAR_NAME, hasOnboarded, setOnboarded } from './lib/storage'
+import { getPreferences, savePreferences, hasOnboarded, setOnboarded } from './lib/storage'
 import type { RobotConfig } from './lib/robotSeed'
 import { OnboardingTour } from './components/onboarding/OnboardingTour'
 import { type MascotaMood, type RobotUnitId } from './types/mascota'
@@ -29,9 +29,7 @@ function MainDashboard() {
   const [dragging, setDragging] = useState(false)
   const [mascotaMood, setMascotaMood] = useState<MascotaMood>('neutro')
   const [mascotaSubtitulo, setMascotaSubtitulo] = useState<string>('')
-  const [mascotFace, setMascotFace] = useState<MascotFace>(() => getPreferences().mascotFace)
   const [mascotRobot, setMascotRobot] = useState<RobotUnitId>(() => getPreferences().mascotRobot)
-  const [blobatarName, setBlobatarName] = useState<string>(() => getPreferences().blobatarName)
   const [robotConfig, setRobotConfig] = useState(() => getPreferences().robotConfig)
   const [robotName, setRobotName] = useState<string>(() => getPreferences().robotName)
   const [userName, setUserName] = useState<string>(() => getPreferences().userName)
@@ -509,9 +507,8 @@ function MainDashboard() {
               documento mantiene el héroe grande de bienvenida. */}
           <div className={`mascot-stage${hasDocument ? ' compact' : ''}`}>
             <Mascota
-              variant={mascotFace === 'blobatar' ? 'blobatar' : mascotRobot}
-              avatarName={blobatarName}
-              config={mascotFace === 'robot' ? robotConfig : undefined}
+              variant={mascotRobot}
+              config={robotConfig}
               mood={mascotaMood}
               subtitulo={hasDocument ? '' : mascotaSubtitulo}
               size={hasDocument ? 72 : 180}
@@ -521,9 +518,7 @@ function MainDashboard() {
                   window.dispatchEvent(new CustomEvent('copixi:reread'))
                   return
                 }
-                speak(mascotFace === 'blobatar'
-                  ? `¡Hola! Soy ${blobatarName || DEFAULT_BLOBATAR_NAME}, tu avatar analista. Carga tu documento PDF para comenzar.`
-                  : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)
+                speak(`¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)
               }}
             />
             <p className="mascot-greeting" aria-live="polite">
@@ -563,18 +558,14 @@ function MainDashboard() {
                       </Dialog.Close>
                     </div>
                     <MascotCustomizer
-                      face={mascotFace}
                       robot={mascotRobot}
-                      name={blobatarName}
                       robotName={robotName}
                       config={robotConfig}
-                      onChange={(face, robot, name, rName, cfg) => {
-                        setMascotFace(face)
+                      onChange={(robot, rName, cfg) => {
                         setMascotRobot(robot)
-                        setBlobatarName(name)
                         setRobotName(rName)
                         setRobotConfig(cfg)
-                        savePreferences({ ...getPreferences(), mascotFace: face, mascotRobot: robot, blobatarName: name, robotName: rName, robotConfig: cfg })
+                        savePreferences({ ...getPreferences(), mascotRobot: robot, robotName: rName, robotConfig: cfg })
                       }}
                     />
                   </Dialog.Content>

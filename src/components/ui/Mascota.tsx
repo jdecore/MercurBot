@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Blobatar } from '@blobatar/react'
-import 'blobatar/motion.css'
 import './Mascota.css'
 import { speak, isSpeaking } from '../../lib/tts'
 import type { MascotaMood, MascotVariant, RobotUnitId } from '../../types/mascota'
 import { ROBOT_UNITS } from '../../types/mascota'
 import { ROBOT_DESIGNS, type RobotConfig } from '../../lib/robotSeed'
-import { DEFAULT_BLOBATAR_NAME } from '../../lib/storage'
 
 interface MascotaProps {
   mood?: MascotaMood
@@ -14,13 +11,11 @@ interface MascotaProps {
   size?: number
   onClick?: () => void
   variant?: MascotVariant
-  /** Nombre semilla del avatar Blobatar (solo usado con variant="blobatar"). */
-  avatarName?: string
   /** Diseño del robot personalizable (Fase C): gana a la unidad legacy. */
   config?: RobotConfig
 }
 
-export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', avatarName, config }: MascotaProps) {
+export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', config }: MascotaProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [localMood, setLocalMood] = useState<MascotaMood>(mood)
   const [speakingState, setSpeakingState] = useState<boolean>(isSpeaking())
@@ -73,30 +68,6 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
   const effectiveMood = speakingState ? 'hablando' : localMood
   const moodClass = `mood-${effectiveMood}`
-
-  // Cara personalizable (Blobatar): avatar determinista derivado del nombre.
-  // Conserva el sistema de moods por fuera (clase mood-*) y subtítulos/TTS.
-  if (variant === 'blobatar') {
-    const displayName = (avatarName ?? '').trim() || DEFAULT_BLOBATAR_NAME
-    return (
-      <div
-        className={`mascota-root robot-eve face-blobatar ${moodClass}`}
-        ref={rootRef}
-        onClick={onClick}
-        style={{
-          ...(size ? { ['--robot-size' as string]: `${size}px` } : {}),
-        } as React.CSSProperties}
-        aria-label={`Avatar personalizado de ${displayName}, estado: ${effectiveMood}`}
-        role="img"
-      >
-        <div className="robot-container blobatar-face">
-          <Blobatar name={displayName} animate="hover" size={size ?? 180} />
-        </div>
-
-        {subtitulo && <div className="mascota-subtitles">{subtitulo}</div>}
-      </div>
-    )
-  }
 
   // Mapeo a unidad de robot (legacy) o diseño personalizable por semilla (Fase C).
   const isRobotUnit = variant in ROBOT_UNITS
@@ -237,6 +208,15 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
         <div className="robot-thruster-glow" aria-hidden />
         <div className="robot-shadow" aria-hidden />
+
+        {/* Partículas por mood */}
+        {(effectiveMood === 'exito' || effectiveMood === 'duda' || effectiveMood === 'dormido') && (
+          <div className="mood-particles" aria-hidden>
+            {effectiveMood === 'exito' && (<><span className="particle">✦</span><span className="particle">✦</span><span className="particle">✦</span></>)}
+            {effectiveMood === 'duda' && (<><span className="particle">?</span><span className="particle">?</span><span className="particle">?</span></>)}
+            {effectiveMood === 'dormido' && (<><span className="particle">Z</span><span className="particle">z</span><span className="particle">Z</span></>)}
+          </div>
+        )}
       </div>
 
       {subtitulo && <div className="mascota-subtitles">{subtitulo}</div>}

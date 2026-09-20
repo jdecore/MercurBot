@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
-import { Blobatar } from '@blobatar/react'
-import { DEFAULT_BLOBATAR_NAME, DEFAULT_ROBOT_NAME } from '../../lib/storage'
+import { DEFAULT_ROBOT_NAME } from '../../lib/storage'
 import { ROBOT_UNITS, type RobotUnitId } from '../../types/mascota'
 import {
   ROBOT_DESIGN_LIST,
+  QUICK_THEMES,
   designFromName,
   sanitizeRobotName,
   type RobotAccessory,
@@ -14,22 +14,14 @@ import {
 import { Mascota } from './Mascota'
 import { Icon } from './Icon'
 
-export type MascotFace = 'robot' | 'blobatar'
-
 interface MascotCustomizerProps {
-  face: MascotFace
   robot: RobotUnitId
-  name: string
   robotName: string
   config: RobotConfig
-  onChange: (face: MascotFace, robot: RobotUnitId, name: string, robotName: string, config: RobotConfig) => void
+  onChange: (robot: RobotUnitId, robotName: string, config: RobotConfig) => void
 }
 
 const MAX_NAME = 24
-
-function sanitize(raw: string): string {
-  return raw.trim().slice(0, MAX_NAME) || DEFAULT_BLOBATAR_NAME
-}
 
 const EYES_OPTIONS: { id: RobotEyes; label: string }[] = [
   { id: 'round', label: 'Redondos' },
@@ -56,68 +48,92 @@ const ACCESSORY_OPTIONS: { id: RobotAccessory; label: string }[] = [
  * en vivo. El ajuste manual gana a la semilla. Todo persiste en preferencias
  * locales (sin backend, §8/§31).
  */
-export function MascotCustomizer({ face, robot, name, robotName, config, onChange }: MascotCustomizerProps) {
-  const [draft, setDraft] = useState(name)
+export function MascotCustomizer({ robot, robotName, config, onChange }: MascotCustomizerProps) {
   const [robotDraft, setRobotDraft] = useState(robotName)
+  const [tab, setTab] = useState<'rapido' | 'avanzado'>('rapido')
   // Si el usuario tocó un rasgo a mano, cambiar el nombre ya no regenera.
   const touchedRef = useRef(false)
-
-  const applyName = () => onChange(face, robot, sanitize(draft), robotName, config)
 
   const applyRobotName = () => {
     const clean = sanitizeRobotName(robotDraft, DEFAULT_ROBOT_NAME)
     setRobotDraft(clean)
     if (touchedRef.current) {
-      onChange(face, robot, sanitize(draft || name), clean, config)
+      onChange(robot, clean, config)
     } else {
-      onChange(face, robot, sanitize(draft || name), clean, designFromName(clean))
+      onChange(robot, clean, designFromName(clean))
     }
   }
 
   const pickTrait = (patch: Partial<RobotConfig>) => {
     touchedRef.current = true
-    onChange(face, robot, sanitize(draft || name), sanitizeRobotName(robotDraft || robotName), { ...config, ...patch })
+    onChange(robot, sanitizeRobotName(robotDraft || robotName), { ...config, ...patch })
   }
 
   const surprise = () => {
     touchedRef.current = true
     const d = ROBOT_DESIGN_LIST[Math.floor(Math.random() * ROBOT_DESIGN_LIST.length)]
     const clean = sanitizeRobotName(robotDraft || robotName)
-    onChange(face, robot, sanitize(draft || name), clean, { color: d.color, eyes: d.eyes, accessory: d.accessory })
+    onChange(robot, clean, { color: d.color, eyes: d.eyes, accessory: d.accessory })
   }
 
   return (
     <div className="mascot-customizer" role="group" aria-label="Personalizar mascota">
-      <section className="customizer-section" aria-label="Cara de la mascota">
-        <h3 className="customizer-section-title">Cara</h3>
-        <div className="mascot-face-toggle" role="radiogroup" aria-label="Cara de la mascota">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={face === 'robot'}
-            className={`face-btn ${face === 'robot' ? 'active' : ''}`}
-            onClick={() => onChange('robot', robot, sanitize(draft || name), sanitizeRobotName(robotDraft || robotName), config)}
-          >
-            <Icon name="robot" size={14} /> Robot
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={face === 'blobatar'}
-            className={`face-btn ${face === 'blobatar' ? 'active' : ''}`}
-            onClick={() => onChange('blobatar', robot, sanitize(draft || name), sanitizeRobotName(robotDraft || robotName), config)}
-          >
-            <Icon name="user" size={14} /> Mi avatar
-          </button>
-        </div>
-      </section>
+      <div className="customizer-hero" aria-hidden>
+        <Mascota variant={robot} config={config} mood="neutro" size={140} />
+        <p className="customizer-hero-name">{sanitizeRobotName(robotDraft || robotName)}</p>
+      </div>
 
-      {face === 'robot' && (
+      <div className="customizer-tabs" role="tablist" aria-label="Opciones de personalización">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'rapido'}
+          className={`customizer-tab ${tab === 'rapido' ? 'active' : ''}`}
+          onClick={() => setTab('rapido')}
+        >
+          Estilo
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'avanzado'}
+          className={`customizer-tab ${tab === 'avanzado' ? 'active' : ''}`}
+          onClick={() => setTab('avanzado')}
+        >
+          Detalles
+        </button>
+      </div>
+
+      {tab === 'rapido' && (
         <>
-          <div className="customizer-hero" aria-hidden>
-            <Mascota variant={robot} config={config} mood="neutro" size={140} />
-            <p className="customizer-hero-name">{sanitizeRobotName(robotDraft || robotName)}</p>
-          </div>
+          <section className="customizer-section" aria-label="Temas rápidos">
+            <h3 className="customizer-section-title">Temas</h3>
+            <div className="theme-picker" role="radiogroup" aria-label="Temas prearmados">
+              {QUICK_THEMES.map((t) => {
+                const active = config.color === t.config.color && config.eyes === t.config.eyes && config.accessory === t.config.accessory
+                const design = ROBOT_DESIGN_LIST.find((d) => d.id === t.config.color)
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`theme-btn ${active ? 'active' : ''}`}
+                    title={`${t.label} — ${t.emoji}`}
+                    aria-label={`Tema ${t.label}`}
+                    style={{ ['--theme-color' as string]: design?.hex ?? '#888' } as React.CSSProperties}
+                    onClick={() => {
+                      touchedRef.current = true
+                      onChange(robot, sanitizeRobotName(robotDraft || robotName), t.config)
+                    }}
+                  >
+                    <span className="theme-emoji" aria-hidden>{t.emoji}</span>
+                    <span className="theme-label">{t.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
 
           <section className="customizer-section" aria-label="Nombre del robot">
             <h3 className="customizer-section-title">Mi robot se llama</h3>
@@ -144,9 +160,13 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
               </button>
             </div>
           </section>
+        </>
+      )}
 
+      {tab === 'avanzado' && (
+        <>
           <section className="customizer-section" aria-label="Diseño del robot">
-            <h3 className="customizer-section-title">Diseño</h3>
+            <h3 className="customizer-section-title">Color</h3>
             <div className="mascot-design-picker" role="radiogroup" aria-label="Diseño del robot">
               {ROBOT_DESIGN_LIST.map((d) => {
                 const selected = config.color === d.id
@@ -226,7 +246,7 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
                     aria-label={`${meta.name}, ${meta.domain}`}
                     className={`unit-btn ${selected ? 'active' : ''}`}
                     style={{ ['--unit-color' as string]: meta.primaryColor } as React.CSSProperties}
-                    onClick={() => onChange('robot', id, sanitize(draft || name), sanitizeRobotName(robotDraft || robotName), config)}
+                    onClick={() => onChange(id, sanitizeRobotName(robotDraft || robotName), config)}
                   >
                     <span className="unit-dot" aria-hidden />
                     {meta.name}
@@ -236,29 +256,6 @@ export function MascotCustomizer({ face, robot, name, robotName, config, onChang
             </div>
           </section>
         </>
-      )}
-
-      {face === 'blobatar' && (
-        <section className="customizer-section" aria-label="Nombre del avatar">
-          <h3 className="customizer-section-title">Mi avatar</h3>
-          <div className="mascot-customizer-row">
-            <span className="mascot-avatar-preview" aria-hidden>
-              <Blobatar name={sanitize(draft || name)} size={40} />
-            </span>
-            <label className="mascot-name-field">
-              <input
-                type="text"
-                value={draft}
-                maxLength={MAX_NAME}
-                placeholder={DEFAULT_BLOBATAR_NAME}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={applyName}
-                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                aria-label="Nombre del avatar (define su apariencia)"
-              />
-            </label>
-          </div>
-        </section>
       )}
     </div>
   )

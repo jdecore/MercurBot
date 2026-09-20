@@ -29,12 +29,8 @@ export type SavedAnalysis = {
 export type Preferences = {
   anomalyThreshold: number
   anomalyMethod: 'zscore' | 'iqr'
-  /** Cara de la mascota: robot del ecosistema o avatar personalizable (Blobatar). */
-  mascotFace: 'robot' | 'blobatar'
   /** Unidad del robot único personalizable (se conservan las 7 unidades). */
   mascotRobot: RobotUnitId
-  /** Nombre semilla del Blobatar (determinista: mismo nombre = mismo avatar). */
-  blobatarName: string
   /** Nombre del usuario (tutorial de bienvenida, Fase B). Saludo humano. */
   userName: string
   /** Nombre del robot (semilla de su diseño + cómo te saluda). */
@@ -101,16 +97,13 @@ export function saveDataset(d: SavedDataset): void {
   localStorage.setItem(KEY_DATASETS, JSON.stringify(list))
 }
 
-// Preferences (anomaly threshold, method, mascot face)
-export const DEFAULT_BLOBATAR_NAME = 'compe'
+// Preferences (anomaly threshold, method, mascot)
 export const DEFAULT_ROBOT_NAME = 'Copi'
 const brasita = ROBOT_DESIGNS.brasita
 const DEFAULT_PREFS: Preferences = {
   anomalyThreshold: 2.5,
   anomalyMethod: 'zscore',
-  mascotFace: 'robot',
   mascotRobot: 'helix',
-  blobatarName: DEFAULT_BLOBATAR_NAME,
   userName: '',
   robotName: DEFAULT_ROBOT_NAME,
   robotConfig: { color: brasita.color, eyes: brasita.eyes, accessory: brasita.accessory },

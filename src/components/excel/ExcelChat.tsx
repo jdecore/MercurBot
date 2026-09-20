@@ -10,6 +10,7 @@ import { useDictation, getDictationSupport } from '../../lib/dictation'
 import { splitChartBlock, stripChartBlock, type ChartSpec } from '../../lib/chartJson'
 import { verifyChartSpec } from '../../lib/verifyChart'
 import { formatPageRange, countSelectionFigures } from '../../lib/chartFull'
+import { pop, chime, startThinking, stopThinking, error as soundError, success as soundSuccess } from '../../lib/sounds'
 import type { ChartFullResultDetail } from '../pdf/ChartFullButton'
 
 // Fase C: gráfica SVG propia en chunk separado (no engorda el bundle inicial).
@@ -585,6 +586,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
       setStatus('streaming')
       setMascotaMood('pensando')
+      startThinking()
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -674,10 +676,15 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
       setStatus('done')
       setMascotaMood('exito')
+      stopThinking()
+      const hasChart = splitChartBlock(acc).chart
+      if (hasChart) soundSuccess()
+      else chime()
       if (!getMuted() && acc) speak(firstSentence(stripChartBlock(cleanAI(acc))))
     } catch (e) {
       // Detener es una acción del usuario, no un error: limpia sin alarmar.
       if ((e instanceof DOMException && e.name === 'AbortError') || (e instanceof Error && e.name === 'AbortError')) {
+        stopThinking()
         setStatus('idle')
         setMascotaMood('neutro')
         setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
@@ -687,6 +694,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       setError(msg)
       setMascotaMood('enojado')
       setStatus('error')
+      stopThinking()
+      soundError()
       // Drop the empty assistant placeholder so the UI stays clean
       setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
     } finally {
@@ -701,6 +710,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     const t = input.trim()
     setInput('')
     setDictationBase('')
+    pop()
     void runQuery(t)
   }
 
