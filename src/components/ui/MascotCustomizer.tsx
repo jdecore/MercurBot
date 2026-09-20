@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { DEFAULT_ROBOT_NAME } from '../../lib/storage'
-import { ROBOT_UNITS, type RobotUnitId } from '../../types/mascota'
+import type { RobotUnitId } from '../../types/mascota'
 import {
   ROBOT_DESIGN_LIST,
   QUICK_THEMES,
@@ -230,31 +230,6 @@ export function MascotCustomizer({ robot, robotName, config, onChange }: MascotC
             </div>
           </section>
 
-          <section className="customizer-section" aria-label="Unidad base del robot">
-            <h3 className="customizer-section-title">Unidad base</h3>
-            <div className="mascot-unit-picker" role="radiogroup" aria-label="Unidad base del robot">
-              {(Object.keys(ROBOT_UNITS) as RobotUnitId[]).map((id) => {
-                const meta = ROBOT_UNITS[id]
-                const selected = robot === id
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    title={`${meta.name} — ${meta.domain}`}
-                    aria-label={`${meta.name}, ${meta.domain}`}
-                    className={`unit-btn ${selected ? 'active' : ''}`}
-                    style={{ ['--unit-color' as string]: meta.primaryColor } as React.CSSProperties}
-                    onClick={() => onChange(id, sanitizeRobotName(robotDraft || robotName), config)}
-                  >
-                    <span className="unit-dot" aria-hidden />
-                    {meta.name}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
         </>
       )}
     </div>

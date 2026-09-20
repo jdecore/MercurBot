@@ -1914,46 +1914,6 @@ button.citation-inline:focus-visible {
   outline-offset: 2px;
 }
 
-/* ==================== UNIT PICKER ==================== */
-.mascot-unit-picker {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-.unit-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border: 2px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text);
-  transition: all 150ms ease;
-}
-.unit-btn:hover {
-  border-color: var(--unit-color, var(--color-primary));
-}
-.unit-btn.active {
-  border-color: var(--unit-color, var(--color-primary));
-  background: color-mix(in srgb, var(--unit-color, var(--color-primary)) 10%, transparent);
-}
-.unit-btn:focus-visible {
-  outline: 2px solid var(--color-accent-ink);
-  outline-offset: 2px;
-}
-.unit-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--unit-color, #888);
-  flex-shrink: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .pdf-viewer-content {
     transform: translate(-50%, -50%);

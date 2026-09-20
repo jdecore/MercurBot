@@ -74,7 +74,6 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
   // ── Eye behavior state ──
   const [blinkPhase, setBlinkPhase] = useState<'open' | 'closing' | 'closed' | 'opening'>('open')
-  const [doubleBlink, setDoubleBlink] = useState(false)
   const [ wink, setWink ] = useState(false)
   const [ irisPos, setIrisPos ] = useState({ x: 0, y: 0 })
   const [ hoverActive, setHoverActive ] = useState(false)
@@ -136,28 +135,28 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     return () => window.removeEventListener('mousemove', handler)
   }, [])
 
-  // ── 2. Saccades (random micro-movements every 2-5s) ──
+  // ── 2. Saccades (random micro-movements every 2-5s, paused when mouse active) ──
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>
     const schedule = () => {
       const delay = 2000 + Math.random() * 3000
       timeout = setTimeout(() => {
-        // Random target within 60% of max range
-        targetRef.current = {
-          x: (Math.random() - 0.5) * IRIS_MAX_X * 1.2,
-          y: (Math.random() - 0.5) * IRIS_MAX_Y * 1.2,
+        // Skip saccade if mouse is hovering (mouse tracking takes priority)
+        if (!hoverActive) {
+          targetRef.current = {
+            x: (Math.random() - 0.5) * IRIS_MAX_X * 1.2,
+            y: (Math.random() - 0.5) * IRIS_MAX_Y * 1.2,
+          }
+          setTimeout(() => {
+            if (!hoverActive) targetRef.current = { x: 0, y: 0 }
+          }, 150 + Math.random() * 100)
         }
-        // Return to center after 150-250ms
-        setTimeout(() => {
-          // Only return if no mouse tracking active (mouse handler will override)
-          targetRef.current = { x: 0, y: 0 }
-        }, 150 + Math.random() * 100)
         schedule()
       }, delay)
     }
     schedule()
     return () => clearTimeout(timeout)
-  }, [])
+  }, [hoverActive])
 
   // ── 3. Random blink timing + double blink on hover ──
   useEffect(() => {
@@ -195,11 +194,31 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     return () => clearTimeout(timeout)
   }, [])
 
-  // Hover → double blink
+  // Hover → quick double blink (short, not stuck)
   const handleMouseEnter = useCallback(() => {
     setHoverActive(true)
-    setDoubleBlink(true)
-    setTimeout(() => setDoubleBlink(false), 400)
+    // Quick double blink: closing→closed→opening→open→closing→closed→opening→open
+    setBlinkPhase('closing')
+    setTimeout(() => {
+      setBlinkPhase('closed')
+      setTimeout(() => {
+        setBlinkPhase('opening')
+        setTimeout(() => {
+          setBlinkPhase('open')
+          // Second blink
+          setTimeout(() => {
+            setBlinkPhase('closing')
+            setTimeout(() => {
+              setBlinkPhase('closed')
+              setTimeout(() => {
+                setBlinkPhase('opening')
+                setTimeout(() => setBlinkPhase('open'), 40)
+              }, 50)
+            }, 40)
+          }, 100)
+        }, 40)
+      }, 50)
+    }, 40)
   }, [])
 
   const handleMouseLeave = useCallback(() => {
@@ -244,7 +263,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
       if (!running) return
       const t = targetRef.current
       const c = irisRef.current
-      const speed = 0.12
+      const speed = 0.08
       c.x = lerp(c.x, t.x, speed)
       c.y = lerp(c.y, t.y, speed)
       // Clamp
@@ -262,7 +281,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
   const scleraScale = MOOD_SCLERA_SCALE[effectiveMood] ?? 1
   const [browL, browR] = MOOD_BROWS[effectiveMood] ?? [0, 0]
 
-  const isBlinking = blinkPhase === 'closing' || blinkPhase === 'closed' || doubleBlink
+  const isBlinking = blinkPhase === 'closing' || blinkPhase === 'closed'
   const scleraY = isBlinking ? 0.08 : scleraScale
   const isWinking = wink && effectiveMood !== 'enojado'
 
