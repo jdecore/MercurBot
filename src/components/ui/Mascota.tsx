@@ -34,23 +34,6 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     return () => window.removeEventListener('copixi:tts-speaking', handleTts as EventListener)
   }, [])
 
-  // Mouse tracking for eye direction
-  useEffect(() => {
-    const el = rootRef.current
-    if (!el) return
-    const handler = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect()
-      const cx = rect.left + rect.width / 2
-      const cy = rect.top + rect.height * 0.35
-      const dx = (e.clientX - cx) / (rect.width || 1)
-      const dy = (e.clientY - cy) / (rect.height || 1)
-      el.style.setProperty('--mx', `${Math.max(-2.5, Math.min(2.5, dx * 2.5))}px`)
-      el.style.setProperty('--my', `${Math.max(-1.5, Math.min(1.5, dy * 1.5))}px`)
-    }
-    window.addEventListener('mousemove', handler, { passive: true })
-    return () => window.removeEventListener('mousemove', handler)
-  }, [])
-
   // Expose API
   useEffect(() => {
     const api = { setMood: (m: MascotaMood) => setLocalMood(m), speak: (t: string) => speak(t) }
@@ -275,20 +258,18 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           <rect x="52" y="50" width="96" height="52" rx="24" fill="url(#vg)" stroke="#3A3126" strokeWidth="1.5" />
           <ellipse cx="100" cy="58" rx="36" ry="10" fill="#fff" opacity="0.12" />
 
-          {/* Eyes — white sclera + colored iris + dark pupil + sparkle */}
+          {/* Eyes — white sclera + colored iris + sparkle (no pupil) */}
           <g filter="url(#gl)" className="svg-eyes">
             {/* Left eye */}
             <ellipse cx="78" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye" />
-            <ellipse cx="78" cy="75" rx={eyeW * 0.65} ry={eyeH * 0.65} fill={primary} className="svg-iris" />
-            <circle cx="78" cy="75" r={eyeW * 0.35} fill="#1C1A10" className="svg-pupil" style={{ transform: 'translate(var(--mx,0px), var(--my,0px))' }} />
-            <circle cx={76} cy={72} r="2" fill="#fff" opacity="0.92" />
-            <circle cx={80} cy={77} r="1" fill="#fff" opacity="0.5" />
+            <ellipse cx="78" cy="75" rx={eyeW * 0.6} ry={eyeH * 0.6} fill={primary} className="svg-iris" />
+            <circle cx={76} cy={72} r="2.2" fill="#fff" opacity="0.92" />
+            <circle cx={80} cy={77} r="1.1" fill="#fff" opacity="0.5" />
             {/* Right eye */}
             <ellipse cx="122" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye" />
-            <ellipse cx="122" cy="75" rx={eyeW * 0.65} ry={eyeH * 0.65} fill={primary} className="svg-iris" />
-            <circle cx="122" cy="75" r={eyeW * 0.35} fill="#1C1A10" className="svg-pupil" style={{ transform: 'translate(var(--mx,0px), var(--my,0px))' }} />
-            <circle cx={120} cy={72} r="2" fill="#fff" opacity="0.92" />
-            <circle cx={124} cy={77} r="1" fill="#fff" opacity="0.5" />
+            <ellipse cx="122" cy="75" rx={eyeW * 0.6} ry={eyeH * 0.6} fill={primary} className="svg-iris" />
+            <circle cx={120} cy={72} r="2.2" fill="#fff" opacity="0.92" />
+            <circle cx={124} cy={77} r="1.1" fill="#fff" opacity="0.5" />
           </g>
 
           {/* Cheeks */}
@@ -315,16 +296,14 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           {/* Body */}
           <ellipse cx="100" cy="148" rx="36" ry="26" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1.5" />
           <ellipse cx="100" cy="140" rx="22" ry="8" fill="#fff" opacity="0.35" />
-          {/* Left arm — curved, attached at shoulder */}
-          <path d="M 64 138 Q 52 142 48 155 Q 45 165 50 172" fill="none" stroke="url(#bg)" strokeWidth="10" strokeLinecap="round" />
-          <path d="M 64 138 Q 52 142 48 155 Q 45 165 50 172" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" />
-          {/* Left hand */}
-          <circle cx="50" cy="173" r="5" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
-          {/* Right arm — curved, attached at shoulder */}
-          <path d="M 136 138 Q 148 142 152 155 Q 155 165 150 172" fill="none" stroke="url(#bg)" strokeWidth="10" strokeLinecap="round" />
-          <path d="M 136 138 Q 148 142 152 155 Q 155 165 150 172" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" />
-          {/* Right hand */}
-          <circle cx="150" cy="173" r="5" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
+          {/* Left arm — capsule from shoulder to hand */}
+          <g transform="rotate(-12 64 138)">
+            <rect x="54" y="136" width="12" height="34" rx="6" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
+          </g>
+          {/* Right arm — capsule from shoulder to hand */}
+          <g transform="rotate(12 136 138)">
+            <rect x="134" y="136" width="12" height="34" rx="6" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
+          </g>
         </g>
 
         {/* Thruster */}
