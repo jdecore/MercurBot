@@ -67,6 +67,10 @@
   95% { transform: scaleY(0.08); }
 }
 
+.svg-iris {
+  transition: fill 300ms ease;
+}
+
 .svg-pupil {
   transition: transform 100ms ease-out;
 }

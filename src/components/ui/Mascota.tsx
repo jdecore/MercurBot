@@ -71,22 +71,22 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
   const eyeW = config?.eyes === 'big' ? 16 : 13
   const eyeH = config?.eyes === 'big' ? 18 : config?.eyes === 'sleepy' ? 5 : config?.eyes === 'happy' ? 7 : 14
 
-  // Mouth path by mood
+  // Mouth path by mood — positioned on head shell below visor
   const mouthPath = useMemo(() => {
     switch (effectiveMood) {
       case 'feliz':
       case 'exito':
-        return 'M 89 118 Q 100 127 111 118'
+        return 'M 90 108 Q 100 116 110 108'
       case 'duda':
-        return 'M 89 120 Q 94 117 100 121 Q 106 123 111 119'
+        return 'M 90 110 Q 95 107 100 111 Q 105 113 110 109'
       case 'enojado':
-        return 'M 89 122 L 95 119 L 105 122 L 111 119'
+        return 'M 90 112 L 96 109 L 104 112 L 110 109'
       case 'dormido':
-        return 'M 91 120 L 109 120'
+        return 'M 92 110 L 108 110'
       case 'hablando':
-        return 'M 91 118 Q 100 126 109 118'
+        return 'M 92 108 Q 100 115 108 108'
       default:
-        return 'M 93 120 L 107 120'
+        return 'M 94 110 L 106 110'
     }
   }, [effectiveMood])
 
@@ -192,11 +192,6 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
             <stop offset="0%" stopColor="#2A2118" />
             <stop offset="100%" stopColor="#14100B" />
           </radialGradient>
-          <radialGradient id="eg" cx="45%" cy="35%" r="50%">
-            <stop offset="0%" stopColor="#fff" />
-            <stop offset="30%" stopColor={accent} />
-            <stop offset="100%" stopColor={primary} />
-          </radialGradient>
           <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#F8FAFC" />
             <stop offset="100%" stopColor="#CBD5E1" />
@@ -280,16 +275,20 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           <rect x="52" y="50" width="96" height="52" rx="24" fill="url(#vg)" stroke="#3A3126" strokeWidth="1.5" />
           <ellipse cx="100" cy="58" rx="36" ry="10" fill="#fff" opacity="0.12" />
 
-          {/* Eyes — larger, centered in visor */}
+          {/* Eyes — white sclera + colored iris + dark pupil + sparkle */}
           <g filter="url(#gl)" className="svg-eyes">
-            {/* Left */}
-            <ellipse cx="78" cy="74" rx={eyeW} ry={eyeH} fill="url(#eg)" className="svg-eye" />
-            <circle cx="78" cy="74" r={eyeW * 0.42} fill="#1C1A10" className="svg-pupil" style={{ transform: 'translate(var(--mx,0px), var(--my,0px))' }} />
-            <circle cx="75" cy="71" r="2.2" fill="#fff" opacity="0.9" />
-            {/* Right */}
-            <ellipse cx="122" cy="74" rx={eyeW} ry={eyeH} fill="url(#eg)" className="svg-eye" />
-            <circle cx="122" cy="74" r={eyeW * 0.42} fill="#1C1A10" className="svg-pupil" style={{ transform: 'translate(var(--mx,0px), var(--my,0px))' }} />
-            <circle cx="119" cy="71" r="2.2" fill="#fff" opacity="0.9" />
+            {/* Left eye */}
+            <ellipse cx="78" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye" />
+            <ellipse cx="78" cy="75" rx={eyeW * 0.65} ry={eyeH * 0.65} fill={primary} className="svg-iris" />
+            <circle cx="78" cy="75" r={eyeW * 0.35} fill="#1C1A10" className="svg-pupil" style={{ transform: 'translate(var(--mx,0px), var(--my,0px))' }} />
+            <circle cx={76} cy={72} r="2" fill="#fff" opacity="0.92" />
+            <circle cx={80} cy={77} r="1" fill="#fff" opacity="0.5" />
+            {/* Right eye */}
+            <ellipse cx="122" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye" />
+            <ellipse cx="122" cy="75" rx={eyeW * 0.65} ry={eyeH * 0.65} fill={primary} className="svg-iris" />
+            <circle cx="122" cy="75" r={eyeW * 0.35} fill="#1C1A10" className="svg-pupil" style={{ transform: 'translate(var(--mx,0px), var(--my,0px))' }} />
+            <circle cx={120} cy={72} r="2" fill="#fff" opacity="0.92" />
+            <circle cx={124} cy={77} r="1" fill="#fff" opacity="0.5" />
           </g>
 
           {/* Cheeks */}
@@ -316,9 +315,16 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           {/* Body */}
           <ellipse cx="100" cy="148" rx="36" ry="26" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1.5" />
           <ellipse cx="100" cy="140" rx="22" ry="8" fill="#fff" opacity="0.35" />
-          {/* Arms — attached to body sides */}
-          <rect x="56" y="136" width="10" height="30" rx="5" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" transform="rotate(8 61 151)" />
-          <rect x="134" y="136" width="10" height="30" rx="5" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" transform="rotate(-8 139 151)" />
+          {/* Left arm — curved, attached at shoulder */}
+          <path d="M 64 138 Q 52 142 48 155 Q 45 165 50 172" fill="none" stroke="url(#bg)" strokeWidth="10" strokeLinecap="round" />
+          <path d="M 64 138 Q 52 142 48 155 Q 45 165 50 172" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" />
+          {/* Left hand */}
+          <circle cx="50" cy="173" r="5" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
+          {/* Right arm — curved, attached at shoulder */}
+          <path d="M 136 138 Q 148 142 152 155 Q 155 165 150 172" fill="none" stroke="url(#bg)" strokeWidth="10" strokeLinecap="round" />
+          <path d="M 136 138 Q 148 142 152 155 Q 155 165 150 172" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" />
+          {/* Right hand */}
+          <circle cx="150" cy="173" r="5" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
         </g>
 
         {/* Thruster */}
