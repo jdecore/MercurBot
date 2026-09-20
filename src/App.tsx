@@ -218,6 +218,8 @@ function MainDashboard() {
       }
       setPdfFile(file)
       setPdfDoc(pdfResult)
+      // Robot eyes look at PDF panel (right)
+      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'right' } }))
       // Fase A: documento nuevo → panel visible desde la página 1.
       setPanelPage(1)
       setPanelVisible(true)
@@ -257,6 +259,8 @@ function MainDashboard() {
         : err instanceof Error ? err.message : 'Failed to parse file'
       setError(msg)
       setMascotaSubtitulo(msg)
+      // Robot eyes look left on error
+      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'left' } }))
     } finally {
       setLoading(false)
     }

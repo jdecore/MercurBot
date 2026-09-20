@@ -1679,6 +1679,281 @@ button.citation-inline:focus-visible {
   outline-offset: -2px;
 }
 
+/* ==================== CUSTOMIZER DIALOG ==================== */
+.customizer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  animation: customizerFadeIn 200ms ease;
+}
+@keyframes customizerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.customizer-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  padding: 24px;
+  z-index: 101;
+  animation: customizerSlideIn 250ms ease;
+}
+@keyframes customizerSlideIn {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.customizer-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.customizer-card-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+.customizer-card-sub {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+/* ==================== CUSTOMIZER BODY ==================== */
+.mascot-customizer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.customizer-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 4px;
+}
+.customizer-hero-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.customizer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.customizer-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.mascot-customizer-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.mascot-name-field {
+  flex: 1;
+}
+.mascot-name-field input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-2, var(--color-bg));
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+.mascot-name-field input:focus {
+  border-color: var(--color-primary);
+}
+.mascot-name-field input::placeholder {
+  color: var(--color-muted);
+}
+
+/* ==================== THEME PICKER ==================== */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.theme-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all 150ms ease;
+  font-family: inherit;
+}
+.theme-btn:hover {
+  border-color: var(--theme-color, var(--color-primary));
+  background: color-mix(in srgb, var(--theme-color, var(--color-primary)) 8%, transparent);
+}
+.theme-btn.active {
+  border-color: var(--theme-color, var(--color-primary));
+  background: color-mix(in srgb, var(--theme-color, var(--color-primary)) 12%, transparent);
+  box-shadow: 0 0 0 1px var(--theme-color, var(--color-primary));
+}
+.theme-btn:focus-visible {
+  outline: 2px solid var(--color-accent-ink);
+  outline-offset: 2px;
+}
+.theme-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+.theme-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+}
+
+/* ==================== DESIGN PICKER ==================== */
+.mascot-design-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.design-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: all 150ms ease;
+}
+.design-btn:hover {
+  border-color: var(--design-color, var(--color-primary));
+}
+.design-btn.active {
+  border-color: var(--design-color, var(--color-primary));
+  background: color-mix(in srgb, var(--design-color, var(--color-primary)) 10%, transparent);
+}
+.design-btn:focus-visible {
+  outline: 2px solid var(--color-accent-ink);
+  outline-offset: 2px;
+}
+.design-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--design-color, #888);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* ==================== FACE / ACCESSORY TOGGLE ==================== */
+.mascot-face-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.face-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: all 150ms ease;
+}
+.face-btn:hover {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+.face-btn.active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+.face-btn:focus-visible {
+  outline: 2px solid var(--color-accent-ink);
+  outline-offset: 2px;
+}
+
+/* ==================== UNIT PICKER ==================== */
+.mascot-unit-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.unit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  transition: all 150ms ease;
+}
+.unit-btn:hover {
+  border-color: var(--unit-color, var(--color-primary));
+}
+.unit-btn.active {
+  border-color: var(--unit-color, var(--color-primary));
+  background: color-mix(in srgb, var(--unit-color, var(--color-primary)) 10%, transparent);
+}
+.unit-btn:focus-visible {
+  outline: 2px solid var(--color-accent-ink);
+  outline-offset: 2px;
+}
+.unit-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--unit-color, #888);
+  flex-shrink: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pdf-viewer-content {
     transform: translate(-50%, -50%);
@@ -1947,6 +2222,26 @@ button.citation-inline:focus-visible {
     background: var(--color-danger-soft);
     border-color: var(--color-danger);
     color: var(--color-danger);
+  }
+  .customizer-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+  .customizer-card {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+  .mascot-name-field input {
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
+    color: var(--color-text);
+  }
+  .theme-btn,
+  .design-btn,
+  .face-btn,
+  .unit-btn {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text);
   }
 }
 

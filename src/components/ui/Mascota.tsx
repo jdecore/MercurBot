@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { speak, isSpeaking } from '../../lib/tts'
 import type { MascotaMood, RobotUnitId } from '../../types/mascota'
 import { ROBOT_UNITS } from '../../types/mascota'
@@ -14,14 +14,77 @@ interface MascotaProps {
   config?: RobotConfig
 }
 
+// Iris bounds: max offset from eye center so iris stays inside sclera
+const IRIS_MAX_X = 5
+const IRIS_MAX_Y = 3
+
+// Mood → iris scale (dilation/constriction)
+const MOOD_IRIS_SCALE: Record<string, number> = {
+  neutro: 1,
+  feliz: 1.15,
+  exito: 1.18,
+  enojado: 0.82,
+  dormido: 0.55,
+  duda: 1.05,
+  pensando: 1.08,
+  hablando: 1.05,
+  escuchando: 1.1,
+  guino: 1,
+  limpiando: 0.9,
+  escaneando: 1.12,
+}
+
+// Mood → sclera Y scale (squint)
+const MOOD_SCLERA_SCALE: Record<string, number> = {
+  neutro: 1,
+  feliz: 0.5,
+  exito: 0.5,
+  enojado: 0.7,
+  dormido: 0.12,
+  duda: 0.9,
+  pensando: 0.85,
+  hablando: 0.8,
+  escuchando: 0.9,
+  guino: 1,
+  limpiando: 0.8,
+  escaneando: 0.9,
+}
+
+// Mood → eyebrow rotations [left, right]
+const MOOD_BROWS: Record<string, [number, number]> = {
+  neutro: [0, 0],
+  feliz: [8, 8],
+  exito: [10, 10],
+  enojado: [-14, 14],
+  dormido: [0, 0],
+  duda: [-10, 4],
+  pensando: [6, 6],
+  hablando: [4, 4],
+  escuchando: [6, -2],
+  guino: [0, 0],
+  limpiando: [-4, -4],
+  escaneando: [6, 6],
+}
+
 export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', config }: MascotaProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [localMood, setLocalMood] = useState<MascotaMood>(mood)
   const [speakingState, setSpeakingState] = useState(isSpeaking())
 
+  // ── Eye behavior state ──
+  const [blinkPhase, setBlinkPhase] = useState<'open' | 'closing' | 'closed' | 'opening'>('open')
+  const [doubleBlink, setDoubleBlink] = useState(false)
+  const [ wink, setWink ] = useState(false)
+  const [ irisPos, setIrisPos ] = useState({ x: 0, y: 0 })
+  const [ hoverActive, setHoverActive ] = useState(false)
+  const targetRef = useRef({ x: 0, y: 0 })
+  const irisRef = useRef({ x: 0, y: 0 })
+  const rafRef = useRef<number>(0)
+
   useEffect(() => { setLocalMood(mood) }, [mood])
 
+  // ── TTS listener ──
   useEffect(() => {
     const handleTts = (e: Event) => {
       const detail = (e as CustomEvent<{ speaking: boolean }>).detail
@@ -34,7 +97,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     return () => window.removeEventListener('copixi:tts-speaking', handleTts as EventListener)
   }, [])
 
-  // Expose API
+  // ── Expose API ──
   useEffect(() => {
     const api = { setMood: (m: MascotaMood) => setLocalMood(m), speak: (t: string) => speak(t) }
     ;(window as any).setMood = api.setMood
@@ -54,7 +117,159 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
   const eyeW = config?.eyes === 'big' ? 16 : 13
   const eyeH = config?.eyes === 'big' ? 18 : config?.eyes === 'sleepy' ? 5 : config?.eyes === 'happy' ? 7 : 14
 
-  // Mouth path by mood — positioned on head shell below visor
+  // ── 1. Mouse tracking ──
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const handler = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect()
+      const cx = rect.left + rect.width / 2
+      const cy = rect.top + rect.height * 0.37
+      const dx = (e.clientX - cx) / (rect.width || 1)
+      const dy = (e.clientY - cy) / (rect.height || 1)
+      targetRef.current = {
+        x: Math.max(-IRIS_MAX_X, Math.min(IRIS_MAX_X, dx * IRIS_MAX_X * 1.2)),
+        y: Math.max(-IRIS_MAX_Y, Math.min(IRIS_MAX_Y, dy * IRIS_MAX_Y * 1.2)),
+      }
+    }
+    window.addEventListener('mousemove', handler, { passive: true })
+    return () => window.removeEventListener('mousemove', handler)
+  }, [])
+
+  // ── 2. Saccades (random micro-movements every 2-5s) ──
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>
+    const schedule = () => {
+      const delay = 2000 + Math.random() * 3000
+      timeout = setTimeout(() => {
+        // Random target within 60% of max range
+        targetRef.current = {
+          x: (Math.random() - 0.5) * IRIS_MAX_X * 1.2,
+          y: (Math.random() - 0.5) * IRIS_MAX_Y * 1.2,
+        }
+        // Return to center after 150-250ms
+        setTimeout(() => {
+          // Only return if no mouse tracking active (mouse handler will override)
+          targetRef.current = { x: 0, y: 0 }
+        }, 150 + Math.random() * 100)
+        schedule()
+      }, delay)
+    }
+    schedule()
+    return () => clearTimeout(timeout)
+  }, [])
+
+  // ── 3. Random blink timing + double blink on hover ──
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>
+    const scheduleBlink = () => {
+      const delay = 2200 + Math.random() * 3800
+      timeout = setTimeout(() => {
+        setBlinkPhase('closing')
+        setTimeout(() => {
+          setBlinkPhase('closed')
+          setTimeout(() => {
+            setBlinkPhase('opening')
+            setTimeout(() => {
+              setBlinkPhase('open')
+              // Double blink: 30% chance
+              if (Math.random() < 0.3) {
+                setTimeout(() => {
+                  setBlinkPhase('closing')
+                  setTimeout(() => {
+                    setBlinkPhase('closed')
+                    setTimeout(() => {
+                      setBlinkPhase('opening')
+                      setTimeout(() => setBlinkPhase('open'), 50)
+                    }, 60)
+                  }, 50)
+                }, 120)
+              }
+              scheduleBlink()
+            }, 50)
+          }, 80)
+        }, 60)
+      }, delay)
+    }
+    scheduleBlink()
+    return () => clearTimeout(timeout)
+  }, [])
+
+  // Hover → double blink
+  const handleMouseEnter = useCallback(() => {
+    setHoverActive(true)
+    setDoubleBlink(true)
+    setTimeout(() => setDoubleBlink(false), 400)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    setHoverActive(false)
+    targetRef.current = { x: 0, y: 0 }
+  }, [])
+
+  // Click → wink
+  const handleClick = useCallback(() => {
+    setWink(true)
+    setTimeout(() => setWink(false), 350)
+    onClick?.()
+  }, [onClick])
+
+  // ── 5. Look at UI elements ──
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ direction: 'left' | 'right' | 'up' | 'down' | 'center' }>).detail
+      if (!detail) return
+      const d = detail.direction
+      const mag = IRIS_MAX_X * 0.8
+      const map: Record<string, { x: number; y: number }> = {
+        left: { x: -mag, y: 0 },
+        right: { x: mag, y: 0 },
+        up: { x: 0, y: -IRIS_MAX_Y * 0.8 },
+        down: { x: 0, y: IRIS_MAX_Y * 0.8 },
+        center: { x: 0, y: 0 },
+      }
+      targetRef.current = map[d] ?? map.center
+      // Return to center after 2s
+      setTimeout(() => { targetRef.current = { x: 0, y: 0 } }, 2000)
+    }
+    window.addEventListener('copixi:eye-target', handler as EventListener)
+    return () => window.removeEventListener('copixi:eye-target', handler as EventListener)
+  }, [])
+
+  // ── Smooth iris interpolation (RAF loop) ──
+  useEffect(() => {
+    let running = true
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+    const tick = () => {
+      if (!running) return
+      const t = targetRef.current
+      const c = irisRef.current
+      const speed = 0.12
+      c.x = lerp(c.x, t.x, speed)
+      c.y = lerp(c.y, t.y, speed)
+      // Clamp
+      c.x = Math.max(-IRIS_MAX_X, Math.min(IRIS_MAX_X, c.x))
+      c.y = Math.max(-IRIS_MAX_Y, Math.min(IRIS_MAX_Y, c.y))
+      setIrisPos({ x: c.x, y: c.y })
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => { running = false; cancelAnimationFrame(rafRef.current) }
+  }, [])
+
+  // ── Derived eye values ──
+  const irisScale = MOOD_IRIS_SCALE[effectiveMood] ?? 1
+  const scleraScale = MOOD_SCLERA_SCALE[effectiveMood] ?? 1
+  const [browL, browR] = MOOD_BROWS[effectiveMood] ?? [0, 0]
+
+  const isBlinking = blinkPhase === 'closing' || blinkPhase === 'closed' || doubleBlink
+  const scleraY = isBlinking ? 0.08 : scleraScale
+  const isWinking = wink && effectiveMood !== 'enojado'
+
+  // Glow for exito
+  const glowOpacity = effectiveMood === 'exito' ? 0.6 : effectiveMood === 'feliz' ? 0.3 : 0
+
+  // Mouth path by mood
   const mouthPath = useMemo(() => {
     switch (effectiveMood) {
       case 'feliz':
@@ -153,12 +368,25 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
   const svgSize = size ?? 200
 
+  // CSS vars for eye behavior
+  const eyeVars = {
+    ['--iris-x' as string]: `${irisPos.x}px`,
+    ['--iris-y' as string]: `${irisPos.y}px`,
+    ['--iris-scale' as string]: irisScale,
+    ['--sclera-sy' as string]: scleraY,
+    ['--brow-l' as string]: `${browL}deg`,
+    ['--brow-r' as string]: `${browR}deg`,
+    ['--glow-opacity' as string]: glowOpacity,
+  } as React.CSSProperties
+
   return (
     <div
-      className={`mascota-svg-root mood-${effectiveMood}`}
+      className={`mascota-svg-root mood-${effectiveMood} ${hoverActive ? 'eye-hover' : ''}`}
       ref={rootRef}
-      onClick={onClick}
-      style={{ width: svgSize, height: svgSize, ['--unit-primary' as string]: primary, ['--unit-accent' as string]: accent } as React.CSSProperties}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      style={{ width: svgSize, height: svgSize, ['--unit-primary' as string]: primary, ['--unit-accent' as string]: accent, ...eyeVars }}
       aria-label={`Robot ${design?.label ?? robotMeta.name}, estado: ${effectiveMood}`}
       role="img"
     >
@@ -198,6 +426,11 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           <filter id="hs" x="-15%" y="-10%" width="130%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.1" />
           </filter>
+          {/* Eye glow filter for exito/feliz */}
+          <filter id="eg" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
         </defs>
 
         {/* Aura */}
@@ -205,7 +438,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
         {/* === HEAD === */}
         <g filter="url(#hs)" className="svg-head">
-          {/* Head shell — rounder, taller */}
+          {/* Head shell */}
           <ellipse cx="100" cy="72" rx="58" ry="50" fill="url(#hg)" stroke="#E2E8F0" strokeWidth="1.5" />
           {/* Gloss highlight */}
           <ellipse cx="100" cy="48" rx="38" ry="14" fill="#fff" opacity="0.5" />
@@ -258,18 +491,45 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           <rect x="52" y="50" width="96" height="52" rx="24" fill="url(#vg)" stroke="#3A3126" strokeWidth="1.5" />
           <ellipse cx="100" cy="58" rx="36" ry="10" fill="#fff" opacity="0.12" />
 
-          {/* Eyes — white sclera + colored iris + sparkle (no pupil) */}
-          <g filter="url(#gl)" className="svg-eyes">
-            {/* Left eye */}
-            <ellipse cx="78" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye" />
-            <ellipse cx="78" cy="75" rx={eyeW * 0.6} ry={eyeH * 0.6} fill={primary} className="svg-iris" />
-            <circle cx={76} cy={72} r="2.2" fill="#fff" opacity="0.92" />
-            <circle cx={80} cy={77} r="1.1" fill="#fff" opacity="0.5" />
-            {/* Right eye */}
-            <ellipse cx="122" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye" />
-            <ellipse cx="122" cy="75" rx={eyeW * 0.6} ry={eyeH * 0.6} fill={primary} className="svg-iris" />
-            <circle cx={120} cy={72} r="2.2" fill="#fff" opacity="0.92" />
-            <circle cx={124} cy={77} r="1.1" fill="#fff" opacity="0.5" />
+          {/* === EYEBROWS === */}
+          <g className="svg-brows">
+            <line x1="62" y1="48" x2="88" y2="46" stroke={primary} strokeWidth="2.5" strokeLinecap="round" className="svg-brow-l" />
+            <line x1="112" y1="46" x2="138" y2="48" stroke={primary} strokeWidth="2.5" strokeLinecap="round" className="svg-brow-r" />
+          </g>
+
+          {/* === EYES === */}
+          <g className="svg-eyes">
+            {/* Left eye group */}
+            <g className="svg-eye-group" filter={glowOpacity > 0 ? 'url(#eg)' : undefined} style={{ opacity: glowOpacity > 0 ? 1 : undefined }}>
+              {/* Sclera */}
+              <ellipse cx="78" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye-l" />
+              {/* Parallax depth (subtle sclera shadow when looking sideways) */}
+              <ellipse cx="78" cy="74" rx={eyeW * 0.85} ry={eyeH * 0.85} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="1" className="svg-eye-depth-l" />
+              {/* Iris */}
+              <ellipse cx="78" cy="75" rx={eyeW * 0.6} ry={eyeH * 0.6} fill={primary} className="svg-iris-l" />
+              {/* Glow ring for exito */}
+              {glowOpacity > 0 && <ellipse cx="78" cy="75" rx={eyeW * 0.7} ry={eyeH * 0.7} fill="none" stroke={accent} strokeWidth="1" opacity={glowOpacity} className="svg-iris-glow" />}
+              {/* Sparkles */}
+              <circle cx={76} cy={72} r="2.2" fill="#fff" opacity="0.92" />
+              <circle cx={80} cy={77} r="1.1" fill="#fff" opacity="0.5" />
+            </g>
+
+            {/* Right eye group */}
+            <g className="svg-eye-group" filter={glowOpacity > 0 ? 'url(#eg)' : undefined} style={{ opacity: glowOpacity > 0 ? 1 : undefined }}>
+              {/* Wink: right eye closes */}
+              {isWinking ? (
+                <path d={`M ${122 - eyeW} 74 Q 122 ${74 - 3} ${122 + eyeW} 74`} fill="none" stroke="#E2E8F0" strokeWidth="1.5" strokeLinecap="round" className="svg-eye-wink" />
+              ) : (
+                <>
+                  <ellipse cx="122" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye-r" />
+                  <ellipse cx="122" cy="74" rx={eyeW * 0.85} ry={eyeH * 0.85} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="1" className="svg-eye-depth-r" />
+                  <ellipse cx="122" cy="75" rx={eyeW * 0.6} ry={eyeH * 0.6} fill={primary} className="svg-iris-r" />
+                  {glowOpacity > 0 && <ellipse cx="122" cy="75" rx={eyeW * 0.7} ry={eyeH * 0.7} fill="none" stroke={accent} strokeWidth="1" opacity={glowOpacity} className="svg-iris-glow" />}
+                  <circle cx={120} cy={72} r="2.2" fill="#fff" opacity="0.92" />
+                  <circle cx={124} cy={77} r="1.1" fill="#fff" opacity="0.5" />
+                </>
+              )}
+            </g>
           </g>
 
           {/* Cheeks */}
@@ -287,6 +547,24 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
               ))}
             </g>
           )}
+
+          {/* Dormido Z's */}
+          {effectiveMood === 'dormido' && (
+            <g className="svg-zzz">
+              <text x="130" y="40" fontSize="10" fill={accent} opacity="0.6" className="zzz-1">z</text>
+              <text x="140" y="30" fontSize="13" fill={accent} opacity="0.4" className="zzz-2">z</text>
+              <text x="152" y="18" fontSize="16" fill={accent} opacity="0.25" className="zzz-3">z</text>
+            </g>
+          )}
+
+          {/* Pensando dots */}
+          {effectiveMood === 'pensando' && (
+            <g className="svg-thinking">
+              {[0, 1, 2].map(i => (
+                <circle key={i} cx={140 + i * 8} cy={38 - i * 6} r={2 + i} fill={accent} opacity={0.6 - i * 0.15} className={`think-dot-${i}`} />
+              ))}
+            </g>
+          )}
         </g>
 
         {/* === BODY === */}
@@ -296,11 +574,11 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           {/* Body */}
           <ellipse cx="100" cy="148" rx="36" ry="26" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1.5" />
           <ellipse cx="100" cy="140" rx="22" ry="8" fill="#fff" opacity="0.35" />
-          {/* Left arm — capsule from shoulder to hand */}
+          {/* Left arm */}
           <g transform="rotate(-12 64 138)">
             <rect x="54" y="136" width="12" height="34" rx="6" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
           </g>
-          {/* Right arm — capsule from shoulder to hand */}
+          {/* Right arm */}
           <g transform="rotate(12 136 138)">
             <rect x="134" y="136" width="12" height="34" rx="6" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
           </g>

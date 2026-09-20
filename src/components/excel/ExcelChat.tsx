@@ -590,6 +590,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       setStatus('streaming')
       setMascotaMood('pensando')
       startThinking()
+      // Robot eyes look down at the response being generated
+      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'down' } }))
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -680,6 +682,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       setStatus('done')
       setMascotaMood('exito')
       stopThinking()
+      // Robot eyes return to center after response
+      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
       const hasChart = splitChartBlock(acc).chart
       if (hasChart) soundSuccess()
       else chime()
@@ -714,6 +718,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     setInput('')
     setDictationBase('')
     pop()
+    // Eyes look at chat area (response will appear here)
+    window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
     void runQuery(t)
   }
 
