@@ -7,7 +7,7 @@ import { Mascota } from './components/ui/Mascota'
 import { Icon } from './components/ui/Icon'
 import { MascotCustomizer } from './components/ui/MascotCustomizer'
 import { ExcelChat } from './components/excel/ExcelChat'
-import { speak } from './lib/tts'
+import { speak, speakInteraction } from './lib/tts'
 import { getPreferences, savePreferences, hasOnboarded, setOnboarded } from './lib/storage'
 import type { RobotConfig } from './lib/robotSeed'
 import { OnboardingTour } from './components/onboarding/OnboardingTour'
@@ -168,6 +168,7 @@ function MainDashboard() {
         canCancel: true,
       })
       speak(`Voy a leer ${file.name}, dame un momento.`)
+      speakInteraction('file-upload')
 
       // Fase 24A: huella estable → mismo archivo, mismo docId, caché OPFS válida.
       const docId = await hashPdfFile(file)

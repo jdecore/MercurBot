@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useDashboard } from '../../state/DashboardContext'
-import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as cancelTts, isSpeaking } from '../../lib/tts'
+import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as cancelTts, isSpeaking, speakInteraction } from '../../lib/tts'
 import type { MascotaMood } from '../../types/mascota'
 import { ragClient } from '../../lib/ragClient'
 import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg } from '../../lib/storage'
@@ -447,6 +447,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
 
   async function handleCopy(id: string, text: string) {
     const ok = await copyText(stripChartBlock(cleanAI(text)))
+    if (ok) speakInteraction('copy-response')
     if (ok) {
       setCopiedId(id)
       setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 2000)
@@ -460,6 +461,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     const sources = (msg.citations ?? []).map((c) => `- Pág. ${c.pageNumber}: ${c.snippet}`).join('\n')
     const body = `# ${base}\n\n${prevUser ? `**Pregunta:** ${prevUser.content}\n\n` : ''}**Respuesta:**\n\n${stripChartBlock(cleanAI(msg.content))}\n\n${sources ? `**Fuentes:**\n\n${sources}\n` : ''}`
     downloadMarkdown(`${base}.md`, body)
+    speakInteraction('export')
   }
 
   async function runQuery(text: string) {
@@ -505,6 +507,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     setMessages((prev) => [...prev, userMsg, assistantMsg])
     setMascotaMood('escuchando')
     setStatus('submitted')
+    speakInteraction('search-query')
 
     // Sin índice no hay qué buscar: respuesta local honesta sin quemar cuota
     // de IA (PDF escaneado sin texto o indexación fallida). El LLM sin

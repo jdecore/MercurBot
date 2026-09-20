@@ -1,0 +1,249 @@
+/* =========================================================================
+   COPIXI SVG ROBOT — High-fidelity EVE-style robot with Canvas particles
+   ========================================================================= */
+
+.mascota-svg-root {
+  --robot-size: 200px;
+  --mx: 0px;
+  --my: 0px;
+  --unit-primary: #10b981;
+  --unit-accent: #34d399;
+  width: var(--robot-size);
+  height: var(--robot-size);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* Canvas particle layer */
+.mascota-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* SVG robot layer */
+.mascota-svg {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  animation: svgLevitacion 6s ease-in-out infinite;
+  transition: transform 200ms ease;
+}
+
+.mascota-svg-root:hover .mascota-svg {
+  transform: scale(1.04);
+}
+
+/* ==================== SVG ANIMATIONS ==================== */
+
+@keyframes svgLevitacion {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Aura pulse */
+.svg-aura {
+  animation: svgAuraPulse 3s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes svgAuraPulse {
+  0% { opacity: 0.6; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+
+/* Eye blink — scaleY on the eye ellipses */
+.svg-eye {
+  animation: svgEyeBlink 4.6s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes svgEyeBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.08); }
+}
+
+/* Pupils follow mouse via CSS var */
+.svg-pupil {
+  transition: transform 120ms ease-out;
+}
+
+/* Cheeks */
+.svg-cheek {
+  transition: opacity 300ms ease;
+}
+.mascota-svg-root.mood-feliz .svg-cheek,
+.mascota-svg-root.mood-exito .svg-cheek {
+  opacity: 0.8;
+}
+
+/* Mouth transition */
+.svg-mouth {
+  transition: d 300ms ease;
+}
+
+/* Audio wave bars */
+.svg-wave {
+  overflow: visible;
+}
+.wave-rect {
+  animation: svgWaveBounce 0.5s ease-in-out infinite alternate;
+  transform-origin: bottom;
+}
+@keyframes svgWaveBounce {
+  from { height: 3px; y: 110; }
+  to { height: 12px; y: 101; }
+}
+
+/* Thruster pulse */
+.svg-thruster {
+  animation: svgThrusterPulse 2s ease-in-out infinite alternate;
+}
+@keyframes svgThrusterPulse {
+  0% { opacity: 0.5; transform: scaleX(0.9); }
+  100% { opacity: 0.8; transform: scaleX(1.1); }
+}
+
+/* ==================== MOOD STATES ==================== */
+
+/* Feliz / Éxito: sonrisa + mejillas fuertes */
+.mascota-svg-root.mood-feliz .svg-eye,
+.mascota-svg-root.mood-exito .svg-eye {
+  ry: 6;
+}
+
+/* Dormido: ojos cerrados */
+.mascota-svg-root.mood-dormido .svg-eye {
+  animation: none;
+  ry: 2;
+}
+
+/* Duda: ojos torcidos */
+.mascota-svg-root.mood-duda .svg-eye:first-child {
+  transform: rotate(-6deg) translateY(-2px);
+}
+.mascota-svg-root.mood-duda .svg-eye:last-child {
+  transform: rotate(3deg) translateY(1px);
+}
+
+/* Pensando: pupils orbitan */
+.mascota-svg-root.mood-pensando .svg-pupil {
+  animation: svgThinkEyes 2s linear infinite;
+}
+@keyframes svgThinkEyes {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(3px, -2px); }
+  50% { transform: translate(0, -3px); }
+  75% { transform: translate(-3px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Hablando: cabeza asiente */
+.mascota-svg-root.mood-hablando .svg-head {
+  animation: svgHeadBob 0.8s ease-in-out infinite alternate;
+}
+@keyframes svgHeadBob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-2px); }
+}
+
+/* Enojado: sacudida */
+.mascota-svg-root.mood-enojado {
+  animation: svgShake 0.5s ease-in-out;
+}
+@keyframes svgShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-5px) rotate(-1.5deg); }
+  30% { transform: translateX(4px) rotate(1deg); }
+  45% { transform: translateX(-3px) rotate(-0.5deg); }
+  60% { transform: translateX(2px); }
+}
+
+/* Éxito: salto */
+.mascota-svg-root.mood-exito {
+  animation: svgBounce 0.5s ease-out;
+}
+@keyframes svgBounce {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
+  50% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+/* Dormido: pulso lento */
+.mascota-svg-root.mood-dormido .mascota-svg {
+  animation: svgSleepPulse 3s ease-in-out infinite;
+}
+@keyframes svgSleepPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ==================== SUBTITLES ==================== */
+.mascota-subtitles {
+  position: absolute;
+  bottom: -28px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  color: #f8fafc;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+/* ==================== REDUCED MOTION ==================== */
+@media (prefers-reduced-motion: reduce) {
+  .mascota-svg {
+    animation: none !important;
+  }
+  .svg-aura,
+  .svg-eye,
+  .svg-thruster,
+  .wave-rect {
+    animation: none !important;
+  }
+  .mascota-svg-root.mood-enojado,
+  .mascota-svg-root.mood-exito,
+  .mascota-svg-root.mood-dormido .mascota-svg,
+  .mascota-svg-root.mood-hablando .svg-head,
+  .mascota-svg-root.mood-pensando .svg-pupil {
+    animation: none !important;
+  }
+  .mascota-svg-root:hover .mascota-svg {
+    transform: none;
+  }
+}
+
+/* ==================== COMPACT MODE ==================== */
+.mascot-stage.compact .mascota-svg-root {
+  --robot-size: 72px;
+}
+.mascot-stage.compact .mascota-svg {
+  animation: none;
+  transform: scale(2.2) translateY(-6%);
+  transform-origin: center 40%;
+}
+.mascot-stage.compact .mascota-svg-root:hover .mascota-svg {
+  transform: scale(2.3) translateY(-6%);
+}
+.mascot-stage.compact .mascota-subtitles {
+  display: none;
+}
+.mascot-stage.compact .mascota-particles {
+  display: none;
+}
+.mascot-stage.compact .svg-aura {
+  display: none;
+}

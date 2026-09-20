@@ -1,6 +1,7 @@
 /**
  * Copixi — Native TTS via Web Speech API (browser-only, §8: stays local).
  * Synchronized with Mascota mood & audio waves.
+ * Extended: speaks on mood changes and user interactions (Option 2).
  */
 
 const STORAGE_KEY = 'copixi:tts-muted'
@@ -92,6 +93,66 @@ function processQueue() {
   window.speechSynthesis.speak(utterance)
 }
 
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+/* ==================== OPTION 2: SPEECH ON INTERACTIONS ==================== */
+
+/** Mood-change phrases: robot says something when its mood changes. */
+const MOOD_PHRASES: Record<string, string[]> = {
+  exito: ['¡Encontré algo interesante!', 'Listo, ya quedó.', '¡Eso quedó genial!', 'Perfecto, ahí lo tienes.'],
+  enojado: ['Hmm, algo no salió bien.', 'Hubo un problemilla.', 'Eso no funcionó como esperaba.'],
+  duda: ['Hmm, no estoy seguro de esto.', 'Déjame pensarlo un momento.', 'Esta parte me genera dudas.'],
+  pensando: ['Déjame ver...', 'Estoy pensando...', 'Un momento...', 'Analizando...'],
+  dormido: ['...', 'Zzz...', 'Ah, estoy aquí.'],
+  feliz: ['¡Me gusta esto!', '¡Genial!', 'Bien, continuamos.'],
+}
+
+/** Interaction phrases keyed by event type. */
+const INTERACTION_PHRASES: Record<string, string[]> = {
+  'file-upload': ['Voy a leer tu documento.', 'Perfecto, dame un momento con esto.', 'Empezando la lectura.'],
+  'tab-data': ['Aquí tienes los datos crudos.', 'Veamos los datos.'],
+  'tab-insights': ['Vamos a ver los hallazgos.', 'Aquí están los insights.'],
+  'tab-overview': ['De vuelta al resumen.', 'Veamos el panorama general.'],
+  'filter-applied': ['Filtro aplicado.', 'Ya filtré los datos.'],
+  'filter-cleared': ['Filtros eliminados.', 'Todo limpio de nuevo.'],
+  'chart-generated': ['Gráfica lista.', 'Aquí tienes la gráfica.'],
+  'search-query': ['Buscando en el documento...', 'Déjame buscar eso.'],
+  'export': ['Exportando datos.', 'Listo para descargar.'],
+  'copy-response': ['Copiado.', 'Listo para pegar.'],
+}
+
+/**
+ * Say a phrase when mood changes. Picks a random phrase for that mood.
+ * Cooldown: won't repeat the same mood within 4 seconds.
+ */
+let lastMoodTime = 0
+let lastMood = ''
+export function speakMood(mood: string): void {
+  if (muted || mood === lastMood) return
+  const now = Date.now()
+  if (now - lastMoodTime < 4000) return
+  lastMoodTime = now
+  lastMood = mood
+  const phrases = MOOD_PHRASES[mood]
+  if (phrases) speak(pickRandom(phrases))
+}
+
+/**
+ * Say a phrase for a user interaction event.
+ * Cooldown: won't repeat the same event within 6 seconds.
+ */
+const interactionCooldowns: Record<string, number> = {}
+export function speakInteraction(event: string): void {
+  if (muted) return
+  const now = Date.now()
+  if (interactionCooldowns[event] && now - interactionCooldowns[event] < 6000) return
+  interactionCooldowns[event] = now
+  const phrases = INTERACTION_PHRASES[event]
+  if (phrases) speak(pickRandom(phrases))
+}
+
 export function speak(text: string): void {
   if (!isSupported() || muted || !text) return
   cancel() // stop any ongoing to start fresh
@@ -138,4 +199,9 @@ if (typeof window !== 'undefined') {
       // voice list ready
     }
   }
+  // Speak on mood changes (Option 2).
+  window.addEventListener('copixi:mascota-mood', ((e: Event) => {
+    const mood = (e as CustomEvent<string>).detail
+    if (mood && typeof mood === 'string') speakMood(mood)
+  }) as EventListener)
 }

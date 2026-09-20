@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { ragClient, type DocSearchHit } from '../../lib/ragClient'
+import { speakInteraction } from '../../lib/tts'
 import { matchHighlightSpans } from '../../lib/highlight'
 import { ChartFullButton } from './ChartFullButton'
 import type { PdfPageText } from '../../data/extractors/pdf'
@@ -46,6 +47,7 @@ function DocSearch({ onJump }: { onJump: (page: number) => void }) {
     }
     setHits(ragClient.searchPages(value, 20))
     setSearched(true)
+    speakInteraction('search-query')
   }
 
   return (
