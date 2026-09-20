@@ -1,5 +1,5 @@
 /* =========================================================================
-   COPIXI SVG ROBOT — High-fidelity EVE-style robot with Canvas particles
+   COPIXI SVG ROBOT — EVE-style robot with Canvas particles
    ========================================================================= */
 
 .mascota-svg-root {
@@ -19,7 +19,6 @@
   cursor: pointer;
 }
 
-/* Canvas particle layer */
 .mascota-particles {
   position: absolute;
   inset: 0;
@@ -29,14 +28,13 @@
   z-index: 0;
 }
 
-/* SVG robot layer */
 .mascota-svg {
   width: 100%;
   height: 100%;
   position: relative;
   z-index: 1;
   overflow: visible;
-  animation: svgLevitacion 6s ease-in-out infinite;
+  animation: svgFloat 6s ease-in-out infinite;
   transition: transform 200ms ease;
 }
 
@@ -44,39 +42,35 @@
   transform: scale(1.04);
 }
 
-/* ==================== SVG ANIMATIONS ==================== */
+/* ==================== ANIMATIONS ==================== */
 
-@keyframes svgLevitacion {
+@keyframes svgFloat {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  50% { transform: translateY(-5px); }
 }
 
-/* Aura pulse */
 .svg-aura {
   animation: svgAuraPulse 3s ease-in-out infinite alternate;
   transform-origin: center;
 }
 @keyframes svgAuraPulse {
-  0% { opacity: 0.6; transform: scale(0.95); }
-  100% { opacity: 1; transform: scale(1.05); }
+  0% { opacity: 0.6; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1.04); }
 }
 
-/* Eye blink — scaleY on the eye ellipses */
 .svg-eye {
-  animation: svgEyeBlink 4.6s ease-in-out infinite;
+  animation: svgBlink 4.6s ease-in-out infinite;
   transform-origin: center;
 }
-@keyframes svgEyeBlink {
+@keyframes svgBlink {
   0%, 92%, 100% { transform: scaleY(1); }
   95% { transform: scaleY(0.08); }
 }
 
-/* Pupils follow mouse via CSS var */
 .svg-pupil {
-  transition: transform 120ms ease-out;
+  transition: transform 100ms ease-out;
 }
 
-/* Cheeks */
 .svg-cheek {
   transition: opacity 300ms ease;
 }
@@ -85,25 +79,20 @@
   opacity: 0.8;
 }
 
-/* Mouth transition */
 .svg-mouth {
-  transition: d 300ms ease;
+  transition: d 250ms ease;
 }
 
-/* Audio wave bars */
-.svg-wave {
-  overflow: visible;
-}
+.svg-wave { overflow: visible; }
 .wave-rect {
   animation: svgWaveBounce 0.5s ease-in-out infinite alternate;
   transform-origin: bottom;
 }
 @keyframes svgWaveBounce {
-  from { height: 3px; y: 110; }
-  to { height: 12px; y: 101; }
+  from { height: 3px; y: 102; }
+  to { height: 10px; y: 95; }
 }
 
-/* Thruster pulse */
 .svg-thruster {
   animation: svgThrusterPulse 2s ease-in-out infinite alternate;
 }
@@ -114,39 +103,34 @@
 
 /* ==================== MOOD STATES ==================== */
 
-/* Feliz / Éxito: sonrisa + mejillas fuertes */
 .mascota-svg-root.mood-feliz .svg-eye,
 .mascota-svg-root.mood-exito .svg-eye {
-  ry: 6;
+  ry: 7;
 }
 
-/* Dormido: ojos cerrados */
 .mascota-svg-root.mood-dormido .svg-eye {
   animation: none;
   ry: 2;
 }
 
-/* Duda: ojos torcidos */
-.mascota-svg-root.mood-duda .svg-eye:first-child {
-  transform: rotate(-6deg) translateY(-2px);
+.mascota-svg-root.mood-duda .svg-eyes > :first-child {
+  transform: rotate(-5deg) translateY(-2px);
 }
-.mascota-svg-root.mood-duda .svg-eye:last-child {
+.mascota-svg-root.mood-duda .svg-eyes > :last-child {
   transform: rotate(3deg) translateY(1px);
 }
 
-/* Pensando: pupils orbitan */
 .mascota-svg-root.mood-pensando .svg-pupil {
   animation: svgThinkEyes 2s linear infinite;
 }
 @keyframes svgThinkEyes {
   0% { transform: translate(0, 0); }
-  25% { transform: translate(3px, -2px); }
+  25% { transform: translate(2px, -2px); }
   50% { transform: translate(0, -3px); }
-  75% { transform: translate(-3px, -1px); }
+  75% { transform: translate(-2px, -1px); }
   100% { transform: translate(0, 0); }
 }
 
-/* Hablando: cabeza asiente */
 .mascota-svg-root.mood-hablando .svg-head {
   animation: svgHeadBob 0.8s ease-in-out infinite alternate;
 }
@@ -155,30 +139,27 @@
   to { transform: translateY(-2px); }
 }
 
-/* Enojado: sacudida */
 .mascota-svg-root.mood-enojado {
   animation: svgShake 0.5s ease-in-out;
 }
 @keyframes svgShake {
   0%, 100% { transform: translateX(0); }
-  15% { transform: translateX(-5px) rotate(-1.5deg); }
-  30% { transform: translateX(4px) rotate(1deg); }
-  45% { transform: translateX(-3px) rotate(-0.5deg); }
-  60% { transform: translateX(2px); }
+  15% { transform: translateX(-4px) rotate(-1deg); }
+  30% { transform: translateX(3px) rotate(0.8deg); }
+  45% { transform: translateX(-2px); }
+  60% { transform: translateX(1px); }
 }
 
-/* Éxito: salto */
 .mascota-svg-root.mood-exito {
   animation: svgBounce 0.5s ease-out;
 }
 @keyframes svgBounce {
   0% { transform: translateY(0); }
-  30% { transform: translateY(-8px); }
-  50% { transform: translateY(-3px); }
+  30% { transform: translateY(-7px); }
+  60% { transform: translateY(-2px); }
   100% { transform: translateY(0); }
 }
 
-/* Dormido: pulso lento */
 .mascota-svg-root.mood-dormido .mascota-svg {
   animation: svgSleepPulse 3s ease-in-out infinite;
 }
@@ -205,9 +186,7 @@
 
 /* ==================== REDUCED MOTION ==================== */
 @media (prefers-reduced-motion: reduce) {
-  .mascota-svg {
-    animation: none !important;
-  }
+  .mascota-svg,
   .svg-aura,
   .svg-eye,
   .svg-thruster,
