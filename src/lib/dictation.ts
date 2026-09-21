@@ -1,5 +1,5 @@
 /**
- * Copixi — Dictado por voz via Web Speech API (STT nativo del navegador).
+ * MercurBot — Dictado por voz via Web Speech API (STT nativo del navegador).
  *
  * Por qué Web Speech API y no otra cosa (§34):
  * - Es el único STT 100% nativo del navegador: cero deps, cero descargas,

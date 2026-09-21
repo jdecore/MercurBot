@@ -17,7 +17,7 @@ function extOf(name: string): string {
 
 /**
  * Universal parser — frontend-first (§6), pure browser.
- * Copixi solo trabaja con PDF (.pdf): extracción de páginas + chunks
+ * MercurBot solo trabaja con PDF (.pdf): extracción de páginas + chunks
  * para búsqueda RAG local. Sin CSV/Excel/Word.
  */
 export async function parseAnyFile(file: File, options?: PdfExtractOptions): Promise<UniversalParseResult> {
@@ -32,7 +32,7 @@ export async function parseAnyFile(file: File, options?: PdfExtractOptions): Pro
       filename: file.name,
     }
   }
-  throw new Error(`Tipo no soportado "${ext}". Copixi solo trabaja con documentos PDF (.pdf).`)
+  throw new Error(`Tipo no soportado "${ext}". MercurBot solo trabaja con documentos PDF (.pdf).`)
 }
 
 export function validateAnyFile(file: File, maxSizeMB = 30): { valid: boolean; error?: string } {

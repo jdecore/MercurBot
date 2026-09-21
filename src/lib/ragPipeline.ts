@@ -1,5 +1,5 @@
 /**
- * Copixi — Fase 4: Pipeline de Búsqueda RAG.
+ * MercurBot — Fase 4: Pipeline de Búsqueda RAG.
  *
  * Contrato explícito:
  *  - Modo vectorial activo (worker híbrido): Top 15 vectorial + Top 15

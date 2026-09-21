@@ -172,7 +172,7 @@ function MainDashboard() {
 
       // Fase 24A: huella estable → mismo archivo, mismo docId, caché OPFS válida.
       const docId = await hashPdfFile(file)
-      if (import.meta.env.DEV) console.log('[Copixi] docId', docId)
+      if (import.meta.env.DEV) console.log('[MercurBot] docId', docId)
 
       const parseResult = await parseAnyFile(file, {
         docId,
@@ -471,9 +471,9 @@ function MainDashboard() {
     <div className="canvas-wrapper">
       <div className={`app-shell${railCollapsed ? ' rail' : ''}`}>
         <aside className={`app-sidebar${railCollapsed ? ' rail' : ''}`} aria-label="Navegación principal">
-          <div className="sidebar-brand" aria-label="Copixi AI">
-            <span className="brand-mark" aria-hidden>◈</span>
-            <span className="brand-title">Copixi</span>
+          <div className="sidebar-brand" aria-label="MercurBot AI">
+            <div className="brand-mark" aria-hidden>MB</div>
+            <span className="brand-title">MercurBot</span>
             <span className="brand-sub">tu lector de PDFs</span>
           </div>
           {sidebar}
@@ -643,9 +643,9 @@ function MainDashboard() {
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <div className="sidebar-drawer-head">
-              <div className="sidebar-brand" aria-label="Copixi AI">
-                <span className="brand-mark" aria-hidden>◈</span>
-                <span className="brand-title">Copixi</span>
+              <div className="sidebar-brand" aria-label="MercurBot AI">
+                <div className="brand-mark" aria-hidden>MB</div>
+                <span className="brand-title">MercurBot</span>
               </div>
               <Dialog.Close className="btn btn-secondary small" aria-label="Cerrar navegación">
                 ✕ Cerrar

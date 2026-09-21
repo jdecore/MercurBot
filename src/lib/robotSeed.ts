@@ -1,5 +1,5 @@
 /**
- * Copixi Robot Seed — diseño determinista del robot desde un nombre (Fase B).
+ * MercurBot Robot Seed — diseño determinista del robot desde un nombre (Fase B).
  * Mismo nombre = mismo diseño, siempre. Sin dependencias, sin backend.
  * Misma técnica de hash que src/lib/fileHash.ts (FNV-1a).
  */
@@ -71,7 +71,7 @@ export const QUICK_THEMES: QuickTheme[] = [
 
 export const MAX_ROBOT_NAME = 24
 
-export function sanitizeRobotName(raw: string, fallback = 'Copi'): string {
+export function sanitizeRobotName(raw: string, fallback = 'Mercur'): string {
   const clean = raw.trim().slice(0, MAX_ROBOT_NAME)
   return clean || fallback
 }

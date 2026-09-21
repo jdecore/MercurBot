@@ -1,5 +1,5 @@
 /**
- * Copixi — Biblioteca de PDFs recientes (P1).
+ * MercurBot — Biblioteca de PDFs recientes (P1).
  *
  * Los bytes del PDF se guardan en OPFS (Origin Private File System, sin
  * límite práctico de 5 MB como localStorage) y solo los metadatos en

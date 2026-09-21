@@ -1,5 +1,5 @@
 /**
- * Copixi — Native TTS via Web Speech API (browser-only, §8: stays local).
+ * MercurBot — Native TTS via Web Speech API (browser-only, §8: stays local).
  * Synchronized with Mascota mood & audio waves.
  * Extended: speaks on mood changes and user interactions (Option 2).
  */

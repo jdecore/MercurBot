@@ -10,7 +10,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error }
   }
   componentDidCatch(error: Error) {
-    if (import.meta.env.DEV) console.error('[Copixi] ErrorBoundary', error)
+    if (import.meta.env.DEV) console.error('[MercurBot] ErrorBoundary', error)
   }
   render() {
     if (this.state.hasError) {

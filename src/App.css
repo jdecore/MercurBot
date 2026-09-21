@@ -1,4 +1,4 @@
-/* Copixi — PDF Canvas Layout (Sin navbar tradicional, inmersivo) §19/§20 */
+/* MercurBot — PDF Canvas Layout (Sin navbar tradicional, inmersivo) §19/§20 */
 .canvas-wrapper {
   min-height: 100svh;
   display: flex;
@@ -99,7 +99,7 @@ summary svg {
   justify-content: center;
 }
 
-/* Marca Copixi (sidebar + drawer) */
+/* Marca MercurBot (sidebar + drawer) */
 .brand-mark {
   width: 28px;
   height: 28px;

@@ -65,7 +65,7 @@ export function OnboardingTour({ open, onOpenChange, initialUserName, initialRob
           </Dialog.Title>
 
           <p id="onboard-desc" className="sr-only">
-            Tutorial de bienvenida de Copixi en 3 pasos
+            Tutorial de bienvenida de MercurBot en 3 pasos
           </p>
 
           {/* Paso 0: Presentación + Nombres */}

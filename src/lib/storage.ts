@@ -1,5 +1,5 @@
 /**
- * Copixi Storage — frontend-first persistence (§31, §32 Fase 5)
+ * MercurBot Storage — frontend-first persistence (§31, §32 Fase 5)
  * InsForge-compatible local abstraction: no backend, no secrets,
  * data stays in browser (§8). When InsForge SDK is added, swap impl.
  */
@@ -98,7 +98,7 @@ export function saveDataset(d: SavedDataset): void {
 }
 
 // Preferences (anomaly threshold, method, mascot)
-export const DEFAULT_ROBOT_NAME = 'Copi'
+export const DEFAULT_ROBOT_NAME = 'Mercur'
 const brasita = ROBOT_DESIGNS.brasita
 const DEFAULT_PREFS: Preferences = {
   anomalyThreshold: 2.5,

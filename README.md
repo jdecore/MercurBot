@@ -1,4 +1,4 @@
-# Copixi — Tu Analista de Documentos PDF con IA
+# MercurBot — Tu Analista de Documentos PDF con IA
 
 **Sube un PDF → se vectoriza en tu navegador en segundos → pregunta lo que quieras y responde con citas verificables `[Pág. N]`.**
 
@@ -6,9 +6,9 @@
 
 ---
 
-## Por qué Copixi ayuda a tu empresa
+## Por qué MercurBot ayuda a tu empresa
 
-Copixi convierte los PDFs que tu equipo ya tiene (manuales, guías, reportes, contratos) en respuestas verificables, **sin subir el documento a ningún servidor**.
+MercurBot convierte los PDFs que tu equipo ya tiene (manuales, guías, reportes, contratos) en respuestas verificables, **sin subir el documento a ningún servidor**.
 
 | Lo que entrega | Valor de negocio |
 |---|---|

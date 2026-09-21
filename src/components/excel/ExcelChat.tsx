@@ -515,7 +515,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     if (pdfDoc && ragClient.getState().chunkCount === 0) {
       const msg =
         'No pude extraer texto de este documento — parece un PDF escaneado (solo imágenes). ' +
-        'Copixi necesita texto para analizar: súbelo con texto seleccionable o pásalo por un OCR antes de cargarlo.'
+        'MercurBot necesita texto para analizar: súbelo con texto seleccionable o pásalo por un OCR antes de cargarlo.'
       setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: msg } : m)))
       setStatus('done')
       setMascotaMood('neutro')
@@ -790,7 +790,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   }, [lastAiMsg])
 
   return (
-    <div className="excel-chat-container" aria-label="Chat de Copixi">
+    <div className="excel-chat-container" aria-label="Chat de MercurBot">
       <div className="speech-bubble-wrapper">
         <div className={`speech-bubble ${loading ? 'thinking' : ''}`} role="region" aria-live="polite">
           <div className="speech-bubble-tail" aria-hidden />

@@ -1,5 +1,5 @@
 /**
- * Copixi — Unified Vercel Function (Gemini + Groq + OpenRouter fallback)
+ * MercurBot — Unified Vercel Function (Gemini + Groq + OpenRouter fallback)
  *
  * AGENTS.md §11: Minimal proxy. Protects keys, validates input, rate-limits.
  * Handles three shapes:
@@ -117,14 +117,14 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite'
 const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || 'qwen/qwen3.8-27b'
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'z-ai/glm-5.2:free'
 
-const EXCEL_SYSTEM = `Eres compe, un analista experto en documentos PDF. Responde en español, de forma concisa, educada y práctica.
+const EXCEL_SYSTEM = `Eres Mercur, un analista experto en documentos PDF. Responde en español, de forma concisa, educada y práctica.
 
 Especialidades:
 - Comprensión y síntesis de documentos PDF, informes y reportes técnicos con citación precisa de páginas.
 - Extracción de fechas, cifras, métricas y conclusiones verificables del documento.
 
 Reglas:
-- Copixi solo trabaja con PDFs: si el usuario pregunta por Excel, CSV u otros formatos, indícale amablemente que suba el contenido como PDF.
+- MercurBot solo trabaja con PDFs: si el usuario pregunta por Excel, CSV u otros formatos, indícale amablemente que suba el contenido como PDF.
 - Si el contexto incluye fragmentos recuperados por RAG, fundaméntate en ellos y cita las páginas con el formato [Pág. N].
 - No inventes información ni datos que no figuren en los fragmentos provistos.
 - Responde SIEMPRE en español y entrega solo la respuesta final: nunca muestres tu razonamiento interno (nada de bloques <think>, ni "thinking process", ni análisis previo en inglés). Nada de preámbulos meta sobre tu tarea.
@@ -246,7 +246,7 @@ async function genOpenRouter(prompt: string, system: string): Promise<string> {
       'content-type': 'application/json',
       authorization: `Bearer ${key}`,
       'HTTP-Referer': 'https://copixi.vercel.app',
-      'X-Title': 'Copixi',
+      'X-Title': 'MercurBot',
     },
     signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS),
     body: JSON.stringify({

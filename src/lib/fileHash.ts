@@ -1,5 +1,5 @@
 /**
- * Copixi — Huella estable de archivo (Fase 24A).
+ * MercurBot — Huella estable de archivo (Fase 24A).
  *
  * FNV-1a sobre `nombre|tamaño|primeros 64 KB|últimos 64 KB`: ~1 ms incluso
  * en PDFs de 30 MB y estable entre sesiones. El hash ES el docId, de modo
