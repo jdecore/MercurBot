@@ -155,9 +155,12 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
       const cy = rect.top + rect.height * 0.37
       const dx = (e.clientX - cx) / (rect.width || 1)
       const dy = (e.clientY - cy) / (rect.height || 1)
+      // Distance-based: closer = gentler, far = full tracking
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const factor = Math.min(1, dist * 2) // ramps up over ~50% of viewport
       targetRef.current = {
-        x: Math.max(-IRIS_MAX_X, Math.min(IRIS_MAX_X, dx * IRIS_MAX_X * 1.2)),
-        y: Math.max(-IRIS_MAX_Y, Math.min(IRIS_MAX_Y, dy * IRIS_MAX_Y * 1.2)),
+        x: Math.max(-IRIS_MAX_X, Math.min(IRIS_MAX_X, dx * IRIS_MAX_X * 1.2 * factor)),
+        y: Math.max(-IRIS_MAX_Y, Math.min(IRIS_MAX_Y, dy * IRIS_MAX_Y * 1.2 * factor)),
       }
     }
     window.addEventListener('mousemove', handler, { passive: true })
@@ -211,13 +214,13 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     return () => { clearTimeout(outerTimeout); clearAllBlinkTimeouts() }
   }, [interactive, scheduleBlinkSequence, clearAllBlinkTimeouts])
 
-  // ── Hover → quick double blink ──
+  // ── Hover → soft single blink (not aggressive double) ──
   const handleMouseEnter = useCallback(() => {
     if (!interactive) return
     setHoverActive(true)
     clearAllBlinkTimeouts()
-    // Double blink: [closing, closed, opening, open, pause, closing, closed, opening, open]
-    scheduleBlinkSequence([0, 40, 50, 40, 100, 40, 50, 40])
+    // Soft single blink: closing→closed→opening→open
+    scheduleBlinkSequence([0, 50, 60, 50])
   }, [interactive, clearAllBlinkTimeouts, scheduleBlinkSequence])
 
   const handleMouseLeave = useCallback(() => {
@@ -265,7 +268,9 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
       if (!running) return
       const t = targetRef.current
       const c = irisRef.current
-      const speed = 0.08
+      // Adaptive speed: fast when far, slow when close (ease-out feel)
+      const dist = Math.abs(t.x - c.x) + Math.abs(t.y - c.y)
+      const speed = dist > 2 ? 0.14 : dist > 0.5 ? 0.1 : 0.06
       const nx = Math.max(-IRIS_MAX_X, Math.min(IRIS_MAX_X, lerp(c.x, t.x, speed)))
       const ny = Math.max(-IRIS_MAX_Y, Math.min(IRIS_MAX_Y, lerp(c.y, t.y, speed)))
       // Only trigger re-render if position changed meaningfully

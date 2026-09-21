@@ -139,23 +139,6 @@ summary svg {
   outline-offset: 8px;
 }
 
-.mascot-stage {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  position: relative;
-  margin-bottom: 0;
-  z-index: 10;
-}
-.mascot-stage .mascota-root {
-  filter: drop-shadow(0 12px 20px color-mix(in srgb, var(--color-accent) 16%, transparent));
-}
-.mascot-stage .mascota-root.robot-eve {
-  filter: drop-shadow(0 12px 20px color-mix(in srgb, var(--color-accent) 14%, transparent));
-}
-
 .mascot-switch {
   display: inline-flex;
   gap: 6px;
@@ -1414,11 +1397,44 @@ button.citation-inline:focus-visible {
   font-size: 12px;
   color: var(--color-muted-foreground);
 }
+.wayflow-panel-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.wayflow-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: wayflow-pulse 1.2s ease-in-out infinite;
+}
+@keyframes wayflow-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.wayflow-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-muted-foreground);
+  font-size: 14px;
+  padding: 24px;
+}
 .wayflow-panel-editor {
   flex: 1;
   min-height: 0;
   border-radius: 8px;
   overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wayflow-panel-editor {
+    animation: none;
+    transition: none;
+  }
 }
 .pdf-panel {
   position: sticky;
@@ -2473,17 +2489,73 @@ button.citation-inline:focus-visible {
   }
 }
 
-/* Fase B: saludo QwenWork bajo la mascota + dock protagonista. */
-.mascot-greeting {
-  margin: 2px 0 0;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--color-text);
-  max-width: 560px;
+/* ═══════ HERO SPEECH BUBBLE (left of robot) ═══════ */
+.mascot-stage {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  position: relative;
+  margin-bottom: 0;
+  z-index: 10;
 }
+.mascot-stage .mascota-root {
+  filter: drop-shadow(0 12px 20px color-mix(in srgb, var(--color-accent) 16%, transparent));
+}
+.mascot-stage .mascota-root.robot-eve {
+  filter: drop-shadow(0 12px 20px color-mix(in srgb, var(--color-accent) 14%, transparent));
+}
+
+/* Chat bubble — hero mode */
+.speech-bubble-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  animation: bubbleIn 400ms ease-out both;
+}
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateX(-12px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+.speech-bubble-hero-content {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px 14px 14px 4px;
+  padding: 12px 16px;
+  max-width: 260px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  position: relative;
+}
+.speech-bubble-hero-name {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+.speech-bubble-hero-text {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+/* Speech pointer (right-pointing triangle) */
+.speech-bubble-hero-tail {
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 10px solid var(--color-surface);
+  margin-top: 14px;
+  filter: drop-shadow(2px 0 0 var(--color-border));
+  flex-shrink: 0;
+}
+
 .excel-starters {
   display: flex;
   flex-direction: column;
@@ -2624,6 +2696,7 @@ button.citation-inline:focus-visible {
 
 /* Robot compacto con documento: fila de 72px en vez de héroe 180px.
    Devuelve ~130px verticales al chat; el personalizar vive en el sidebar. */
+.speech-bubble-hero { display: none; }
 .mascot-stage.compact {
   flex-direction: row;
   align-items: center;
@@ -2649,6 +2722,12 @@ button.citation-inline:focus-visible {
   overflow: hidden;
   border-radius: 50%;
   flex-shrink: 0;
+}
+.mascot-stage.compact .mascot-greeting {
+  text-align: left;
+  font-size: 14px;
+  flex: 1;
+  min-width: 0;
 }
 .mascot-stage.compact .mascota-root .robot-habitat-aura,
 .mascot-stage.compact .mascota-root .robot-body,

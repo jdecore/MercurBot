@@ -33,11 +33,8 @@ const CHART_FULL_BODY_MAX = 300 * 1024 // 300 KB
 const CHART_FULL_MAX_CHARS = 250_000
 const CHART_FULL_MAX_PAGES = 500
 const hits = new Map<string, number[]>()
-const ALLOWED_ORIGINS = [
-  'https://copixi.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000',
-]
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS?.trim() || 'https://copixi.vercel.app,http://localhost:5173,http://localhost:3000')
+  .split(',').map(s => s.trim()).filter(Boolean)
 
 function rateLimitHeaders(retryAfter: number): Record<string, string> {
   return {
@@ -86,19 +83,32 @@ function getClientIp(req: any): string {
   return 'unknown'
 }
 
-function getOrigin(req: any): string {
+function getHeader(req: any, key: string): string {
   const h = req?.headers
   if (!h) return ''
-  if (typeof h.get === 'function') return String(h.get('origin') || '').trim()
-  return String(h['origin'] || '').trim()
+  if (typeof h.get === 'function') return String(h.get(key) || '').trim()
+  return String(h[key] || '').trim()
 }
 
-function isAllowedOrigin(origin: string): boolean {
+function getOrigin(req: any): string {
+  return getHeader(req, 'origin')
+}
+
+function getHost(req: any): string {
+  return getHeader(req, 'host')
+}
+
+function isAllowedOrigin(origin: string, host: string): boolean {
   if (!origin) return true
-  // H2: whitelist exacta. El comodín *.vercel.app permitía que cualquiera
-  // desplegara evil.vercel.app y abusara la cuota desde navegadores ajenos.
-  // Previews de Vercel: si se necesitan, añadir su host exacto aquí.
-  // Same-origin requests (no Origin header) are allowed; cross-origin must match.
+  // Same-origin: Origin header matches Host header (scheme differs for
+  // http→https upgrade, so compare hostnames only).
+  if (host) {
+    try {
+      const originHost = new URL(origin).hostname
+      if (originHost === host.split(':')[0]) return true
+    } catch { /* invalid URL — fall through to whitelist */ }
+  }
+  // H2: whitelist exacta para cross-origin explícito.
   return ALLOWED_ORIGINS.includes(origin)
 }
 
@@ -245,8 +255,8 @@ async function genOpenRouter(prompt: string, system: string): Promise<string> {
     headers: {
       'content-type': 'application/json',
       authorization: `Bearer ${key}`,
-      'HTTP-Referer': 'https://copixi.vercel.app',
-      'X-Title': 'MercurBot',
+      'HTTP-Referer': process.env.SITE_URL?.trim() || 'https://copixi.vercel.app',
+      'X-Title': process.env.SITE_NAME?.trim() || 'MercurBot',
     },
     signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS),
     body: JSON.stringify({
@@ -448,8 +458,9 @@ export default async function handler(req: any, res?: any): Promise<Response | v
   // Origin check: solo permitimos llamadas desde el mismo origen o desde
   // nuestra propia app en Vercel / localhost. Bloquea CSRF cross-origin.
   const origin = getOrigin(req)
-  if (process.env.NODE_ENV !== 'production') console.log('[chat] origin=', origin, 'allowed=', isAllowedOrigin(origin))
-  if (origin && !isAllowedOrigin(origin)) {
+  const host = getHost(req)
+  if (process.env.NODE_ENV !== 'production') console.log('[chat] origin=', origin, 'host=', host, 'allowed=', isAllowedOrigin(origin, host))
+  if (origin && !isAllowedOrigin(origin, host)) {
     return respond.json(403, { error: 'Forbidden origin.' })
   }
 

@@ -49,6 +49,28 @@ export function createMercurRuntime(mercur: MercurBotRuntimeContext): Runtime {
         }
         return Promise.resolve({})
       },
+      conditionPage: (node) => {
+        const page = Number(node.data.page ?? 0)
+        const threshold = Number(node.data.threshold ?? 0)
+        const op = String(node.data.operator ?? '>')
+        let result = false
+        switch (op) {
+          case '>': result = page > threshold; break
+          case '>=': result = page >= threshold; break
+          case '<': result = page < threshold; break
+          case '<=': result = page <= threshold; break
+          case '==': result = page === threshold; break
+          case '!=': result = page !== threshold; break
+        }
+        return Promise.resolve({ true: result, false: !result })
+      },
+      loopPages: (_node, inputs) => {
+        const from = Number(inputs.from ?? 1)
+        const to = Number(inputs.to ?? 1)
+        const current = Number.isFinite(from) ? from : 1
+        const done = current > to
+        return Promise.resolve({ page: current, done })
+      },
     },
   })
 }

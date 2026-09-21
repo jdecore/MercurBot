@@ -114,13 +114,34 @@ export async function removeFromLibrary(id: string): Promise<LibDoc[]> {
 export interface WorkflowDef {
   id: string
   name: string
-  graph: unknown
+  graph: string
   updatedAt: string
 }
 
 const KEY_WORKFLOW_PREFIX = 'copixi:workflows:'
 
-export function listWorkflows(docId: string): WorkflowDef[] {
+async function workflowsDir(create: boolean) {
+  const root = await navigator.storage.getDirectory()
+  return root.getDirectoryHandle('copixi_workflows', { create })
+}
+
+async function opfsReadJson<T>(handle: FileSystemFileHandle, fallback: T): Promise<T> {
+  try {
+    const file = await handle.getFile()
+    const text = await file.text()
+    return JSON.parse(text) as T
+  } catch {
+    return fallback
+  }
+}
+
+async function opfsWriteJson(handle: FileSystemFileHandle, value: unknown): Promise<void> {
+  const writable = await handle.createWritable()
+  await writable.write(JSON.stringify(value))
+  await writable.close()
+}
+
+function legacyListWorkflows(docId: string): WorkflowDef[] {
   if (typeof localStorage === 'undefined') return []
   const raw = localStorage.getItem(KEY_WORKFLOW_PREFIX + docId)
   if (!raw) return []
@@ -132,19 +153,54 @@ export function listWorkflows(docId: string): WorkflowDef[] {
   }
 }
 
-export function saveWorkflow(docId: string, workflow: WorkflowDef): void {
-  const current = listWorkflows(docId)
+export async function listWorkflows(docId: string): Promise<WorkflowDef[]> {
+  if (!opfsSupported()) return legacyListWorkflows(docId)
+  try {
+    const dir = await workflowsDir(false)
+    const handle = await dir.getFileHandle(`${docId}.json`)
+    return await opfsReadJson(handle, [])
+  } catch {
+    return legacyListWorkflows(docId)
+  }
+}
+
+export async function saveWorkflow(docId: string, workflow: WorkflowDef): Promise<void> {
+  const current = await listWorkflows(docId)
   const next = [workflow, ...current.filter((w) => w.id !== workflow.id)]
-  localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(next.slice(0, 20)))
+  const trimmed = next.slice(0, 20)
+  if (!opfsSupported()) {
+    localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(trimmed))
+    return
+  }
+  try {
+    const dir = await workflowsDir(true)
+    const handle = await dir.getFileHandle(`${docId}.json`, { create: true })
+    await opfsWriteJson(handle, trimmed)
+  } catch {
+    localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(trimmed))
+  }
 }
 
-export function getWorkflow(docId: string, workflowId: string): WorkflowDef | null {
-  return listWorkflows(docId).find((w) => w.id === workflowId) ?? null
+export async function getWorkflow(docId: string, workflowId: string): Promise<WorkflowDef | null> {
+  const all = await listWorkflows(docId)
+  return all.find((w) => w.id === workflowId) ?? null
 }
 
-export function removeWorkflow(docId: string, workflowId: string): WorkflowDef[] {
-  const next = listWorkflows(docId).filter((w) => w.id !== workflowId)
-  localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(next))
-  return next
+export async function removeWorkflow(docId: string, workflowId: string): Promise<WorkflowDef[]> {
+  const current = await listWorkflows(docId)
+  const next = current.filter((w) => w.id !== workflowId)
+  if (!opfsSupported()) {
+    localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(next))
+    return next
+  }
+  try {
+    const dir = await workflowsDir(true)
+    const handle = await dir.getFileHandle(`${docId}.json`, { create: true })
+    await opfsWriteJson(handle, next)
+    return next
+  } catch {
+    localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(next))
+    return next
+  }
 }
 

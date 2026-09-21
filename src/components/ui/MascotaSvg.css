@@ -69,9 +69,19 @@
 .svg-iris-l,
 .svg-iris-r {
   transform-box: fill-box;
-  transition: fill 300ms ease;
+  transition: fill 300ms ease, filter 200ms ease;
   transform: translate(var(--iris-x), var(--iris-y)) scale(var(--iris-scale));
   transform-origin: center;
+}
+
+/* Hover glow — eyes get a subtle brightness boost when mouse enters */
+.eye-hover .svg-iris-l,
+.eye-hover .svg-iris-r {
+  filter: brightness(1.2) drop-shadow(0 0 3px var(--robot-neon-soft, rgba(255,107,0,0.25)));
+}
+.eye-hover .svg-eye-l,
+.eye-hover .svg-eye-r {
+  filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));
 }
 
 /* Sparkles follow iris (shifted slightly less for parallax depth) */

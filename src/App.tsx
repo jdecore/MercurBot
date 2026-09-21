@@ -56,7 +56,10 @@ function MainDashboard() {
   const [railCollapsed, setRailCollapsed] = useState(() => getPreferences().sidebarCollapsed)
 
   const speakRef = useRef(speak)
-  speakRef.current = speak
+
+  useEffect(() => {
+    speakRef.current = speak
+  })
 
   // Track setTimeout IDs to clear them on unmount (prevents state updates on
   // unmounted components and memory leaks from lingering closures).
@@ -368,16 +371,16 @@ function MainDashboard() {
       if (status === 'complete') {
         setMascotaMood('exito')
         setMascotaSubtitulo('Automatización completada.')
-        speak('Automatización completada.')
+        speakRef.current('Automatización completada.')
       } else if (status === 'error') {
         setMascotaMood('duda')
         setMascotaSubtitulo('La automatización falló.')
-        speak('La automatización falló.')
+        speakRef.current('La automatización falló.')
       }
     }
     window.addEventListener('copixi:workflow-status', handler as EventListener)
     return () => window.removeEventListener('copixi:workflow-status', handler as EventListener)
-  }, [speak])
+  }, [])
 
   // Cleanup timeouts on unmount to prevent state updates on unmounted component.
   useEffect(() => {
@@ -535,6 +538,17 @@ function MainDashboard() {
               (72px en fila) para devolver espacio vertical al chat; sin
               documento mantiene el héroe grande de bienvenida. */}
           <div className={`mascot-stage${hasDocument ? ' compact' : ''}`}>
+            {!hasDocument && (
+              <div className="speech-bubble-hero" aria-live="polite">
+                <div className="speech-bubble-hero-content">
+                  <span className="speech-bubble-hero-name">{robotName || 'Mercur'}</span>
+                  <p className="speech-bubble-hero-text">
+                    {mascotaSubtitulo || `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Sube un PDF y lo leemos juntos.`}
+                  </p>
+                </div>
+                <div className="speech-bubble-hero-tail" aria-hidden />
+              </div>
+            )}
             <Mascota
               variant={mascotRobot}
               config={robotConfig}
@@ -550,22 +564,13 @@ function MainDashboard() {
                 speak(`¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)
               }}
             />
-            <p className="mascot-greeting" aria-live="polite">
-              {hasDocument && pdfDoc
-                ? (mascotaSubtitulo || `${robotName} ya leyó ${pdfDoc.filename} — pregúntale lo que quieras. Toca al robot para escuchar la última respuesta.`)
-                : `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName} — sube un PDF y lo leemos juntos.`}
-            </p>
+            {hasDocument && (
+              <p className="mascot-greeting" aria-live="polite">
+                {mascotaSubtitulo || `${robotName} ya leyó ${pdfDoc?.filename} — pregúntale lo que quieras.`}
+              </p>
+            )}
             <div className="customizer-toggle-row">
               <Dialog.Root open={customizerOpen} onOpenChange={setCustomizerOpen}>
-                <Dialog.Trigger asChild>
-                  <button
-                    type="button"
-                    className="btn btn-secondary small"
-                    title="Cambiar la cara del robot"
-                  >
-                    ⚙ Personalizar robot
-                  </button>
-                </Dialog.Trigger>
                 <Dialog.Portal>
                   <Dialog.Overlay className="customizer-overlay" />
                   <Dialog.Content
