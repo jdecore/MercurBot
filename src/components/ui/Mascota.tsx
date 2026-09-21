@@ -12,6 +12,7 @@ interface MascotaProps {
   onClick?: () => void
   variant?: RobotUnitId
   config?: RobotConfig
+  interactive?: boolean
 }
 
 // Iris bounds: max offset from eye center so iris stays inside sclera
@@ -66,7 +67,7 @@ const MOOD_BROWS: Record<string, [number, number]> = {
   escaneando: [6, 6],
 }
 
-export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', config }: MascotaProps) {
+export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', config, interactive = true }: MascotaProps) {
   const uid = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -81,6 +82,8 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
   const targetRef = useRef({ x: 0, y: 0 })
   const irisRef = useRef({ x: 0, y: 0 })
   const rafRef = useRef<number>(0)
+  const blinkTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const winkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { setLocalMood(mood) }, [mood])
 
@@ -117,8 +120,33 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
   const eyeW = config?.eyes === 'big' ? 16 : config?.eyes === 'visor' ? 16 : 13
   const eyeH = config?.eyes === 'big' ? 18 : config?.eyes === 'visor' ? 8 : config?.eyes === 'round' ? 13 : config?.eyes === 'sleepy' ? 5 : config?.eyes === 'happy' ? 7 : 14
 
-  // ── 1. Mouse tracking ──
+  // ── Clear all blink timeouts helper ──
+  const clearAllBlinkTimeouts = useCallback(() => {
+    blinkTimeoutsRef.current.forEach(clearTimeout)
+    blinkTimeoutsRef.current = []
+  }, [])
+
+  // ── Schedule a blink sequence (closing→closed→opening→open) via ref ──
+  const scheduleBlinkRef = useRef<(delays: number[], idx?: number) => void>(() => {})
+  // Assign via effect to avoid accessing ref during render
   useEffect(() => {
+    scheduleBlinkRef.current = (delays: number[], idx = 0) => {
+      if (idx >= delays.length) return
+      const t = setTimeout(() => {
+        const phases: Array<'closing' | 'closed' | 'opening' | 'open'> = ['closing', 'closed', 'opening', 'open']
+        setBlinkPhase(phases[idx] ?? 'open')
+        scheduleBlinkRef.current(delays, idx + 1)
+      }, delays[idx])
+      blinkTimeoutsRef.current.push(t)
+    }
+  }, [])
+  const scheduleBlinkSequence = useCallback((delays: number[]) => {
+    scheduleBlinkRef.current(delays)
+  }, [])
+
+  // ── 1. Mouse tracking (only when interactive) ──
+  useEffect(() => {
+    if (!interactive) return
     const el = rootRef.current
     if (!el) return
     const handler = (e: MouseEvent) => {
@@ -134,21 +162,22 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     }
     window.addEventListener('mousemove', handler, { passive: true })
     return () => window.removeEventListener('mousemove', handler)
-  }, [])
+  }, [interactive])
 
-  // ── 2. Saccades (random micro-movements every 2-5s, paused when mouse active) ──
+  // ── 2. Saccades (only when interactive, paused when mouse active) ──
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>
+    if (!interactive) return
+    let outerTimeout: ReturnType<typeof setTimeout>
+    let innerTimeout: ReturnType<typeof setTimeout>
     const schedule = () => {
       const delay = 2000 + Math.random() * 3000
-      timeout = setTimeout(() => {
-        // Skip saccade if mouse is hovering (mouse tracking takes priority)
+      outerTimeout = setTimeout(() => {
         if (!hoverActive) {
           targetRef.current = {
             x: (Math.random() - 0.5) * IRIS_MAX_X * 1.2,
             y: (Math.random() - 0.5) * IRIS_MAX_Y * 1.2,
           }
-          setTimeout(() => {
+          innerTimeout = setTimeout(() => {
             if (!hoverActive) targetRef.current = { x: 0, y: 0 }
           }, 150 + Math.random() * 100)
         }
@@ -156,83 +185,53 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
       }, delay)
     }
     schedule()
-    return () => clearTimeout(timeout)
-  }, [hoverActive])
+    return () => { clearTimeout(outerTimeout); clearTimeout(innerTimeout) }
+  }, [hoverActive, interactive])
 
-  // ── 3. Random blink timing + double blink on hover ──
+  // ── 3. Periodic blink (only when interactive) ──
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>
+    if (!interactive) return
+    let outerTimeout: ReturnType<typeof setTimeout>
     const scheduleBlink = () => {
       const delay = 2200 + Math.random() * 3800
-      timeout = setTimeout(() => {
-        setBlinkPhase('closing')
-        setTimeout(() => {
-          setBlinkPhase('closed')
-          setTimeout(() => {
-            setBlinkPhase('opening')
-            setTimeout(() => {
-              setBlinkPhase('open')
-              // Double blink: 30% chance
-              if (Math.random() < 0.3) {
-                setTimeout(() => {
-                  setBlinkPhase('closing')
-                  setTimeout(() => {
-                    setBlinkPhase('closed')
-                    setTimeout(() => {
-                      setBlinkPhase('opening')
-                      setTimeout(() => setBlinkPhase('open'), 50)
-                    }, 60)
-                  }, 50)
-                }, 120)
-              }
-              scheduleBlink()
-            }, 50)
-          }, 80)
-        }, 60)
+      outerTimeout = setTimeout(() => {
+        // Single blink: closing(0) → closed(60) → opening(140) → open(190)
+        scheduleBlinkSequence([0, 60, 80, 50])
+        // Double blink: 30% chance, adds second sequence after 120ms pause
+        if (Math.random() < 0.3) {
+          const t = setTimeout(() => {
+            scheduleBlinkSequence([0, 50, 60, 50])
+          }, 120)
+          blinkTimeoutsRef.current.push(t)
+        }
+        scheduleBlink()
       }, delay)
     }
     scheduleBlink()
-    return () => clearTimeout(timeout)
-  }, [])
+    return () => { clearTimeout(outerTimeout); clearAllBlinkTimeouts() }
+  }, [interactive, scheduleBlinkSequence, clearAllBlinkTimeouts])
 
-  // Hover → quick double blink (short, not stuck)
+  // ── Hover → quick double blink ──
   const handleMouseEnter = useCallback(() => {
+    if (!interactive) return
     setHoverActive(true)
-    // Quick double blink: closing→closed→opening→open→closing→closed→opening→open
-    setBlinkPhase('closing')
-    setTimeout(() => {
-      setBlinkPhase('closed')
-      setTimeout(() => {
-        setBlinkPhase('opening')
-        setTimeout(() => {
-          setBlinkPhase('open')
-          // Second blink
-          setTimeout(() => {
-            setBlinkPhase('closing')
-            setTimeout(() => {
-              setBlinkPhase('closed')
-              setTimeout(() => {
-                setBlinkPhase('opening')
-                setTimeout(() => setBlinkPhase('open'), 40)
-              }, 50)
-            }, 40)
-          }, 100)
-        }, 40)
-      }, 50)
-    }, 40)
-  }, [])
+    clearAllBlinkTimeouts()
+    // Double blink: [closing, closed, opening, open, pause, closing, closed, opening, open]
+    scheduleBlinkSequence([0, 40, 50, 40, 100, 40, 50, 40])
+  }, [interactive, clearAllBlinkTimeouts, scheduleBlinkSequence])
 
   const handleMouseLeave = useCallback(() => {
     setHoverActive(false)
     targetRef.current = { x: 0, y: 0 }
   }, [])
 
-  // Click → wink
+  // ── Click → wink (cancels ongoing blink first) ──
   const handleClick = useCallback(() => {
+    clearAllBlinkTimeouts()
     setWink(true)
-    setTimeout(() => setWink(false), 350)
+    winkTimeoutRef.current = setTimeout(() => setWink(false), 350)
     onClick?.()
-  }, [onClick])
+  }, [onClick, clearAllBlinkTimeouts])
 
   // ── 5. Look at UI elements ──
   useEffect(() => {
@@ -256,26 +255,29 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
     return () => window.removeEventListener('copixi:eye-target', handler as EventListener)
   }, [])
 
-  // ── Smooth iris interpolation (RAF loop) ──
+  // ── Smooth iris interpolation (RAF loop — only re-renders when position changes) ──
   useEffect(() => {
+    if (!interactive) return
     let running = true
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+    const TICK_THRESHOLD = 0.05
     const tick = () => {
       if (!running) return
       const t = targetRef.current
       const c = irisRef.current
       const speed = 0.08
-      c.x = lerp(c.x, t.x, speed)
-      c.y = lerp(c.y, t.y, speed)
-      // Clamp
-      c.x = Math.max(-IRIS_MAX_X, Math.min(IRIS_MAX_X, c.x))
-      c.y = Math.max(-IRIS_MAX_Y, Math.min(IRIS_MAX_Y, c.y))
-      setIrisPos({ x: c.x, y: c.y })
+      const nx = Math.max(-IRIS_MAX_X, Math.min(IRIS_MAX_X, lerp(c.x, t.x, speed)))
+      const ny = Math.max(-IRIS_MAX_Y, Math.min(IRIS_MAX_Y, lerp(c.y, t.y, speed)))
+      // Only trigger re-render if position changed meaningfully
+      if (Math.abs(nx - c.x) > TICK_THRESHOLD || Math.abs(ny - c.y) > TICK_THRESHOLD) {
+        c.x = nx; c.y = ny
+        setIrisPos({ x: c.x, y: c.y })
+      }
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => { running = false; cancelAnimationFrame(rafRef.current) }
-  }, [])
+  }, [interactive])
 
   // ── Derived eye values ──
   const irisScale = MOOD_IRIS_SCALE[effectiveMood] ?? 1

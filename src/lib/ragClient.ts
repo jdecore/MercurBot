@@ -230,7 +230,7 @@ class RagClient {
     return this.searchMainThread(query, topK)
   }
 
-  private searchMainThread(query: string, topK: number): RagSearchResultItem[] {
+  public searchMainThread(query: string, topK: number): RagSearchResultItem[] {
     if (!this.mainThreadMiniSearch) return []
     const hits = this.mainThreadMiniSearch.search(query).slice(0, topK)
     return hits.map((h) => {

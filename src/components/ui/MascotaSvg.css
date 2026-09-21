@@ -68,6 +68,7 @@
 /* Both irises move together via CSS vars set by JS */
 .svg-iris-l,
 .svg-iris-r {
+  transform-box: fill-box;
   transition: fill 300ms ease;
   transform: translate(var(--iris-x), var(--iris-y)) scale(var(--iris-scale));
   transform-origin: center;
@@ -75,6 +76,7 @@
 
 /* Sparkles follow iris (shifted slightly less for parallax depth) */
 .svg-eye-group > circle {
+  transform-box: fill-box;
   transition: transform 80ms ease-out;
   transform: translate(
     calc(var(--iris-x) * 0.6),
@@ -85,18 +87,15 @@
 /* Sclera squint (blink, mood) — scaleY controlled by JS via --sclera-sy */
 .svg-eye-l,
 .svg-eye-r {
+  transform-box: fill-box;
   transform: scaleY(var(--sclera-sy));
   transform-origin: center;
 }
 
 /* Depth shadow follows iris slightly (parallax illusion) */
-.svg-eye-depth-l {
-  transform: translate(
-    calc(var(--iris-x) * 0.3),
-    calc(var(--iris-y) * 0.2)
-  );
-}
+.svg-eye-depth-l,
 .svg-eye-depth-r {
+  transform-box: fill-box;
   transform: translate(
     calc(var(--iris-x) * 0.3),
     calc(var(--iris-y) * 0.2)

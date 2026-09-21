@@ -72,7 +72,7 @@ export function OnboardingTour({ open, onOpenChange, initialUserName, initialRob
           {step === 0 && (
             <div className="onboard-body">
               <div className="onboard-mascot" aria-hidden>
-                <Mascota variant="helix" config={activeConfig} mood="feliz" size={120} />
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={120} interactive={false} />
               </div>
               <p>
                 Leo tus PDFs contigo y te respondo señalando la página exacta.
@@ -109,7 +109,7 @@ export function OnboardingTour({ open, onOpenChange, initialUserName, initialRob
           {step === 1 && (
             <div className="onboard-body">
               <div className="onboard-mascot" aria-hidden>
-                <Mascota variant="helix" config={activeConfig} mood="feliz" size={120} />
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={120} interactive={false} />
               </div>
 
               <p className="onboard-section-label">Tema rápido</p>

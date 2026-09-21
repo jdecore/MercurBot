@@ -17,6 +17,7 @@ interface SidebarProps {
   onRemoved: () => void
   onCustomize: () => void
   onHowItWorks: () => void
+  onToggleWayflow: () => void
 }
 
 function fmtSize(bytes: number): string {
@@ -44,6 +45,7 @@ export function Sidebar({
   onRemoved,
   onCustomize,
   onHowItWorks,
+  onToggleWayflow,
 }: SidebarProps) {
   const [docs, setDocs] = useState<LibDoc[]>([])
 
@@ -67,6 +69,9 @@ export function Sidebar({
         </button>
         <button type="button" className="btn btn-secondary rail-btn" onClick={onUpload} title="Cargar PDF" aria-label="Cargar PDF">
           <Icon name="upload" size={16} />
+        </button>
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleWayflow} title="Automatización" aria-label="Automatización">
+          <Icon name="send" size={16} />
         </button>
         <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleRail} title="Recientes — expandir menú" aria-label="Recientes — expandir menú" aria-expanded={false}>
           <Icon name="file" size={16} />
@@ -104,6 +109,9 @@ export function Sidebar({
       </button>
       <button type="button" className="btn btn-secondary sidebar-new" onClick={onUpload}>
         <Icon name="upload" size={16} /> Cargar PDF
+      </button>
+      <button type="button" className="btn btn-secondary sidebar-new" onClick={onToggleWayflow}>
+        <Icon name="send" size={16} /> Automatización
       </button>
 
       <nav className="sidebar-section" aria-label="Documentos recientes">

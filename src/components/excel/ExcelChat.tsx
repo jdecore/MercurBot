@@ -5,6 +5,7 @@ import type { MascotaMood } from '../../types/mascota'
 import { ragClient } from '../../lib/ragClient'
 import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg } from '../../lib/storage'
 import { Icon } from '../ui/Icon'
+import { WorkflowQuickStart } from '../../features/wayflow/WorkflowQuickStart'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
 import { useDictation, getDictationSupport } from '../../lib/dictation'
 import { splitChartBlock, stripChartBlock, type ChartSpec } from '../../lib/chartJson'
@@ -307,6 +308,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const [muted, setMutedState] = useState(getMuted())
   const [ttsSpeaking, setTtsSpeaking] = useState(isSpeaking())
   const [chatLogOpen, setChatLogOpen] = useState(false)
+  const [workflowQuickOpen, setWorkflowQuickOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Chat state (self-contained, no external chat SDK)
@@ -424,6 +426,37 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     }
     window.addEventListener('copixi:reread', handler)
     return () => window.removeEventListener('copixi:reread', handler)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent<string>).detail
+      if (!text) return
+      const msg: ChatMsg = {
+        id: `a-wf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        role: 'assistant',
+        content: text,
+        model: 'workflow',
+      }
+      setMessages((prev) => [...prev, msg])
+    }
+    window.addEventListener('copixi:append-message', handler as EventListener)
+    return () => window.removeEventListener('copixi:append-message', handler as EventListener)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const preset = (e as CustomEvent<string>).detail
+      if (!preset) return
+      const userMsg: ChatMsg = {
+        id: `u-wf-${Date.now()}`,
+        role: 'user',
+        content: `Ejecutar automatización: ${preset}`,
+      }
+      setMessages((prev) => [...prev, userMsg])
+    }
+    window.addEventListener('copixi:run-workflow', handler as EventListener)
+    return () => window.removeEventListener('copixi:run-workflow', handler as EventListener)
   }, [])
 
   // EngineStatus (top-bar): publica modo RAG + modelo de la última
@@ -1125,6 +1158,15 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               <Icon name="pause" size={16} />
             </button>
           )}
+          <button
+            type="button"
+            className="dock-attach-btn"
+            onClick={() => setWorkflowQuickOpen(true)}
+            title="Automatizaciones"
+            aria-label="Abrir automatizaciones"
+          >
+            <Icon name="send" size={16} />
+          </button>
           <input
             className="excel-text-input"
             value={input}
@@ -1156,6 +1198,14 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
           </p>
         )}
       </div>
+      <WorkflowQuickStart
+        open={workflowQuickOpen}
+        onOpenChange={setWorkflowQuickOpen}
+        onSelect={(preset: string) => {
+          setWorkflowQuickOpen(false)
+          window.dispatchEvent(new CustomEvent('copixi:run-workflow', { detail: preset }))
+        }}
+      />
     </div>
   )
 }

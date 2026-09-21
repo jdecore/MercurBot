@@ -109,3 +109,42 @@ export async function removeFromLibrary(id: string): Promise<LibDoc[]> {
   await removePdfBytes(id)
   return docs
 }
+
+/** Persistencia de workflows de Wayflow en OPFS, asociados a un docId. */
+export interface WorkflowDef {
+  id: string
+  name: string
+  graph: unknown
+  updatedAt: string
+}
+
+const KEY_WORKFLOW_PREFIX = 'copixi:workflows:'
+
+export function listWorkflows(docId: string): WorkflowDef[] {
+  if (typeof localStorage === 'undefined') return []
+  const raw = localStorage.getItem(KEY_WORKFLOW_PREFIX + docId)
+  if (!raw) return []
+  try {
+    const v = JSON.parse(raw) as WorkflowDef[]
+    return Array.isArray(v) ? v.filter((w) => w && w.id && w.name) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveWorkflow(docId: string, workflow: WorkflowDef): void {
+  const current = listWorkflows(docId)
+  const next = [workflow, ...current.filter((w) => w.id !== workflow.id)]
+  localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(next.slice(0, 20)))
+}
+
+export function getWorkflow(docId: string, workflowId: string): WorkflowDef | null {
+  return listWorkflows(docId).find((w) => w.id === workflowId) ?? null
+}
+
+export function removeWorkflow(docId: string, workflowId: string): WorkflowDef[] {
+  const next = listWorkflows(docId).filter((w) => w.id !== workflowId)
+  localStorage.setItem(KEY_WORKFLOW_PREFIX + docId, JSON.stringify(next))
+  return next
+}
+

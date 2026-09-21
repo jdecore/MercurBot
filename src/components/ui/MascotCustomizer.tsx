@@ -79,7 +79,7 @@ export function MascotCustomizer({ robot, robotName, config, onChange }: MascotC
   return (
     <div className="mascot-customizer" role="group" aria-label="Personalizar mascota">
       <div className="customizer-hero" aria-hidden>
-        <Mascota variant={robot} config={config} mood="neutro" size={140} />
+        <Mascota variant={robot} config={config} mood="neutro" size={140} interactive={false} />
         <p className="customizer-hero-name">{sanitizeRobotName(robotDraft || robotName)}</p>
       </div>
 

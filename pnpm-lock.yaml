@@ -38,6 +38,9 @@ importers:
       react-dom:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
+      wayflow:
+        specifier: ^0.3.0
+        version: 0.3.0
     devDependencies:
       '@types/node':
         specifier: ^24.13.3
@@ -1414,6 +1417,9 @@ packages:
       yaml:
         optional: true
 
+  wayflow@0.3.0:
+    resolution: {integrity: sha512-QirrDC+xeM+dSWh+uFwThVrKwGk93WX3uXpy1z9ddONxTYrTZl8m28+bU5jWkG0ugdk85MihOKvrTAX8YJ7FrQ==}
+
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
@@ -2538,5 +2544,7 @@ snapshots:
       esbuild: 0.27.0
       fsevents: 2.3.3
       tsx: 4.21.0
+
+  wayflow@0.3.0: {}
 
   wrappy@1.0.2: {}

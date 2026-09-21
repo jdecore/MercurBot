@@ -6,6 +6,7 @@ import { DashboardProvider, useDashboard } from './state/DashboardContext'
 import { Mascota } from './components/ui/Mascota'
 import { Icon } from './components/ui/Icon'
 import { MascotCustomizer } from './components/ui/MascotCustomizer'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { ExcelChat } from './components/excel/ExcelChat'
 import { speak, speakInteraction } from './lib/tts'
 import { getPreferences, savePreferences, hasOnboarded, setOnboarded } from './lib/storage'
@@ -19,6 +20,7 @@ import { BriefingCard } from './components/pdf/BriefingCard'
 import { Sidebar } from './components/layout/Sidebar'
 import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
+import { WayflowPanel } from './features/wayflow'
 
 function MainDashboard() {
   const {
@@ -50,7 +52,11 @@ function MainDashboard() {
   const [libraryToken, setLibraryToken] = useState(0)
   const [customizerOpen, setCustomizerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [wayflowActive, setWayflowActive] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(() => getPreferences().sidebarCollapsed)
+
+  const speakRef = useRef(speak)
+  speakRef.current = speak
 
   // Track setTimeout IDs to clear them on unmount (prevents state updates on
   // unmounted components and memory leaks from lingering closures).
@@ -356,6 +362,23 @@ function MainDashboard() {
     }
   }, [hasDocument])
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const status = (e as CustomEvent<string>).detail
+      if (status === 'complete') {
+        setMascotaMood('exito')
+        setMascotaSubtitulo('Automatización completada.')
+        speak('Automatización completada.')
+      } else if (status === 'error') {
+        setMascotaMood('duda')
+        setMascotaSubtitulo('La automatización falló.')
+        speak('La automatización falló.')
+      }
+    }
+    window.addEventListener('copixi:workflow-status', handler as EventListener)
+    return () => window.removeEventListener('copixi:workflow-status', handler as EventListener)
+  }, [speak])
+
   // Cleanup timeouts on unmount to prevent state updates on unmounted component.
   useEffect(() => {
     return () => {
@@ -464,6 +487,7 @@ function MainDashboard() {
         setSidebarOpen(false)
         setTourOpen(true)
       }}
+      onToggleWayflow={() => setWayflowActive((v) => !v)}
     />
   )
 
@@ -585,7 +609,7 @@ function MainDashboard() {
           )}
 
           {/* Briefing proactivo (Fase 24C): la IA trabaja antes de que escribas */}
-          <div className={showSplit ? 'doc-split' : 'doc-stack'}>
+          <div className={showSplit ? (wayflowActive ? 'doc-split-triple' : 'doc-split') : 'doc-stack'}>
             <div className="doc-chat-col">
               {(briefing || briefingLoading) && (
                 <BriefingCard text={briefing} loading={briefingLoading} model={briefingModel} />
@@ -611,6 +635,26 @@ function MainDashboard() {
                 </div>
               )}
             </div>
+
+            {wayflowActive && (
+              <ErrorBoundary>
+                <WayflowPanel
+                  mercur={{
+                    pdfDoc: pdfDoc
+                      ? {
+                          filename: pdfDoc.filename,
+                          totalPages: pdfDoc.totalPages,
+                          pages: pdfDoc.pages,
+                          docId: pdfDoc.docId,
+                        }
+                      : null,
+                    ragClient: {
+                      searchMainThread: (query: string) => ragClient.searchMainThread(query, 3),
+                    },
+                  }}
+                />
+              </ErrorBoundary>
+            )}
 
             {showSplit && (
               <PdfViewerPanel
