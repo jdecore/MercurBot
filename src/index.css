@@ -1,7 +1,10 @@
-/* Copixi — Native CSS + design tokens (AGENTS.md §19) */
+/* MercurBot — Native CSS + design tokens (AGENTS.md §19) */
+
+/* Typography: Inter (body) + Calistoga (headings) via Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Iconos: Pixelarticons como SVG inline vía src/components/ui/Icon.tsx
-   (el woff2 con <i> vacíos no renderizaba ningún glifo). */
+   (el woff2 con <i> vacíos no renderiza ningún glifo). */
 
 :root {
   /* colors — "Gris + Maracuyá + Hoja": base gris neutra, atención
@@ -49,9 +52,9 @@
   --radius-lg: 16px;
   --radius-full: 9999px;
 
-  /* typography */
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
-  --font-sans: ui-sans-system, system-ui, -apple-system, "Inter", "Geist", Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  /* typography — Calistoga para headings, Inter para body/UI */
+  --font-display: "Calistoga", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-system, system-ui, -apple-system, "Geist", Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -69,7 +72,6 @@
   --transition-normal: 200ms ease;
 
   /* robot Cyber-EVE tokens — white body + glossy black visor + orange/amber neon eyes */
-  --robot-size: min(240px, 50vw);
   --robot-shell: #ffffff;
   --robot-shell-light: #f8fafc;
   --robot-shell-shadow: #cbd5e1;
@@ -119,27 +121,28 @@
    Los componentes usan var(--color-*) así que la mayoría cambia solo. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #161817;
-    --color-surface: #1F2421;
-    --color-surface-2: #2A312C;
-    --color-text: #ECEEE8;
-    --color-muted: #A9AEA2;
-    --color-primary: #9AB3B5;
-    --color-primary-hover: #B4CACC;
-    --color-on-primary: #161817;
-    --color-accent: #F5B301;
-    --color-accent-hover: #FFC53D;
-    --color-on-accent: #1C1A10;
-    --color-accent-ink: #F5B301;
+    /* Dark palette — deeper navy + teal primary + orange CTA (UI Pro Max) */
+    --color-bg: #0F172A;
+    --color-surface: #1E293B;
+    --color-surface-2: #334155;
+    --color-text: #F1F5F9;
+    --color-muted: #94A3B8;
+    --color-primary: #0D9488;
+    --color-primary-hover: #14B8A6;
+    --color-on-primary: #000000;
+    --color-accent: #F97316;
+    --color-accent-hover: #FB923C;
+    --color-on-accent: #000000;
+    --color-accent-ink: #FDBA74;
     --color-tropical: #3DD598;
     --color-tropical-hover: #6EE7B7;
-    --color-on-tropical: #10231D;
-    --color-border: #39413A;
+    --color-on-tropical: #022C22;
+    --color-border: #475569;
     --color-success: var(--color-tropical);
-    --color-warning: #fbbf24;
+    --color-warning: #FBBF24;
     --color-danger: #F87171;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.45), 0 10px 15px rgba(0, 0, 0, 0.35);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5), 0 10px 15px rgba(0, 0, 0, 0.4);
     color-scheme: dark;
   }
   ::-webkit-scrollbar-thumb { background: #334155; }
@@ -152,7 +155,7 @@ a { color: var(--color-primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-tropical);
   outline-offset: 2px;
 }
 /* D8: el anillo solo con teclado; con mouse no hay ruido visual. */
@@ -170,3 +173,12 @@ a:hover { text-decoration: underline; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 9999px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* Global UX polish (UI Pro Max) */
+button, [role="button"], a, summary { cursor: pointer; }
+button:not(:disabled), [role="button"]:not(:disabled) {
+  transition: transform 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+  transform: translateY(1px);
+}

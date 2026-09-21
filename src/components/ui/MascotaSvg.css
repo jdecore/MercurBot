@@ -68,7 +68,7 @@
 /* Both irises move together via CSS vars set by JS */
 .svg-iris-l,
 .svg-iris-r {
-  transition: fill 300ms ease, cx 80ms ease-out, cy 80ms ease-out;
+  transition: fill 300ms ease;
   transform: translate(var(--iris-x), var(--iris-y)) scale(var(--iris-scale));
   transform-origin: center;
 }
@@ -85,7 +85,6 @@
 /* Sclera squint (blink, mood) — scaleY controlled by JS via --sclera-sy */
 .svg-eye-l,
 .svg-eye-r {
-  transition: ry 100ms ease;
   transform: scaleY(var(--sclera-sy));
   transform-origin: center;
 }
@@ -144,7 +143,7 @@
 /* ==================== MOUTH ==================== */
 
 .svg-mouth {
-  transition: d 250ms ease;
+  transition: d 250ms ease, opacity 200ms ease;
 }
 
 /* ==================== AUDIO WAVE ==================== */
@@ -152,11 +151,11 @@
 .svg-wave { overflow: visible; }
 .wave-rect {
   animation: svgWaveBounce 0.5s ease-in-out infinite alternate;
-  transform-origin: bottom;
+  transform-origin: center bottom;
 }
 @keyframes svgWaveBounce {
-  from { height: 3px; y: 102; }
-  to { height: 10px; y: 95; }
+  from { transform: scaleY(0.3); }
+  to { transform: scaleY(1); }
 }
 
 /* ==================== THRUSTER ==================== */

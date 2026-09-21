@@ -1,6 +1,6 @@
 # memory.md — Diario de Agente
 
-> **Última actualización:** 2026-09-20 | Rama: `main`
+> **Última actualización:** 2026-09-21 | Rama: `main`
 
 ---
 
@@ -33,6 +33,15 @@ src/lib/storage.ts, src/lib/tts.ts
 - 17/17 fixes CSS (responsive, overflow, tokens)
 - QA live con Chromium headless
 - Eliminación de Blobatar (dependencia innecesaria)
+
+### UI/UX refinements (Sesión 21/09 — Vercel plugin + UI Pro Max)
+- Google Fonts: Inter (body) + Calistoga (headings) via @import
+- CSP actualizado: `style-src` + `font-src` para Google Fonts
+- Dark mode refinado: navy #0F172A, teal primary #0D9488, orange accent #F97316
+- Focus-visible: ring con --color-tropical para mejor contraste
+- Global UX polish: cursor-pointer en botones/links, hover transitions 150ms
+- Contrast ratios verificados: todos pasan WCAG AA (4.5:1+)
+- Design system guardado: `design-system/mercurbot/MASTER.md`
 
 ### Robot SVG
 - Reescritura completa del SVG: proporciones EVE, visor marrón, mejillas 35%, respiración 6s
@@ -89,6 +98,10 @@ src/lib/storage.ts, src/lib/tts.ts
 | Ojos sin pupilas negras | Estilo EVE/robot cute, más natural con solo iris+brillo |
 | Brazos `<rect rx="6">` | Capsule shapes — el fix que resolvió los brazos de palito |
 | TTS con cooldowns | No repetir frases molestas |
+| Inter como body font | UI Pro Max recomienda para AI tools, ya estaba en fallback chain |
+| Calistoga para headings | Agrega calidez humana al robot, paired con Inter |
+| Dark mode navy (#0F172A) | UI Pro Max pattern para AI dashboards, más profesional que verde oscuro |
+| Focus ring con --color-tropical | Mejor contraste que --color-primary, visible en ambos modos |
 
 ---
 
@@ -104,11 +117,10 @@ src/lib/storage.ts, src/lib/tts.ts
 
 ## Pendientes conocidos
 
-1. **Commitear** los 16 archivos de la sesión 20/09
-2. **memory.md** — este archivo (completado)
-3. **QA visual live** — verificar que todo se ve bien tras deploy (sin navegador en entorno)
-4. **og:image** — `public/og-cover.png` 1200×630 pendiente de crear
-5. **E2E completo** — PDF escaneado, mobile, oscuro, gráficas, citas en panel
+1. **Commitear** los 16 archivos de la sesión 20/09 + UI/UX refinements (index.css, vercel.json)
+2. **QA visual live** — verificar que todo se ve bien tras deploy (sin navegador en entorno)
+3. **og:image** — `public/og-cover.png` 1200×630 pendiente de crear
+4. **E2E completo** — PDF escaneado, mobile, oscuro, gráficas, citas en panel
 
 ---
 

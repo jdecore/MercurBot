@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback, useId } from 'react'
 import { speak, isSpeaking } from '../../lib/tts'
 import type { MascotaMood, RobotUnitId } from '../../types/mascota'
 import { ROBOT_UNITS } from '../../types/mascota'
@@ -67,6 +67,7 @@ const MOOD_BROWS: Record<string, [number, number]> = {
 }
 
 export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', config }: MascotaProps) {
+  const uid = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [localMood, setLocalMood] = useState<MascotaMood>(mood)
@@ -112,9 +113,9 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
   const accent = design?.aura ?? robotMeta.accentColor
   const accessory = config?.accessory ?? null
 
-  // Eye dimensions by config
-  const eyeW = config?.eyes === 'big' ? 16 : 13
-  const eyeH = config?.eyes === 'big' ? 18 : config?.eyes === 'sleepy' ? 5 : config?.eyes === 'happy' ? 7 : 14
+  // Eye dimensions by config — each type must be visually distinct
+  const eyeW = config?.eyes === 'big' ? 16 : config?.eyes === 'visor' ? 16 : 13
+  const eyeH = config?.eyes === 'big' ? 18 : config?.eyes === 'visor' ? 8 : config?.eyes === 'round' ? 13 : config?.eyes === 'sleepy' ? 5 : config?.eyes === 'happy' ? 7 : 14
 
   // ── 1. Mouse tracking ──
   useEffect(() => {
@@ -413,52 +414,52 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
       <svg className="mascota-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden>
         <defs>
-          <linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`hg-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#fff" />
             <stop offset="55%" stopColor="#F1F5F9" />
             <stop offset="100%" stopColor="#CBD5E1" />
           </linearGradient>
-          <radialGradient id="vg" cx="50%" cy="40%" r="55%">
+          <radialGradient id={`vg-${uid}`} cx="50%" cy="40%" r="55%">
             <stop offset="0%" stopColor="#2A2118" />
             <stop offset="100%" stopColor="#14100B" />
           </radialGradient>
-          <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`bg-${uid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#F8FAFC" />
             <stop offset="100%" stopColor="#CBD5E1" />
           </linearGradient>
-          <radialGradient id="sg" cx="50%" cy="50%" r="50%">
+          <radialGradient id={`sg-${uid}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="rgba(0,0,0,0.22)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0)" />
           </radialGradient>
-          <radialGradient id="ag" cx="50%" cy="50%" r="50%">
+          <radialGradient id={`ag-${uid}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={primary} stopOpacity="0.2" />
             <stop offset="100%" stopColor={primary} stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="tg" cx="50%" cy="50%" r="50%">
+          <radialGradient id={`tg-${uid}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={primary} stopOpacity="0.6" />
             <stop offset="100%" stopColor={primary} stopOpacity="0" />
           </radialGradient>
-          <filter id="gl" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={`gl-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="2.5" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <filter id="hs" x="-15%" y="-10%" width="130%" height="140%">
+          <filter id={`hs-${uid}`} x="-15%" y="-10%" width="130%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.1" />
           </filter>
           {/* Eye glow filter for exito/feliz */}
-          <filter id="eg" x="-30%" y="-30%" width="160%" height="160%">
+          <filter id={`eg-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
             <feGaussianBlur stdDeviation="4" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
 
         {/* Aura */}
-        <ellipse cx="100" cy="85" rx="72" ry="68" fill="url(#ag)" className="svg-aura" />
+        <ellipse cx="100" cy="85" rx="72" ry="68" fill={`url(#ag-${uid})`} className="svg-aura" />
 
         {/* === HEAD === */}
-        <g filter="url(#hs)" className="svg-head">
+        <g filter={`url(#hs-${uid})`} className="svg-head">
           {/* Head shell */}
-          <ellipse cx="100" cy="72" rx="58" ry="50" fill="url(#hg)" stroke="#E2E8F0" strokeWidth="1.5" />
+          <ellipse cx="100" cy="72" rx="58" ry="50" fill={`url(#hg-${uid})`} stroke="#E2E8F0" strokeWidth="1.5" />
           {/* Gloss highlight */}
           <ellipse cx="100" cy="48" rx="38" ry="14" fill="#fff" opacity="0.5" />
 
@@ -466,7 +467,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           {accessory === 'antenna' && (
             <g>
               <rect x="98" y="10" width="4" height="16" rx="2" fill={primary} />
-              <circle cx="100" cy="8" r="5" fill={accent} filter="url(#gl)" />
+              <circle cx="100" cy="8" r="5" fill={accent} filter={`url(#gl-${uid})`} />
             </g>
           )}
           {accessory === 'fins' && (
@@ -499,7 +500,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
             <g transform="translate(138,26)">
               <ellipse cx="-9" cy="0" rx="9" ry="11" fill={primary} transform="rotate(-18)" />
               <ellipse cx="9" cy="0" rx="9" ry="11" fill={primary} transform="rotate(18)" />
-              <circle cx="0" cy="0" r="4.5" fill={accent} filter="url(#gl)" />
+              <circle cx="0" cy="0" r="4.5" fill={accent} filter={`url(#gl-${uid})`} />
             </g>
           )}
           {accessory === 'tuft' && (
@@ -507,7 +508,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           )}
 
           {/* Visor */}
-          <rect x="52" y="50" width="96" height="52" rx="24" fill="url(#vg)" stroke="#3A3126" strokeWidth="1.5" />
+          <rect x="52" y="50" width="96" height="52" rx="24" fill={`url(#vg-${uid})`} stroke="#3A3126" strokeWidth="1.5" />
           <ellipse cx="100" cy="58" rx="36" ry="10" fill="#fff" opacity="0.12" />
 
           {/* === EYEBROWS === */}
@@ -519,7 +520,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           {/* === EYES === */}
           <g className="svg-eyes">
             {/* Left eye group */}
-            <g className="svg-eye-group" filter={glowOpacity > 0 ? 'url(#eg)' : undefined} style={{ opacity: glowOpacity > 0 ? 1 : undefined }}>
+            <g className="svg-eye-group" filter={glowOpacity > 0 ? `url(#eg-${uid})` : undefined} style={{ opacity: glowOpacity > 0 ? 1 : undefined }}>
               {/* Sclera */}
               <ellipse cx="78" cy="74" rx={eyeW} ry={eyeH} fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" className="svg-eye-l" />
               {/* Parallax depth (subtle sclera shadow when looking sideways) */}
@@ -534,7 +535,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
             </g>
 
             {/* Right eye group */}
-            <g className="svg-eye-group" filter={glowOpacity > 0 ? 'url(#eg)' : undefined} style={{ opacity: glowOpacity > 0 ? 1 : undefined }}>
+            <g className="svg-eye-group" filter={glowOpacity > 0 ? `url(#eg-${uid})` : undefined} style={{ opacity: glowOpacity > 0 ? 1 : undefined }}>
               {/* Wink: right eye closes */}
               {isWinking ? (
                 <path d={`M ${122 - eyeW} 74 Q 122 ${74 - 3} ${122 + eyeW} 74`} fill="none" stroke="#E2E8F0" strokeWidth="1.5" strokeLinecap="round" className="svg-eye-wink" />
@@ -589,25 +590,25 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
         {/* === BODY === */}
         <g>
           {/* Neck connector */}
-          <rect x="90" y="118" width="20" height="10" rx="4" fill="url(#hg)" stroke="#E2E8F0" strokeWidth="1" />
+          <rect x="90" y="118" width="20" height="10" rx="4" fill={`url(#hg-${uid})`} stroke="#E2E8F0" strokeWidth="1" />
           {/* Body */}
-          <ellipse cx="100" cy="148" rx="36" ry="26" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1.5" />
+          <ellipse cx="100" cy="148" rx="36" ry="26" fill={`url(#bg-${uid})`} stroke="#E2E8F0" strokeWidth="1.5" />
           <ellipse cx="100" cy="140" rx="22" ry="8" fill="#fff" opacity="0.35" />
           {/* Left arm */}
           <g transform="rotate(-12 64 138)">
-            <rect x="54" y="136" width="12" height="34" rx="6" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
+            <rect x="54" y="136" width="12" height="34" rx="6" fill={`url(#bg-${uid})`} stroke="#E2E8F0" strokeWidth="1" />
           </g>
           {/* Right arm */}
           <g transform="rotate(12 136 138)">
-            <rect x="134" y="136" width="12" height="34" rx="6" fill="url(#bg)" stroke="#E2E8F0" strokeWidth="1" />
+            <rect x="134" y="136" width="12" height="34" rx="6" fill={`url(#bg-${uid})`} stroke="#E2E8F0" strokeWidth="1" />
           </g>
         </g>
 
         {/* Thruster */}
-        <ellipse cx="100" cy="178" rx="14" ry="6" fill="url(#tg)" className="svg-thruster" />
+        <ellipse cx="100" cy="178" rx="14" ry="6" fill={`url(#tg-${uid})`} className="svg-thruster" />
 
         {/* Shadow */}
-        <ellipse cx="100" cy="192" rx="30" ry="5" fill="url(#sg)" />
+        <ellipse cx="100" cy="192" rx="30" ry="5" fill={`url(#sg-${uid})`} />
       </svg>
 
       {subtitulo && <div className="mascota-subtitles">{subtitulo}</div>}
