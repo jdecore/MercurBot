@@ -516,7 +516,16 @@ function MainDashboard() {
                 <div className="landing-hero-badge">{t.heroTag}</div>
                 <h1 className="landing-hero-title">{t.heroTitle}</h1>
                 <p className="landing-hero-sub">{t.heroSub}</p>
-                <BlackHoleUpload onFile={parseFile} size={200} />
+                <div className="landing-hero-content">
+                  <Mascota
+                    variant={mascotRobot}
+                    config={robotConfig}
+                    mood={mascotaMood}
+                    subtitulo=""
+                    size={100}
+                  />
+                  <BlackHoleUpload onFile={parseFile} size={180} />
+                </div>
               </header>
             </div>
           )}

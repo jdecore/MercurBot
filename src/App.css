@@ -2819,13 +2819,13 @@ button.citation-inline:focus-visible {
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
-  padding: 0 var(--space-md);
+  padding: 0;
 }
 
 /* ── Hero ── */
 .landing-hero {
   text-align: center;
-  padding: var(--space-3xl) 0 var(--space-2xl);
+  padding: var(--space-2xl) 0 var(--space-lg);
 }
 .landing-hero-badge {
   display: inline-block;
@@ -2853,6 +2853,12 @@ button.citation-inline:focus-visible {
   color: var(--color-muted);
   max-width: 560px;
   margin: 0 auto var(--space-xl);
+}
+.landing-hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
 }
 .landing-hero-actions {
   display: flex;
