@@ -549,9 +549,6 @@ function MainDashboard() {
                   <button type="button" className="btn btn-primary landing-cta" onClick={() => inputRef.current?.click()}>
                     {t.heroCTATry}
                   </button>
-                  <a href="#how-it-works" className="btn btn-secondary landing-cta">
-                    {t.heroCTALearn}
-                  </a>
                 </div>
                 <div className="landing-hero-robot">
                   <Mascota
@@ -563,108 +560,6 @@ function MainDashboard() {
                   />
                 </div>
               </header>
-
-              {/* How it works */}
-              <section className="landing-section" id="how-it-works">
-                <h2 className="landing-section-title">{t.howTitle}</h2>
-                <div className="landing-steps">
-                  {t.howSteps.map((step, i) => (
-                    <div className="landing-step" key={i}>
-                      <div className="landing-step-num">{i + 1}</div>
-                      <h3 className="landing-step-label">{step.label}</h3>
-                      <p className="landing-step-desc">{step.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* What I built */}
-              <section className="landing-section landing-dark">
-                <h2 className="landing-section-title">{t.builtTitle}</h2>
-                <p className="landing-built-name">{t.builtName}</p>
-                <p className="landing-built-tags">{t.builtTags}</p>
-                <p className="landing-built-text">{t.builtText}</p>
-              </section>
-
-              {/* Evolution */}
-              <section className="landing-section">
-                <h2 className="landing-section-title">{t.evoTitle}</h2>
-                <div className="landing-evo-grid">
-                  <div className="landing-evo-col landing-evo-current">
-                    <span className="landing-evo-badge">{t.evoToday}</span>
-                    <ul>{t.evoTodayItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                  </div>
-                  <div className="landing-evo-arrow" aria-hidden>→</div>
-                  <div className="landing-evo-col landing-evo-next">
-                    <span className="landing-evo-badge">{t.evoNext}</span>
-                    <ul>{t.evoNextItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                  </div>
-                  <div className="landing-evo-arrow" aria-hidden>→</div>
-                  <div className="landing-evo-col landing-evo-later">
-                    <span className="landing-evo-badge">{t.evoLater}</span>
-                    <ul>{t.evoLaterItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                  </div>
-                </div>
-              </section>
-
-              {/* Validation */}
-              <section className="landing-section landing-dark">
-                <h2 className="landing-section-title">{t.validTitle}</h2>
-                <span className="landing-valid-badge">{t.validBadge}</span>
-                <p className="landing-valid-text">{t.validText}</p>
-              </section>
-
-              {/* Why chemistry */}
-              <section className="landing-section" id="chemistry">
-                <h2 className="landing-section-title">{t.whyTitle}</h2>
-                <p className="landing-why-text">{t.whyText}</p>
-                <div className="landing-why-path">
-                  {t.whyPath.map((step, i) => (
-                    <span key={i}>
-                      <span className="landing-why-step">{step}</span>
-                      {i < t.whyPath.length - 1 && <span className="landing-why-arrow" aria-hidden> → </span>}
-                    </span>
-                  ))}
-                </div>
-              </section>
-
-              {/* Roadmap */}
-              <section className="landing-section landing-dark" id="roadmap">
-                <h2 className="landing-section-title">{t.roadTitle}</h2>
-                <div className="landing-road">
-                  <div className="landing-road-item">
-                    <span className="landing-road-label">{t.roadNow}</span>
-                    <ul>{t.roadNowItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                  </div>
-                  <div className="landing-road-arrow" aria-hidden>↓</div>
-                  <div className="landing-road-item">
-                    <span className="landing-road-label">{t.roadNext}</span>
-                    <ul>{t.roadNextItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                  </div>
-                  <div className="landing-road-arrow" aria-hidden>↓</div>
-                  <div className="landing-road-item">
-                    <span className="landing-road-label">{t.roadLater}</span>
-                    <ul>{t.roadLaterItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                  </div>
-                </div>
-              </section>
-
-              {/* Built with */}
-              <section className="landing-section">
-                <h2 className="landing-section-title">{t.techTitle}</h2>
-                <div className="landing-tech">
-                  {t.techItems.map((item, i) => (
-                    <span className="landing-tech-pill" key={i}>{item}</span>
-                  ))}
-                </div>
-              </section>
-
-              {/* Builder identity */}
-              <footer className="landing-footer">
-                <p className="landing-footer-name">{t.builderName}</p>
-                <p className="landing-footer-tags">{t.builderTags}</p>
-                <p className="landing-footer-tagline">{t.builderTagline}</p>
-              </footer>
             </div>
           )}
 
