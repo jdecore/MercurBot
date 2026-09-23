@@ -522,7 +522,7 @@ function MainDashboard() {
                     config={robotConfig}
                     mood={mascotaMood}
                     subtitulo=""
-                    size={150}
+                    size={225}
                   />
                 </div>
               </header>
