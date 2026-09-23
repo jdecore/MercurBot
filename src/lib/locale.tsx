@@ -164,7 +164,7 @@ export type FullDict = LandingDict & ProductDict
    ────────────────────────────────────────────────────────────────────── */
 const enDict: FullDict = {
   // ── Landing ──
-  heroTag: 'AI-powered document intelligence',
+  heroTag: 'Your documents, your AI — no hallucinations',
   heroTitle: 'MercurBot',
   heroSub: 'Analyze scientific PDFs, extract knowledge and interact with technical information using LLMs, RAG and AI agents.',
   heroCTATry: 'Try MercurBot',
@@ -543,7 +543,7 @@ const enDict: FullDict = {
    ────────────────────────────────────────────────────────────────────── */
 const esDict: FullDict = {
   // ── Landing ──
-  heroTag: 'Inteligencia documental con IA',
+  heroTag: 'Tus documentos, tu IA — sin alucinaciones',
   heroTitle: 'MercurBot',
   heroSub: 'Analiza PDFs científicos, extrae conocimiento e interactúa con información técnica usando LLMs, RAG y agentes de IA.',
   heroCTATry: 'Probar MercurBot',
