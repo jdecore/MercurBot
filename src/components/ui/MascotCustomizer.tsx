@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { DEFAULT_ROBOT_NAME } from '../../lib/storage'
 import type { RobotUnitId } from '../../types/mascota'
-import { ROBOT_DESIGN_LIST, QUICK_THEMES, designFromName, sanitizeRobotName, type RobotAccessory, type RobotColorId, type RobotConfig, type RobotEyes } from '../../lib/robotSeed'
+import { ROBOT_DESIGN_LIST, QUICK_THEMES, designFromName, sanitizeRobotName, type RobotAccessory, type RobotConfig, type RobotEyes } from '../../lib/robotSeed'
 import { Mascota } from './Mascota'
 import { Icon } from './Icon'
 import { useLocale } from '../../lib/locale'

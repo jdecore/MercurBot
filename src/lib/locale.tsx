@@ -50,7 +50,7 @@ export type ProductDict = {
   // ── Chat ──
   chatAria: string; loading: string; errHeading: string; errNoService: string
   err429: string; err404: string; err500: string; err504: string; errNetwork: string; errGeneric: string
-  retryBtn: string; sourcesAria: string; sourcesPrefix: string; matchLiteral: string
+  retryBtn: string; sourcesAria: string; sourcesPrefix: string
   pageLabel: (n: number) => string; viewPage: (n: number) => string; viewPageBtn: string
   copyBtn: string; copied: string; copyAria: string; downloadAria: string
   chartRejected: string; chartDrawing: string; chartScope: (s: string) => string
@@ -144,7 +144,17 @@ export type ProductDict = {
   rwLoadingModel: string; rwDownloading: (p: number) => string; rwIndexReady: string
   rwCached: (n: number) => string; rwVectorizing: (done: number, total: number) => string
   // ── Match types ──
-  matchLiteral: string2; matchSemantic: string; matchCombined: string
+  matchLiteral: string; matchSemantic: string; matchCombined: string
+  // ── Additional Chat Keys ──
+  scannedPdfError: string; errServer: string
+  timeoutError: string; retryError: string
+  chartDiscarded: string; copyResponse: string; downloadMd: string; downloadMdAria: string
+  chatLogHide: string; chatLogShow: (n: number) => string
+  clearChatAria: string; noDataVerified: (d: number, t: number) => string
+  uploadPdf: string; startersGroup: string
+  suggestResume: string; suggestResumeQ: string
+  changeFileAria: string
+  inputPlaceholder: (name: string) => string; inputPlaceholderEmpty: string
 }
 
 export type FullDict = LandingDict & ProductDict
@@ -244,7 +254,6 @@ const enDict: FullDict = {
   errNetwork: 'No connection to the server. Check your internet and that the app is deployed with <code>/api/chat</code> available.',
   errGeneric: 'Retry the query. If it persists, reload the page and re-upload the PDF.',
   sourcesPrefix: 'Found in',
-  matchLiteral: 'literal search',
   pageLabel: (n: number) => `Page ${n}`,
   viewPage: (n: number) => `View page ${n} in viewer`,
   viewPageBtn: 'View page →',
@@ -273,12 +282,19 @@ const enDict: FullDict = {
   dictInsecure: 'Dictation requires HTTPS or localhost: type the question or open the app on a secure connection',
   dictStop: 'Stop dictation',
   dictStart: 'Dictate question by voice',
+  ttsOn: 'Enable response voice',
+  ttsOff: 'Mute response voice',
+  stopAudio: 'Stop audio',
+  workflowBtn: 'Automations',
+  workflowAria: 'Open automations',
   placeholderDoc: (n: string) => `Ask about ${n}… (e.g. Summarize the 3 key points)`,
   placeholderNoDoc: 'Upload a PDF and let\'s chat…',
   listening: 'Listening…',
   speakNow: 'speak now',
   dictNoApi: 'Dictation not available in this browser (e.g. Firefox): use Chrome, Edge, or Safari, or type the question',
   dictNoHttps: 'Dictation requires HTTPS or localhost: type the question or open the app over a secure connection',
+  stopBtn: 'Stop',
+  sendBtn: 'Send',
   noChartRange: (r: string) => `The model found no comparable figures in ${r} and did not return a chart.`,
   noChartNarrative: (r: string) => `I analyzed ${r} and found no figures: the document is narrative with no series to chart. Ask for a summary by stages or bullet points in the chat.`,
   noChartSingular: (r: string, n: number) => `I analyzed ${r} and found ${n} standalone figure${n === 1 ? '' : 's'}, but no comparable series to chart (different units or no evolution). Try a document with tables or ask about the data in the chat.`,
@@ -517,7 +533,7 @@ const enDict: FullDict = {
   rwVectorizing: (done: number, total: number) => `Vectorizing fragments (${Math.min(total, done)}/${total})...`,
 
   // ── Match types ──
-  matchLiteral2: 'literal',
+  matchLiteral: 'literal',
   matchSemantic: 'semantic',
   matchCombined: 'combined',
 }
@@ -617,7 +633,6 @@ const esDict: FullDict = {
   errNetwork: 'Sin conexión con el servidor. Revisa tu internet y que la app esté desplegada con <code>/api/chat</code> disponible.',
   errGeneric: 'Reintenta la consulta. Si persiste, recarga la página y vuelve a subir el PDF.',
   sourcesPrefix: 'Lo encontré en',
-  matchLiteral: 'búsqueda literal',
   pageLabel: (n: number) => `Pág. ${n}`,
   viewPage: (n: number) => `Ver página ${n} en el visor`,
   viewPageBtn: 'Ver página →',
@@ -646,6 +661,11 @@ const esDict: FullDict = {
   dictInsecure: 'El dictado requiere HTTPS o localhost: escribe la pregunta o abre la app en conexión segura',
   dictStop: 'Detener dictado',
   dictStart: 'Dictar pregunta por voz',
+  ttsOn: 'Activar voz de respuesta',
+  ttsOff: 'Silenciar voz de respuesta',
+  stopAudio: 'Parar audio',
+  workflowBtn: 'Automatizaciones',
+  workflowAria: 'Abrir automatizaciones',
   placeholderDoc: (n: string) => `Pregunta sobre ${n}… (ej. Resume los 3 puntos clave)`,
   placeholderNoDoc: 'Sube un PDF y conversamos…',
   stopBtn: 'Detener',
@@ -892,7 +912,7 @@ const esDict: FullDict = {
   rwVectorizing: (done: number, total: number) => `Vectorizando fragmentos (${Math.min(total, done)}/${total})...`,
 
   // ── Match types ──
-  matchLiteral2: 'literal',
+  matchLiteral: 'literal',
   matchSemantic: 'semántica',
   matchCombined: 'combinada',
 }

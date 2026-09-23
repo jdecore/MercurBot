@@ -57,6 +57,7 @@ function cleanAI(text: string): string {
 // Píldora que indica qué proveedor+modelo generó la respuesta
 // (el backend lo informa en el evento `start` del SSE y en los JSON).
 export function ModelPill({ model }: { model?: string }) {
+  const { t } = useLocale()
   if (!model) return null
   return (
     <span className="model-pill" title={t.modelPill(model)}>
@@ -168,7 +169,7 @@ function downloadMarkdown(filename: string, body: string) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-function renderInlineWithCites(text: string, keyPrefix: string): React.ReactNode[] {
+function renderInlineWithCites(text: string, keyPrefix: string, t: ReturnType<typeof useLocale>['t']): React.ReactNode[] {
   const nodes: React.ReactNode[] = []
   const re = new RegExp(PAGE_CITE_RE.source, 'gi')
   let last = 0
@@ -183,8 +184,8 @@ function renderInlineWithCites(text: string, keyPrefix: string): React.ReactNode
         key={`${keyPrefix}-cite${key++}`}
         type="button"
         className="citation-badge citation-inline"
-        title={t.viewPage(page)}
-        aria-label={t.viewPage(page)}
+        title={t.viewPage(pageNum)}
+        aria-label={t.viewPage(pageNum)}
         onClick={() => gotoPage(pageNum)}
       >
         [Pág. {page}]
@@ -196,7 +197,7 @@ function renderInlineWithCites(text: string, keyPrefix: string): React.ReactNode
   return nodes
 }
 
-function renderRichText(text: string): React.ReactNode {
+function renderRichText(text: string, t: ReturnType<typeof useLocale>['t']): React.ReactNode {
   const lines = text.split('\n')
   const blocks: React.ReactNode[] = []
   let i = 0
@@ -262,7 +263,7 @@ function renderRichText(text: string): React.ReactNode {
       blocks.push(
         <ul key={key++} className="ai-list">
           {items.map((it, idx) => (
-            <li key={idx}>{renderInlineWithCites(it, `ul${key}-${idx}`)}</li>
+            <li key={idx}>{renderInlineWithCites(it, `ul${key}-${idx}`, t)}</li>
           ))}
         </ul>,
       )
@@ -277,7 +278,7 @@ function renderRichText(text: string): React.ReactNode {
       blocks.push(
         <ol key={key++} className="ai-list">
           {items.map((it, idx) => (
-            <li key={idx}>{renderInlineWithCites(it, `ol${key}-${idx}`)}</li>
+            <li key={idx}>{renderInlineWithCites(it, `ol${key}-${idx}`, t)}</li>
           ))}
         </ol>,
       )
@@ -293,14 +294,14 @@ function renderRichText(text: string): React.ReactNode {
       para.push(lines[i])
       i++
     }
-    blocks.push(<p key={key++}>{renderInlineWithCites(para.join(' '), `p${key}`)}</p>)
+    blocks.push(<p key={key++}>{renderInlineWithCites(para.join(' '), `p${key}`, t)}</p>)
   }
   return <>{blocks}</>
 }
 
 export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void }) {
   const { pdfDoc } = useDashboard()
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
 
   const [input, setInput] = useState('')
   const [muted, setMutedState] = useState(getMuted())
@@ -862,7 +863,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               </div>
             ) : cleanedAi.text ? (
               <div className="speech-bubble-text">
-                {renderRichText(sanitizeRichText(cleanedAi.text))}
+                {renderRichText(sanitizeRichText(cleanedAi.text), t)}
                 {lastAiMsg?.citations && lastAiMsg.citations.length > 0 && (
                       <div className="ai-citations-row" aria-label={t.sourcesAria}>
                     <span className="citations-label">
@@ -994,7 +995,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             return (
               <div key={m.id} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
                 <div className="excel-msg-body">
-                  {renderRichText(sanitizeRichText(msgText))}
+                  {renderRichText(sanitizeRichText(msgText), t)}
                   {m.citations && m.citations.length > 0 && (
                   <div className="ai-citations-row" aria-label={t.sourcesAria}>
                       <span className="citations-label">

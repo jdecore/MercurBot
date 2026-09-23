@@ -553,7 +553,7 @@ export default async function handler(req: any, res?: any): Promise<Response | v
       const prompt = lang === 'en'
         ? `Extract tabular data from this document "${filename}". Text (truncated):\n"""${text}"""\n\nInstructions: If there is a table, return a JSON array of objects with keys = normalized columns (lowercase, no spaces). Values string or number. If there is no table but there is structured data, invent reasonable columns and extract up to 30 rows. If there is no tabular data, return []. Respond ONLY with the JSON array, no markdown or explanation.`
         : `Extrae datos tabulares de este documento "${filename}". Texto (truncado):\n"""${text}"""\n\nInstrucciones: Si hay tabla, retorna JSON array de objetos con keys = columnas normalizadas (lowercase, sin espacios). Valores string o number. Si no hay tabla pero hay datos estructurados, inventa columnas razonables y extrae hasta 30 filas. Si no hay datos tabulares, retorna []. Responde SOLO con el JSON array, sin markdown ni explicación.`
-      const out = await generate(prompt, EXCEL_SYSTEM)
+      const out = await generate(prompt, buildSystemPrompt(lang))
       const raw = out.text
       const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()
       let rows: unknown = null
@@ -612,7 +612,7 @@ export default async function handler(req: any, res?: any): Promise<Response | v
       const prompt = lang === 'en'
         ? `Analyze this PDF document "${filename}" and return the most relevant numerical comparison or trend as a chart, plus 2-3 lines of reading in English.\n\n${scope}\n\nBase each figure ONLY on the following text; the sourcePage of each data point must be one of the analyzed pages.\n\n${docText}\n\nRespond with only the final reading in English and close with the chart-json block (chartType bar|line, max 12 data points, value ONLY literal numbers from the text — no calculating, rounding, or estimating). No visible reasoning or <think> blocks. If there are no comparable figures, respond with text only without the block. Cite pages with [Page N] in the reading.`
         : `Analiza este documento PDF "${filename}" y devuelve LA comparación o evolución numérica más relevante en forma de gráfica, más 2-3 líneas de lectura en español.\n\n${scope}\n\nBasa cada cifra SOLO en el texto siguiente; el sourcePage de cada dato debe ser una de las páginas analizadas.\n\n${docText}\n\nResponde solo la lectura final en español y cierra con el bloque chart-json (chartType bar|line, máx. 12 puntos, value SOLO cifras literales del texto — prohibido calcular, redondear o estimar). Sin razonamiento visible ni bloques <think>. Si no hay cifras comparables, responde solo texto sin bloque. Cita páginas con [Pág. N] en la lectura.`
-      const out = await generate(prompt, EXCEL_SYSTEM)
+      const out = await generate(prompt, buildSystemPrompt(lang))
       const text = out.text.trim()
       if (!text) return respond.json(200, { error: 'Empty chart-full response' })
       return respond.json(200, { text, analyzedPages, model: out.model })
@@ -636,7 +636,7 @@ export default async function handler(req: any, res?: any): Promise<Response | v
   const prompt = `${conversation}${contextBlock}`
 
   try {
-    const out = await generate(prompt, EXCEL_SYSTEM)
+    const out = await generate(prompt, buildSystemPrompt(lang))
     return respond.sse(sseChatText(out.text, out.model))
   } catch (err) {
     // H1: en producción no se expone el error crudo del proveedor (puede
