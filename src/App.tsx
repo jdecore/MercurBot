@@ -529,11 +529,6 @@ function MainDashboard() {
                     <strong className="landing-dropzone-title">{t.dropTitle}</strong>
                     <span className="landing-dropzone-hint">{t.dropHint}</span>
                   </div>
-                  <div className="landing-hero-actions">
-                    <button type="button" className="btn btn-primary landing-cta" onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}>
-                      {t.heroCTATry}
-                    </button>
-                  </div>
                 </div>
               </header>
             </div>
