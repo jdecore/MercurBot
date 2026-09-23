@@ -48,12 +48,20 @@ src/components/dashboard/PdfProcessingCard.tsx
 - `src/components/onboarding/OnboardingTour.tsx` — Migrado completo
 - `src/components/dashboard/PdfProcessingCard.tsx` — Migrado completo
 
+**API Locale Awareness:**
+- `api/chat/index.ts` — `buildSystemPrompt(lang)` genera system prompt en ES/EN
+- Frontend envía `lang: locale` en todos los fetch calls
+- Summary, extract, chart-full prompts respetan idioma
+
 **Funciones helper migradas:**
 - `matchTypeLabel()` — Ahora acepta `t` como parámetro
 - `describeNoChart()` — Ahora acepta `t` como parámetro
+- `renderInlineWithCites()` — Ahora acepta `t` como parámetro
+- `renderRichText()` — Ahora acepta `t` como parámetro
+- `ModelPill()` — Usa `useLocale()` hook
 
-**Build verificado:** `npx vite build` pasa sin errores
-**Lint:** 17 warnings (pre-existing hook deps, no críticos)
+**Build verificado:** `npx tsc -b` + `npx vite build` pasan sin errores
+**Commits:** a1e3d75 (feat), a5d585b (fix)
 
 ---
 
