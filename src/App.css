@@ -3202,3 +3202,118 @@ button.citation-inline:focus-visible {
     padding: var(--space-2xl) 0;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   BLACK HOLE UPLOAD COMPONENT
+   ═══════════════════════════════════════════════════════════════════ */
+
+.black-hole-upload {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  outline: none;
+}
+
+.black-hole-upload:hover {
+  transform: scale(1.05);
+}
+
+.black-hole-upload:active {
+  transform: scale(0.98);
+}
+
+.black-hole-upload.drag {
+  transform: scale(1.1);
+  filter: brightness(1.2);
+}
+
+.black-hole-upload.consume {
+  animation: black-hole-consume 0.8s ease-out forwards;
+}
+
+.black-hole-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.black-hole-text {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  animation: black-hole-text-fade 0.5s ease 0.3s forwards;
+}
+
+.black-hole-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+  animation: black-hole-float 3s ease-in-out infinite;
+}
+
+.black-hole-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 10px rgba(100, 150, 255, 0.5);
+}
+
+.black-hole-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 150px;
+}
+
+/* Hover state - text more visible */
+.black-hole-upload:hover .black-hole-label {
+  color: rgba(255, 255, 255, 1);
+  text-shadow: 0 0 15px rgba(100, 180, 255, 0.8);
+}
+
+.black-hole-upload:hover .black-hole-hint {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Drag state - text highlighted */
+.black-hole-upload.drag .black-hole-label {
+  color: #fff;
+  text-shadow: 0 0 20px rgba(100, 200, 255, 1);
+}
+
+.black-hole-upload.drag .black-hole-hint {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Keyframes */
+@keyframes black-hole-text-fade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes black-hole-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes black-hole-consume {
+  0% { transform: scale(1); filter: brightness(1); }
+  30% { transform: scale(0.8); filter: brightness(1.5); }
+  60% { transform: scale(0.3); filter: brightness(2); }
+  100% { transform: scale(0); filter: brightness(3); opacity: 0; }
+}
+
+/* Focus state for accessibility */
+.black-hole-upload:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: 50%;
+}

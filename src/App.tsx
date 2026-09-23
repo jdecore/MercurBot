@@ -22,6 +22,7 @@ import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
 import { WayflowPanel } from './features/wayflow'
 import { LocaleProvider, useLocale } from './lib/locale'
+import { BlackHoleUpload } from './components/ui/BlackHoleUpload'
 
 function MainDashboard() {
   const {
@@ -515,21 +516,7 @@ function MainDashboard() {
                 <div className="landing-hero-badge">{t.heroTag}</div>
                 <h1 className="landing-hero-title">{t.heroTitle}</h1>
                 <p className="landing-hero-sub">{t.heroSub}</p>
-                <div className="landing-hero-dropzone" onClick={() => inputRef.current?.click()} role="button" tabIndex={0}>
-                  <div className="landing-hero-robot">
-                    <Mascota
-                      variant={mascotRobot}
-                      config={robotConfig}
-                      mood={mascotaMood}
-                      subtitulo=""
-                      size={120}
-                    />
-                  </div>
-                  <div className="landing-dropzone-text">
-                    <strong className="landing-dropzone-title">{t.dropTitle}</strong>
-                    <span className="landing-dropzone-hint">{t.dropHint}</span>
-                  </div>
-                </div>
+                <BlackHoleUpload onFile={parseFile} size={200} />
               </header>
             </div>
           )}
