@@ -522,11 +522,11 @@ function MainDashboard() {
                     config={robotConfig}
                     mood={mascotaMood}
                     subtitulo=""
-                    size={100}
+                    size={150}
                   />
-                  <BlackHoleUpload onFile={parseFile} size={180} />
                 </div>
               </header>
+              <BlackHoleUpload onFile={parseFile} size={180} />
             </div>
           )}
 
