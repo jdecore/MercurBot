@@ -1065,11 +1065,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
         {!pdfDoc && messages.length === 0 && (
           <div className="excel-starters" role="group" aria-label="Cómo empezar">
             <p className="excel-starters-title">{t.startersTitle}</p>
-            {onOpenFilePicker && (
-              <button type="button" className="suggestion-chip" onClick={onOpenFilePicker}>
-                <Icon name="upload" size={14} /> {t.uploadPdf}
-              </button>
-            )}
           </div>
         )}
         {pdfDoc && messages.length === 0 && !loading && (
@@ -1087,17 +1082,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
           </div>
         )}
         <form className="excel-dock-input" onSubmit={submit}>
-          {onOpenFilePicker && (
-            <button
-              type="button"
-              className="dock-attach-btn"
-              onClick={onOpenFilePicker}
-              title={t.changeFileAria}
-              aria-label={t.changeFile}
-            >
-              <Icon name="upload" size={16} />
-            </button>
-          )}
           {(() => {
             const support = getDictationSupport()
             const unavailableTitle =
