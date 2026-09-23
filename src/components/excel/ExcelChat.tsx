@@ -819,6 +819,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     }
   }, [lastAiMsg])
 
+  if (!pdfDoc) return null
+
   return (
     <div className="excel-chat-container" aria-label="Chat de MercurBot">
       <div className="speech-bubble-wrapper">
