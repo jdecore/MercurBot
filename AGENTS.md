@@ -53,6 +53,7 @@
 - `GEMINI_API_KEY` solo en `api/chat/index.ts` (server)
 - Nunca exponer en frontend, logs, o respuestas
 - CSP en `vercel.json` con `connect-src` para huggingface/jsdelivr (embeddings)
+- Permissions-Policy hardened en `vercel.json`: deshabilita geolocation, camera, y features de ad-related/privacy-sandbox no utilizadas (`run-ad-auction`, `join-ad-interest-group`, `private-aggregation`, `attribution-reporting`, etc.)
 
 ---
 

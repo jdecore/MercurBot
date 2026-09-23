@@ -64,3 +64,4 @@ El PDF, la extracción, el chunking, los embeddings y la fusión RRF corren 100%
 - API keys solo en server env vars, nunca en frontend ni logs
 - Solo se aceptan PDFs (30 MB); rate-limit 20 req/min
 - Excepción documentada: "Generar gráfica" envía texto completo (máx. 250 KB) bajo consentimiento explícito del usuario
+- Headers hardened en Vercel: CSP, Permissions-Policy (geolocation, camera, ad-related features deshabilitados), X-Frame-Options, X-Content-Type-Options, Referrer-Policy
