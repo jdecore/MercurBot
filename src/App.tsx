@@ -21,12 +21,14 @@ import { Sidebar } from './components/layout/Sidebar'
 import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
 import { WayflowPanel } from './features/wayflow'
+import { LocaleProvider, useLocale } from './lib/locale'
 
 function MainDashboard() {
   const {
     error, setError, setLoading,
     pdfDoc, setPdfDoc,
   } = useDashboard()
+  const { t, locale } = useLocale()
 
   const [dragging, setDragging] = useState(false)
   const [mascotaMood, setMascotaMood] = useState<MascotaMood>('neutro')
@@ -95,8 +97,8 @@ function MainDashboard() {
     setPdfProcessing(null)
     setLoading(false)
     setMascotaMood('duda')
-    setMascotaSubtitulo('Lectura cancelada.')
-    speak('Lectura cancelada.')
+    setMascotaSubtitulo(t.readingCancelled)
+    speak(t.readingCancelled)
     if (cancelTimeoutRef.current !== null) clearTimeout(cancelTimeoutRef.current)
     cancelTimeoutRef.current = window.setTimeout(() => {
       cancelTimeoutRef.current = null
@@ -132,6 +134,7 @@ function MainDashboard() {
             chunks: doc.chunks.length,
             sample,
           },
+          lang: locale,
         }),
         signal: ctrl.signal,
       })
@@ -150,7 +153,7 @@ function MainDashboard() {
 
   const parseFile = useCallback(async (file: File) => {
     const valid = validateAnyFile(file)
-    if (!valid.valid) { setError(valid.error ?? 'Tipo de archivo no soportado'); return }
+    if (!valid.valid) { setError(valid.error ?? t.errUnsupportedType); return }
     briefingReqRef.current++ // invalida briefings en vuelo del documento anterior
     // Aborta una carga anterior solapada antes de empezar la nueva.
     try {
@@ -167,16 +170,16 @@ function MainDashboard() {
       abortControllerRef.current = controller
 
       setMascotaMood('escaneando')
-      setMascotaSubtitulo(`Abriendo ${file.name}…`)
+      setMascotaSubtitulo(t.opening(file.name))
       setPdfProcessing({
         active: true,
         filename: file.name,
         percent: 5,
         phase: 'reading',
-        statusText: 'Leyendo las páginas…',
+        statusText: t.readingPages,
         canCancel: true,
       })
-      speak(`Voy a leer ${file.name}, dame un momento.`)
+      speak(t.ttsGreeting(file.name))
       speakInteraction('file-upload')
 
       // Fase 24A: huella estable → mismo archivo, mismo docId, caché OPFS válida.
@@ -189,7 +192,7 @@ function MainDashboard() {
         timeoutMs: 60000,
         onProgress: (p) => {
           setMascotaMood('pensando')
-          setMascotaSubtitulo(`Leyendo pág. ${p.page} de ${p.totalPages}...`)
+          setMascotaSubtitulo(t.readingPage(p.page, p.totalPages))
           setPdfProcessing((prev) => prev ? {
             ...prev,
             percent: Math.min(50, Math.round(5 + (p.page / (p.totalPages || 1)) * 45)),
@@ -202,12 +205,12 @@ function MainDashboard() {
 
       // Vectorize / index via Web Worker RAG
       setMascotaMood('pensando')
-      setMascotaSubtitulo('Ordenando las ideas…')
+      setMascotaSubtitulo(t.sortingIdeas)
       setPdfProcessing((prev) => prev ? {
         ...prev,
         percent: 55,
         phase: 'indexing',
-        statusText: 'Ordenando las ideas en tu dispositivo…',
+        statusText: t.sortingIdeasFull,
       } : null)
 
       ragClient.setProgressListener((prog) => {
@@ -223,7 +226,7 @@ function MainDashboard() {
 
       // Ready!
       if (!pdfResult.fullText.trim()) {
-        throw new Error('Este PDF parece escaneado (solo imágenes) y no contiene texto extraíble. Prueba con un PDF con texto seleccionable.')
+        throw new Error(t.errScannedPdf)
       }
       setPdfFile(file)
       setPdfDoc(pdfResult)
@@ -247,10 +250,10 @@ function MainDashboard() {
       }
       setMascotaMood('exito')
       const readyMsg = userName
-        ? `¡Listo, ${userName}! Ya leí ${pdfResult.filename} (${pdfResult.totalPages} págs). Pregúntame lo que quieras.`
-        : `¡Listo! Ya leí ${pdfResult.filename} (${pdfResult.totalPages} págs). Pregúntame lo que quieras.`
+        ? t.readyWithName(userName, pdfResult.filename, pdfResult.totalPages)
+        : t.readyNoName(pdfResult.filename, pdfResult.totalPages)
       setMascotaSubtitulo(readyMsg)
-      speak(userName ? `Ya leí tu documento, ${userName}. Pregúntame lo que quieras.` : 'Ya leí tu documento. Pregúntame lo que quieras.')
+      speak(userName ? t.ttsReadyWithName(userName) : t.ttsReadyNoName)
       setPdfProcessing(null)
       abortControllerRef.current = null
       void loadBriefing(pdfResult)
@@ -264,7 +267,7 @@ function MainDashboard() {
       setPdfProcessing(null)
       abortControllerRef.current = null
       const msg = errName === 'PasswordException'
-        ? 'Este PDF está protegido con contraseña. Quítale la protección e inténtalo de nuevo.'
+        ? t.errPassword
         : err instanceof Error ? err.message : 'Failed to parse file'
       setError(msg)
       setMascotaSubtitulo(msg)
@@ -282,7 +285,7 @@ function MainDashboard() {
     setRobotConfig(cfg)
     savePreferences({ ...getPreferences(), userName: user, robotName: rName, robotConfig: cfg })
     setOnboarded()
-    const hello = user ? `¡Hola, ${user}! Soy ${rName}. Suelta tu PDF y lo leemos juntos.` : `¡Hola! Soy ${rName}. Suelta tu PDF y lo leemos juntos.`
+    const hello = user ? t.onbGreetingWithName(user, rName) : t.onbGreetingNoName(rName)
     setMascotaMood('feliz')
     setMascotaSubtitulo(hello)
     speak(hello)
@@ -370,12 +373,12 @@ function MainDashboard() {
       const status = (e as CustomEvent<string>).detail
       if (status === 'complete') {
         setMascotaMood('exito')
-        setMascotaSubtitulo('Automatización completada.')
-        speakRef.current('Automatización completada.')
+        setMascotaSubtitulo(t.workflowComplete)
+    speak(t.workflowComplete)
       } else if (status === 'error') {
         setMascotaMood('duda')
-        setMascotaSubtitulo('La automatización falló.')
-        speakRef.current('La automatización falló.')
+        setMascotaSubtitulo(t.workflowFailed)
+        speakRef.current(t.workflowFailed)
       }
     }
     window.addEventListener('copixi:workflow-status', handler as EventListener)
@@ -395,7 +398,7 @@ function MainDashboard() {
   const openLibraryDoc = useCallback(async (id: string) => {
     const meta = listLibrary().find((d) => d.id === id)
     if (!meta) {
-      setError('Ese documento ya no está en recientes. Súbelo de nuevo.')
+      setError(t.errDocNotInRecents)
       return
     }
     if (id === currentLibId && pdfDoc) return
@@ -403,13 +406,13 @@ function MainDashboard() {
     setError(null)
     try {
       const bytes = await getPdfBytes(id)
-      if (!bytes) throw new Error('No se encontraron los datos guardados. Súbelo de nuevo.')
+      if (!bytes) throw new Error(t.errDataNotFound)
       skipLibrarySaveRef.current = true
       setCurrentLibId(id)
       await parseFile(new File([bytes], meta.name, { type: 'application/pdf' }))
     } catch (err) {
       skipLibrarySaveRef.current = false
-      setError(err instanceof Error ? err.message : 'No se pudo abrir el documento.')
+      setError(err instanceof Error ? err.message : t.errCouldNotOpen)
       setLoading(false)
     }
   }, [currentLibId, pdfDoc, parseFile, setError, setLoading])
@@ -497,11 +500,11 @@ function MainDashboard() {
   return (
     <div className="canvas-wrapper">
       <div className={`app-shell${railCollapsed ? ' rail' : ''}`}>
-        <aside className={`app-sidebar${railCollapsed ? ' rail' : ''}`} aria-label="Navegación principal">
+        <aside className={`app-sidebar${railCollapsed ? ' rail' : ''}`} aria-label={t.navAria}>
           <div className="sidebar-brand" aria-label="MercurBot AI">
             <div className="brand-mark" aria-hidden>MB</div>
             <span className="brand-title">MercurBot</span>
-            <span className="brand-sub">tu lector de PDFs</span>
+            <span className="brand-sub">{t.brandSub}</span>
           </div>
           {sidebar}
         </aside>
@@ -511,7 +514,7 @@ function MainDashboard() {
             type="button"
             className="btn btn-secondary small fab-menu"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Abrir navegación"
+            aria-label={t.openNav}
             aria-expanded={sidebarOpen}
           >
             <Icon name="menu" size={16} />
@@ -529,84 +532,197 @@ function MainDashboard() {
       <main className={`main-canvas${showSplit ? ' wide' : ''}`} id="main-content">
         <section
           className={`hero-excel ${dragging ? 'dropping' : ''}`}
-          aria-label="Escenario interactivo del Robot Analista"
+          aria-label={hasDocument ? 'Escenario interactivo del Robot Analista' : 'MercurBot — AI document intelligence'}
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
         >
-          {/* Top Stage: robot único personalizable. Con documento se compacta
-              (72px en fila) para devolver espacio vertical al chat; sin
-              documento mantiene el héroe grande de bienvenida. */}
-          <div className={`mascot-stage${hasDocument ? ' compact' : ''}`}>
-            {!hasDocument && (
-              <div className="speech-bubble-hero" aria-live="polite">
-                <div className="speech-bubble-hero-content">
-                  <span className="speech-bubble-hero-name">{robotName || 'Mercur'}</span>
-                  <p className="speech-bubble-hero-text">
-                    {mascotaSubtitulo || `¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Sube un PDF y lo leemos juntos.`}
-                  </p>
+          {/* ─── LANDING (no document) ─── */}
+          {!hasDocument && (
+            <div className="landing">
+              {/* Hero */}
+              <header className="landing-hero">
+                <div className="landing-hero-badge">{t.heroTag}</div>
+                <h1 className="landing-hero-title">{t.heroTitle}</h1>
+                <p className="landing-hero-sub">{t.heroSub}</p>
+                <div className="landing-hero-actions">
+                  <button type="button" className="btn btn-primary landing-cta" onClick={() => inputRef.current?.click()}>
+                    {t.heroCTATry}
+                  </button>
+                  <a href="#how-it-works" className="btn btn-secondary landing-cta">
+                    {t.heroCTALearn}
+                  </a>
                 </div>
-                <div className="speech-bubble-hero-tail" aria-hidden />
-              </div>
-            )}
-            <Mascota
-              variant={mascotRobot}
-              config={robotConfig}
-              mood={mascotaMood}
-              subtitulo={hasDocument ? '' : mascotaSubtitulo}
-              size={hasDocument ? 72 : 180}
-              onClick={() => {
-                if (hasDocument) {
-                  // Re-lee la última respuesta en voz alta (la sirve ExcelChat).
-                  window.dispatchEvent(new CustomEvent('copixi:reread'))
-                  return
-                }
-                speak(`¡Hola${userName ? `, ${userName}` : ''}! Soy ${robotName}. Carga tu documento PDF para comenzar.`)
-              }}
-            />
-            {hasDocument && (
-              <p className="mascot-greeting" aria-live="polite">
-                {mascotaSubtitulo || `${robotName} ya leyó ${pdfDoc?.filename} — pregúntale lo que quieras.`}
-              </p>
-            )}
-            <div className="customizer-toggle-row">
-              <Dialog.Root open={customizerOpen} onOpenChange={setCustomizerOpen}>
-                <Dialog.Portal>
-                  <Dialog.Overlay className="customizer-overlay" />
-                  <Dialog.Content
-                    className="customizer-card"
-                    aria-describedby={undefined}
-                    onOpenAutoFocus={(e) => e.preventDefault()}
-                  >
-                    <div className="customizer-card-head">
-                      <div>
-                        <Dialog.Title className="customizer-card-title">
-                          Personaliza a {robotName || 'tu robot'}
-                        </Dialog.Title>
-                        <p className="customizer-card-sub">
-                          El nombre define su diseño base; cada rasgo se ajusta a mano. Todo se guarda en este navegador.
-                        </p>
-                      </div>
-                      <Dialog.Close className="btn btn-secondary small" aria-label="Cerrar personalización">
-                        ✕ Cerrar
-                      </Dialog.Close>
+                <div className="landing-hero-robot">
+                  <Mascota
+                    variant={mascotRobot}
+                    config={robotConfig}
+                    mood={mascotaMood}
+                    subtitulo=""
+                    size={120}
+                  />
+                </div>
+              </header>
+
+              {/* How it works */}
+              <section className="landing-section" id="how-it-works">
+                <h2 className="landing-section-title">{t.howTitle}</h2>
+                <div className="landing-steps">
+                  {t.howSteps.map((step, i) => (
+                    <div className="landing-step" key={i}>
+                      <div className="landing-step-num">{i + 1}</div>
+                      <h3 className="landing-step-label">{step.label}</h3>
+                      <p className="landing-step-desc">{step.desc}</p>
                     </div>
-                    <MascotCustomizer
-                      robot={mascotRobot}
-                      robotName={robotName}
-                      config={robotConfig}
-                      onChange={(robot, rName, cfg) => {
-                        setMascotRobot(robot)
-                        setRobotName(rName)
-                        setRobotConfig(cfg)
-                        savePreferences({ ...getPreferences(), mascotRobot: robot, robotName: rName, robotConfig: cfg })
-                      }}
-                    />
-                  </Dialog.Content>
-                </Dialog.Portal>
-              </Dialog.Root>
+                  ))}
+                </div>
+              </section>
+
+              {/* What I built */}
+              <section className="landing-section landing-dark">
+                <h2 className="landing-section-title">{t.builtTitle}</h2>
+                <p className="landing-built-name">{t.builtName}</p>
+                <p className="landing-built-tags">{t.builtTags}</p>
+                <p className="landing-built-text">{t.builtText}</p>
+              </section>
+
+              {/* Evolution */}
+              <section className="landing-section">
+                <h2 className="landing-section-title">{t.evoTitle}</h2>
+                <div className="landing-evo-grid">
+                  <div className="landing-evo-col landing-evo-current">
+                    <span className="landing-evo-badge">{t.evoToday}</span>
+                    <ul>{t.evoTodayItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  </div>
+                  <div className="landing-evo-arrow" aria-hidden>→</div>
+                  <div className="landing-evo-col landing-evo-next">
+                    <span className="landing-evo-badge">{t.evoNext}</span>
+                    <ul>{t.evoNextItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  </div>
+                  <div className="landing-evo-arrow" aria-hidden>→</div>
+                  <div className="landing-evo-col landing-evo-later">
+                    <span className="landing-evo-badge">{t.evoLater}</span>
+                    <ul>{t.evoLaterItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  </div>
+                </div>
+              </section>
+
+              {/* Validation */}
+              <section className="landing-section landing-dark">
+                <h2 className="landing-section-title">{t.validTitle}</h2>
+                <span className="landing-valid-badge">{t.validBadge}</span>
+                <p className="landing-valid-text">{t.validText}</p>
+              </section>
+
+              {/* Why chemistry */}
+              <section className="landing-section" id="chemistry">
+                <h2 className="landing-section-title">{t.whyTitle}</h2>
+                <p className="landing-why-text">{t.whyText}</p>
+                <div className="landing-why-path">
+                  {t.whyPath.map((step, i) => (
+                    <span key={i}>
+                      <span className="landing-why-step">{step}</span>
+                      {i < t.whyPath.length - 1 && <span className="landing-why-arrow" aria-hidden> → </span>}
+                    </span>
+                  ))}
+                </div>
+              </section>
+
+              {/* Roadmap */}
+              <section className="landing-section landing-dark" id="roadmap">
+                <h2 className="landing-section-title">{t.roadTitle}</h2>
+                <div className="landing-road">
+                  <div className="landing-road-item">
+                    <span className="landing-road-label">{t.roadNow}</span>
+                    <ul>{t.roadNowItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  </div>
+                  <div className="landing-road-arrow" aria-hidden>↓</div>
+                  <div className="landing-road-item">
+                    <span className="landing-road-label">{t.roadNext}</span>
+                    <ul>{t.roadNextItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  </div>
+                  <div className="landing-road-arrow" aria-hidden>↓</div>
+                  <div className="landing-road-item">
+                    <span className="landing-road-label">{t.roadLater}</span>
+                    <ul>{t.roadLaterItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  </div>
+                </div>
+              </section>
+
+              {/* Built with */}
+              <section className="landing-section">
+                <h2 className="landing-section-title">{t.techTitle}</h2>
+                <div className="landing-tech">
+                  {t.techItems.map((item, i) => (
+                    <span className="landing-tech-pill" key={i}>{item}</span>
+                  ))}
+                </div>
+              </section>
+
+              {/* Builder identity */}
+              <footer className="landing-footer">
+                <p className="landing-footer-name">{t.builderName}</p>
+                <p className="landing-footer-tags">{t.builderTags}</p>
+                <p className="landing-footer-tagline">{t.builderTagline}</p>
+              </footer>
             </div>
-          </div>
+          )}
+
+          {/* ─── PRODUCT (with document) ─── */}
+          {hasDocument && (
+            <div className={`mascot-stage compact`}>
+              <Mascota
+                variant={mascotRobot}
+                config={robotConfig}
+                mood={mascotaMood}
+                subtitulo={mascotaSubtitulo}
+                size={72}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('copixi:reread'))
+                }}
+              />
+              <p className="mascot-greeting" aria-live="polite">
+                {mascotaSubtitulo || t.greetingDoc(robotName, pdfDoc?.filename ?? '')}
+              </p>
+            </div>
+          )}
+
+          {/* Customizer dialog (accessible via sidebar) */}
+          <Dialog.Root open={customizerOpen} onOpenChange={setCustomizerOpen}>
+            <Dialog.Portal>
+              <Dialog.Overlay className="customizer-overlay" />
+              <Dialog.Content
+                className="customizer-card"
+                aria-describedby={undefined}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                <div className="customizer-card-head">
+                  <div>
+                    <Dialog.Title className="customizer-card-title">
+                      {t.customizerTitle(robotName)}
+                    </Dialog.Title>
+                    <p className="customizer-card-sub">
+                      {t.customizerDesc}
+                    </p>
+                  </div>
+                  <Dialog.Close className="btn btn-secondary small" aria-label={t.closeCustomizer}>
+                    ✕ Cerrar
+                  </Dialog.Close>
+                </div>
+                <MascotCustomizer
+                  robot={mascotRobot}
+                  robotName={robotName}
+                  config={robotConfig}
+                  onChange={(robot, rName, cfg) => {
+                    setMascotRobot(robot)
+                    setRobotName(rName)
+                    setRobotConfig(cfg)
+                    savePreferences({ ...getPreferences(), mascotRobot: robot, robotName: rName, robotConfig: cfg })
+                  }}
+                />
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
 
           {/* Interactive PDF Processing Banner with Cancel */}
           {pdfProcessing && (
@@ -626,7 +742,7 @@ function MainDashboard() {
                   className="btn btn-secondary small"
                   onClick={() => setPanelVisible(true)}
                 >
-                  <Icon name="file" size={14} /> Mostrar documento
+                  <Icon name="file" size={14} /> {t.showDoc}
                 </button>
               )}
 
@@ -688,7 +804,7 @@ function MainDashboard() {
           <Dialog.Overlay className="sidebar-overlay" />
           <Dialog.Content
             className="sidebar-drawer"
-            aria-label="Navegación principal"
+            aria-label={t.navAria}
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <div className="sidebar-drawer-head">
@@ -696,7 +812,7 @@ function MainDashboard() {
                 <div className="brand-mark" aria-hidden>MB</div>
                 <span className="brand-title">MercurBot</span>
               </div>
-              <Dialog.Close className="btn btn-secondary small" aria-label="Cerrar navegación">
+              <Dialog.Close className="btn btn-secondary small" aria-label={t.closeNav}>
                 ✕ Cerrar
               </Dialog.Close>
             </div>
@@ -734,9 +850,11 @@ function MainDashboard() {
 
 export function App() {
   return (
-    <DashboardProvider>
-      <MainDashboard />
-    </DashboardProvider>
+    <LocaleProvider>
+      <DashboardProvider>
+        <MainDashboard />
+      </DashboardProvider>
+    </LocaleProvider>
   )
 }
 

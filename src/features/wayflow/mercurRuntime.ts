@@ -1,4 +1,5 @@
 import { createRuntime, type Runtime } from 'wayflow/runtime'
+import { getLocale } from '../../lib/locale'
 
 export interface MercurBotRuntimeContext {
   pdfDoc: { filename: string; totalPages: number; pages: { text: string }[]; docId: string } | null
@@ -33,7 +34,7 @@ export function createMercurRuntime(mercur: MercurBotRuntimeContext): Runtime {
           const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: fullPrompt, mode: 'chat' }),
+            body: JSON.stringify({ message: fullPrompt, mode: 'chat', lang: getLocale() }),
             signal: ctx.signal,
           })
           const json = (await res.json()) as { text?: string }

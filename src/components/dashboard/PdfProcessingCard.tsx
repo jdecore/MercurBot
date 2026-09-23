@@ -1,3 +1,5 @@
+import { useLocale } from '../../lib/locale'
+
 export interface PdfProcessingState {
   active: boolean
   filename: string
@@ -13,6 +15,7 @@ interface PdfProcessingCardProps {
 }
 
 export function PdfProcessingCard({ state, onCancel }: PdfProcessingCardProps) {
+  const { t } = useLocale()
   if (!state.active) return null
 
   return (
@@ -22,7 +25,7 @@ export function PdfProcessingCard({ state, onCancel }: PdfProcessingCardProps) {
           <span className="pdf-badge" aria-hidden>PDF</span>
           <span className="pdf-filename" title={state.filename}>{state.filename}</span>
         </div>
-        <span className="pdf-pct" title={`${state.percent}% completado`} aria-label={`${state.percent}% completado`}>{state.percent}%</span>
+        <span className="pdf-pct" title={t.pcProgress(state.percent)} aria-label={t.pcProgress(state.percent)}>{state.percent}%</span>
       </div>
 
       <div className="pdf-progress-bar-bg" aria-hidden>
@@ -42,9 +45,9 @@ export function PdfProcessingCard({ state, onCancel }: PdfProcessingCardProps) {
             type="button"
             className="btn btn-secondary small pdf-cancel-btn"
             onClick={onCancel}
-            title="Cancelar extracción del documento"
+            title={t.pcCancelTitle}
           >
-            ✕ Cancelar
+            {t.pcCancelBtn}
           </button>
         )}
       </div>

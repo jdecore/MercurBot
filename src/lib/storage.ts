@@ -26,6 +26,8 @@ export type SavedAnalysis = {
   metricsSnapshot?: { totalSales: number; avgSales: number; rowCount: number }
 }
 
+export type Locale = 'es' | 'en'
+
 export type Preferences = {
   anomalyThreshold: number
   anomalyMethod: 'zscore' | 'iqr'
@@ -39,6 +41,8 @@ export type Preferences = {
   robotConfig: RobotConfig
   /** Sidebar contraído estilo Copilot (rail de iconos). Persiste entre visitas. */
   sidebarCollapsed: boolean
+  /** Landing locale: 'es' | 'en'. Default 'en' for Makers Fellowship. */
+  locale?: Locale
 }
 
 const KEY_ANALYSES = 'copixi:saved_analyses'

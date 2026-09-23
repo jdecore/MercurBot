@@ -127,7 +127,31 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite'
 const GROQ_MODEL = process.env.GROQ_MODEL?.trim() || 'qwen/qwen3.8-27b'
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.trim() || 'z-ai/glm-5.2:free'
 
-const EXCEL_SYSTEM = `Eres Mercur, un analista experto en documentos PDF. Responde en español, de forma concisa, educada y práctica.
+function buildSystemPrompt(lang?: string): string {
+  const isEn = lang === 'en'
+  if (isEn) {
+    return `You are Mercur, an expert PDF document analyst. Respond in English, concisely, politely, and practically.
+
+Specialties:
+- Comprehension and synthesis of PDF documents, reports, and technical papers with precise page citations.
+- Extraction of dates, figures, metrics, and verifiable conclusions from documents.
+
+Rules:
+- MercurBot only works with PDFs: if the user asks about Excel, CSV, or other formats, kindly ask them to upload the content as a PDF.
+- If the context includes RAG-retrieved snippets, base your answer on them and cite pages using the format [Page N].
+- Never invent information or data not present in the provided snippets.
+- ALWAYS respond in English and deliver only the final answer: never show your internal reasoning (no <think> blocks, no "thinking process", no prior analysis in English). No meta-preambles about your task.
+
+Charts (only when valuable):
+- If the question asks to compare figures or see a trend AND the snippets contain those numbers, close your response with a chart-json block in this EXACT format:
+\`\`\`chart-json
+{"chartType":"bar","title":"Short title","unit":"optional unit","data":[{"label":"Label","value":123,"sourcePage":2}]}
+\`\`\`
+- chartType only "bar" or "line". Max 12 data points.
+- value ONLY literal numbers copied from the snippets: no calculating, rounding, estimating, or unit conversions. sourcePage is the page of the snippet for each figure.
+- If the snippets don't contain comparable figures, DO NOT emit the block: respond with text only.`
+  }
+  return `Eres Mercur, un analista experto en documentos PDF. Responde en español, de forma concisa, educada y práctica.
 
 Especialidades:
 - Comprensión y síntesis de documentos PDF, informes y reportes técnicos con citación precisa de páginas.
@@ -147,7 +171,7 @@ Gráficas (solo cuando aporten valor):
 - chartType solo "bar" o "line". Máx. 12 puntos.
 - value SOLO cifras literales copiadas de los fragmentos: prohibido calcular, redondear, estimar o convertir unidades. sourcePage es la página del fragmento de cada cifra.
 - Si los fragmentos no tienen cifras comparables, NO emitas el bloque: responde solo texto.`
-
+}
 function buildContextBlock(context: unknown): string {
   if (!context || typeof context !== 'object') return ''
   const ctx = context as Record<string, unknown>
@@ -485,6 +509,7 @@ export default async function handler(req: any, res?: any): Promise<Response | v
   }
 
   const mode = typeof body.mode === 'string' ? body.mode : undefined
+  const lang = typeof body.lang === 'string' && body.lang === 'en' ? 'en' : 'es'
 
   // Tope histórico de 32 KB para todo lo que no sea chart-full: el cuerpo ya
   // se leyó con el tope elevado, así que se re-valida aquí por modo.
@@ -505,9 +530,13 @@ export default async function handler(req: any, res?: any): Promise<Response | v
         }
         const isPdf = (ctx as Record<string, unknown>).documentType === 'pdf'
         const prompt = isPdf
-          ? `Resume este documento PDF en español en exactamente 3 puntos clave. Empieza cada punto con la información directa (sin introducciones). Cita la página de cada dato con el formato [Pág. N]. No inventes datos. Texto plano con "-" por punto, sin JSON.\n\nContexto: ${ctxStr}`
-          : `Genera un resumen en español en 3-5 bullets concisos + 1 insight accionable sobre este dataset. Cita números reales del contexto. No inventes columnas. Texto plano, sin JSON.\n\nContexto: ${ctxStr}`
-        const out = await generate(prompt, EXCEL_SYSTEM)
+          ? (lang === 'en'
+            ? `Summarize this PDF document in English in exactly 3 key points. Start each point with the direct information (no introductions). Cite the page of each data point using the format [Page N]. Do not invent data. Plain text with "-" per point, no JSON.\n\nContext: ${ctxStr}`
+            : `Resume este documento PDF en español en exactamente 3 puntos clave. Empieza cada punto con la información directa (sin introducciones). Cita la página de cada dato con el formato [Pág. N]. No inventes datos. Texto plano con "-" por punto, sin JSON.\n\nContexto: ${ctxStr}`)
+          : (lang === 'en'
+            ? `Generate an English summary in 3-5 concise bullets + 1 actionable insight about this dataset. Cite real numbers from the context. Do not invent columns. Plain text, no JSON.\n\nContext: ${ctxStr}`
+            : `Genera un resumen en español en 3-5 bullets concisos + 1 insight accionable sobre este dataset. Cita números reales del contexto. No inventes columnas. Texto plano, sin JSON.\n\nContexto: ${ctxStr}`)
+        const out = await generate(prompt, buildSystemPrompt(lang))
         const text = out.text.trim()
         if (!text) return respond.json(200, { error: 'Empty summary' })
         return respond.json(200, { text, model: out.model })
@@ -521,7 +550,9 @@ export default async function handler(req: any, res?: any): Promise<Response | v
       if (text.length > 8000) {
         return respond.json(400, { error: 'text too large (max 8000 chars, send truncated)' })
       }
-      const prompt = `Extrae datos tabulares de este documento "${filename}". Texto (truncado):\n"""${text}"""\n\nInstrucciones: Si hay tabla, retorna JSON array de objetos con keys = columnas normalizadas (lowercase, sin espacios). Valores string o number. Si no hay tabla pero hay datos estructurados, inventa columnas razonables y extrae hasta 30 filas. Si no hay datos tabulares, retorna []. Responde SOLO con el JSON array, sin markdown ni explicación.`
+      const prompt = lang === 'en'
+        ? `Extract tabular data from this document "${filename}". Text (truncated):\n"""${text}"""\n\nInstructions: If there is a table, return a JSON array of objects with keys = normalized columns (lowercase, no spaces). Values string or number. If there is no table but there is structured data, invent reasonable columns and extract up to 30 rows. If there is no tabular data, return []. Respond ONLY with the JSON array, no markdown or explanation.`
+        : `Extrae datos tabulares de este documento "${filename}". Texto (truncado):\n"""${text}"""\n\nInstrucciones: Si hay tabla, retorna JSON array de objetos con keys = columnas normalizadas (lowercase, sin espacios). Valores string o number. Si no hay tabla pero hay datos estructurados, inventa columnas razonables y extrae hasta 30 filas. Si no hay datos tabulares, retorna []. Responde SOLO con el JSON array, sin markdown ni explicación.`
       const out = await generate(prompt, EXCEL_SYSTEM)
       const raw = out.text
       const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim()
@@ -571,10 +602,16 @@ export default async function handler(req: any, res?: any): Promise<Response | v
       clean.sort((a, b) => a.page - b.page)
       const analyzedPages = clean.map((p) => p.page)
       const scope = truncated && Number.isFinite(totalPages)
-        ? `Páginas analizadas: ${analyzedPages.join(', ')} (de ${Math.floor(totalPages)} totales; pre-selección de las páginas con más cifras).`
-        : `Páginas analizadas: ${analyzedPages.join(', ')} (documento íntegro).`
-      const docText = clean.map((p) => `[Pág. ${p.page}]:\n"""${p.text}"""`).join('\n\n')
-      const prompt = `Analiza este documento PDF "${filename}" y devuelve LA comparación o evolución numérica más relevante en forma de gráfica, más 2-3 líneas de lectura en español.\n\n${scope}\n\nBasa cada cifra SOLO en el texto siguiente; el sourcePage de cada dato debe ser una de las páginas analizadas.\n\n${docText}\n\nResponde solo la lectura final en español y cierra con el bloque chart-json (chartType bar|line, máx. 12 puntos, value SOLO cifras literales del texto — prohibido calcular, redondear o estimar). Sin razonamiento visible ni bloques <think>. Si no hay cifras comparables, responde solo texto sin bloque. Cita páginas con [Pág. N] en la lectura.`
+        ? (lang === 'en'
+          ? `Analyzed pages: ${analyzedPages.join(', ')} (of ${Math.floor(totalPages)} total; pre-selection of pages with most figures).`
+          : `Páginas analizadas: ${analyzedPages.join(', ')} (de ${Math.floor(totalPages)} totales; pre-selección de las páginas con más cifras).`)
+        : (lang === 'en'
+          ? `Analyzed pages: ${analyzedPages.join(', ')} (full document).`
+          : `Páginas analizadas: ${analyzedPages.join(', ')} (documento íntegro).`)
+      const docText = clean.map((p) => `[Page ${p.page}]:\n"""${p.text}"""`).join('\n\n')
+      const prompt = lang === 'en'
+        ? `Analyze this PDF document "${filename}" and return the most relevant numerical comparison or trend as a chart, plus 2-3 lines of reading in English.\n\n${scope}\n\nBase each figure ONLY on the following text; the sourcePage of each data point must be one of the analyzed pages.\n\n${docText}\n\nRespond with only the final reading in English and close with the chart-json block (chartType bar|line, max 12 data points, value ONLY literal numbers from the text — no calculating, rounding, or estimating). No visible reasoning or <think> blocks. If there are no comparable figures, respond with text only without the block. Cite pages with [Page N] in the reading.`
+        : `Analiza este documento PDF "${filename}" y devuelve LA comparación o evolución numérica más relevante en forma de gráfica, más 2-3 líneas de lectura en español.\n\n${scope}\n\nBasa cada cifra SOLO en el texto siguiente; el sourcePage de cada dato debe ser una de las páginas analizadas.\n\n${docText}\n\nResponde solo la lectura final en español y cierra con el bloque chart-json (chartType bar|line, máx. 12 puntos, value SOLO cifras literales del texto — prohibido calcular, redondear o estimar). Sin razonamiento visible ni bloques <think>. Si no hay cifras comparables, responde solo texto sin bloque. Cita páginas con [Pág. N] en la lectura.`
       const out = await generate(prompt, EXCEL_SYSTEM)
       const text = out.text.trim()
       if (!text) return respond.json(200, { error: 'Empty chart-full response' })

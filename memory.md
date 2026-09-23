@@ -1,12 +1,12 @@
 # memory.md — Diario de Agente
 
-> **Última actualización:** 2026-09-21 | Rama: `main`
+> **Última actualización:** 2026-09-23 | Rama: `main`
 
 ---
 
 ## Estado actual (live)
 
-El deploy en `https://copixi.vercel.app/` tiene hasta **Fase 44** (sidebar estilo Copilot + modelos elegidos por el usuario). Los cambios de la sesión del 20/09 (rename a MercurBot/Mercur, SVG robot, ojos, brazos, TTS, sonidos, animaciones) están **sin commitear**.
+El deploy en `https://copixi.vercel.app/` tiene hasta **Fase 44** (sidebar estilo Copilot + modelos elegidos por el usuario). Los cambios de la sesión del 20/09 (rename a MercurBot/Mercur, SVG robot, ojos, brazos, TTS, sonidos, animaciones) están **sin commitear**. Nuevos cambios de 23/09: landing bilingüe Makers Fellowship + hardcoded audit.
 
 ---
 
@@ -16,74 +16,44 @@ Branding: `Copixi→MercurBot`, robot `Copi→Mercur` (no confundir con "Hera" �
 
 Archivos modificados:
 ```
-AGENTS.md, README.md, api/chat/index.ts, index.html
-src/App.css, src/App.tsx, src/components/excel/ExcelChat.tsx
-src/components/onboarding/OnboardingTour.tsx, src/components/ui/ErrorBoundary.tsx
-src/data/universalParser.ts, src/lib/dictation.ts, src/lib/docLibrary.ts
-src/lib/fileHash.ts, src/lib/ragPipeline.ts, src/lib/robotSeed.ts
-src/lib/storage.ts, src/lib/tts.ts
+AGENTS.md, README.md, api/chat/index.ts, index.html, .env.example
+src/App.css, src/App.tsx, src/lib/locale.tsx, src/lib/storage.ts
+src/components/excel/ExcelChat.tsx, src/components/layout/Sidebar.tsx
+src/components/layout/EngineStatus.tsx, src/components/ui/ErrorBoundary.tsx
+src/components/ui/MascotaCustomizer.tsx, src/components/pdf/BriefingCard.tsx
+src/components/pdf/PdfViewer.tsx, src/components/pdf/ChartFullButton.tsx
+src/components/onboarding/OnboardingTour.tsx
+src/components/dashboard/PdfProcessingCard.tsx
 ```
 
 ---
 
 ## Qué se hizo en la última sesión
 
-### Auditoría destructiva (seguridad + funcional + UI)
-- 14/14 fixes de código estáticos (rate-limit, CSP, XSS)
-- 17/17 fixes CSS (responsive, overflow, tokens)
-- QA live con Chromium headless
-- Eliminación de Blobatar (dependencia innecesaria)
+### Product i18n Migration (Phase 2) — 23/09
 
-### UI/UX refinements (Sesión 21/09 — Vercel plugin + UI Pro Max)
-- Google Fonts: Inter (body) + Calistoga (headings) via @import
-- CSP actualizado: `style-src` + `font-src` para Google Fonts
-- Dark mode refinado: navy #0F172A, teal primary #0D9488, orange accent #F97316
-- Focus-visible: ring con --color-tropical para mejor contraste
-- Global UX polish: cursor-pointer en botones/links, hover transitions 150ms
-- Contrast ratios verificados: todos pasan WCAG AA (4.5:1+)
-- Design system guardado: `design-system/mercurbot/MASTER.md`
+**Objetivo:** Migrar todos los strings del producto (UI) al diccionario bilingüe ES/EN.
 
-### Robot SVG
-- Reescritura completa del SVG: proporciones EVE, visor marrón, mejillas 35%, respiración 6s
-- Brazos tipo cápsula (`<rect rx="6">`) — el fix definitivo de los brazos de palito
-- Ojos: esclera blanca + iris coloreado + brillo, sin pupilas negras
-- **Sistema de ojos (10 features):**
-  1. Seguimiento de cursor con lerp (0.08), clamp ±5/±3px
-  2. Sacádicas cada 2-5s (pausadas en hover)
-  3. Parpadeo random 2.2-6s, 30% doble
-  4. Dilatación por mood (feliz +15%, dormido -45%, etc.)
-  5. Tracking de elementos UI vía `copixi:eye-target`
-  6. Interactivo: hover→doble parpadeo, click→guiño, leave→centro
-  7. Cejas sobre el visor con rotación por mood
-  8. Mood especiales: exito glow, dormido Z's, pensando dots, guino wink
-  9. Parallax 3D: sombra de profundidad en esclera
-  10. Reacción a typing/submit/streaming
+**Archivos modificados:**
+- `src/lib/locale.tsx` — Diccionario ampliado: ~352 strings × 2 idiomas. Agregados: chat UI, errores, botones, status, sugerencias, dictado, TTS, PDF viewer, chart, briefing, sidebar, engine status
+- `src/App.tsx` — Todos los strings hardcoded migrados a `t.*` (errores, processing, greetings, onboarding, UI labels)
+- `src/components/excel/ExcelChat.tsx` — Migrado completo (~90 strings): chat UI, mic/TTS buttons, rate-limit, errores, sugerencias, placeholders, status messages
+- `src/components/layout/Sidebar.tsx` — Migrado completo a `t.*`
+- `src/components/layout/EngineStatus.tsx` — Migrado completo a `t.*`
+- `src/components/ui/ErrorBoundary.tsx` — Migrado via `ErrorFallback` wrapper
+- `src/components/ui/MascotCustomizer.tsx` — Migrado completo
+- `src/components/pdf/BriefingCard.tsx` — Migrado completo
+- `src/components/pdf/PdfViewer.tsx` — Migrado completo
+- `src/components/pdf/ChartFullButton.tsx` — Migrado completo
+- `src/components/onboarding/OnboardingTour.tsx` — Migrado completo
+- `src/components/dashboard/PdfProcessingCard.tsx` — Migrado completo
 
-### Canvas partículas
-- `<canvas>` detrás del SVG con polvo ambiental + partículas coloreadas por mood
+**Funciones helper migradas:**
+- `matchTypeLabel()` — Ahora acepta `t` como parámetro
+- `describeNoChart()` — Ahora acepta `t` como parámetro
 
-### TTS
-- `speakMood()` + `speakInteraction()` con cooldowns
-- Web Speech API, `es-ES`, sin dependencias
-- Wired en: ExcelChat, PdfViewer, App.tsx
-
-### Sonidos (Web Audio API, 0 deps)
-- pop, chime, startThinking, stopThinking, success, error, click, whoosh, greeting
-
-### Animaciones avanzadas
-- shakeHard, bounceUp, headBob, thinkEyes, sleepPulse
-- Todas con `prefers-reduced-motion`
-
-### Onboarding rediseñado
-- 3 pasos: intro+names, themes+eyes+random, instructions
-- Preview vivo del robot durante el bautizo
-
-### Customizer rediseñado
-- Tabs "Estilo" y "Detalles"
-- Sección "Unidad base" eliminada
-
-### CSS restaurado
-- MascotCustomizer dialog CSS (~200 líneas) restaurado después de perderse al borrar Mascota.css
+**Build verificado:** `npx vite build` pasa sin errores
+**Lint:** 17 warnings (pre-existing hook deps, no críticos)
 
 ---
 
@@ -102,6 +72,11 @@ src/lib/storage.ts, src/lib/tts.ts
 | Calistoga para headings | Agrega calidez humana al robot, paired con Inter |
 | Dark mode navy (#0F172A) | UI Pro Max pattern para AI dashboards, más profesional que verde oscuro |
 | Focus ring con --color-tropical | Mejor contraste que --color-primary, visible en ambos modos |
+| Landing bilingüe (ES/EN) | Makers Fellowship requiere EN; diccionario quirúrgico sin refactorizar producto |
+| Locale default 'en' | Evaluadores Makers son angloparlantes; toggle ES accesible en sidebar |
+| Producto i18n completo | Todos los strings del producto migrados al diccionario; app 100% bilingüe |
+| Funciones helper con `t` param | `matchTypeLabel`, `describeNoChart` aceptan diccionario como parámetro |
+| ALLOWED_ORIGINS vía env var | Preparado para cambio de dominio sin redeploy de código |
 
 ---
 
@@ -117,10 +92,11 @@ src/lib/storage.ts, src/lib/tts.ts
 
 ## Pendientes conocidos
 
-1. **Commitear** los 16 archivos de la sesión 20/09 + UI/UX refinements (index.css, vercel.json)
+1. **Commitear** los archivos de la sesión (i18n migration, landing, hardcoded audit, etc.)
 2. **QA visual live** — verificar que todo se ve bien tras deploy (sin navegador en entorno)
 3. **og:image** — `public/og-cover.png` 1200×630 pendiente de crear
 4. **E2E completo** — PDF escaneado, mobile, oscuro, gráficas, citas en panel
+5. **api/chat system prompt** — Hacer que respete el locale (pasar `lang` en request body)
 
 ---
 
@@ -141,6 +117,23 @@ git add -A
 git commit -m "..."
 git push
 ```
+
+---
+
+## Hardcoded audit — Decisiones (23/09)
+
+| Valor | Línea | Decisión | Razón |
+|-------|-------|----------|-------|
+| `https://copixi.vercel.app` (ALLOWED_ORIGINS) | 36 | **CONFIG** (env var) | Preparado para cambio de dominio |
+| `http://localhost:5173/3000` | 36 | **KEEP** en default | Dev local, harmless |
+| `https://api.groq.com/...` | 224 | **KEEP** | Endpoint público estable de Groq |
+| `https://openrouter.ai/...` | 256 | **KEEP** | Endpoint público estable de OpenRouter |
+| `https://copixi.vercel.app` (HTTP-Referer) | 258 | **CONFIG** (env var `SITE_URL`) | OpenRouter ranking, cambiante |
+| `MercurBot` (X-Title) | 259 | **CONFIG** (env var `SITE_NAME`) | OpenRouter display name |
+| Model defaults (gemini-3.5-flash-lite, etc.) | 129-131 | **KEEP** | Defaults fallback, overrides via env |
+| `http://www.w3.org/2000/svg` | Mascota.tsx | **KEEP** | XML namespace estándar, no es URL |
+| System prompt ES | 133-152 | **KEEP** | No es secreto, hardcoded language ok |
+| `GEMINI_API_KEY` refs en error strings | ChartFull/ExcelChat | **KEEP** | Solo nombres de variable, no valores |
 
 ---
 

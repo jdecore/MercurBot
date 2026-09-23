@@ -13,6 +13,7 @@ import { verifyChartSpec } from '../../lib/verifyChart'
 import { formatPageRange, countSelectionFigures } from '../../lib/chartFull'
 import { pop, chime, startThinking, stopThinking, error as soundError, success as soundSuccess } from '../../lib/sounds'
 import type { ChartFullResultDetail } from '../pdf/ChartFullButton'
+import { useLocale } from '../../lib/locale'
 
 // Fase C: gráfica SVG propia en chunk separado (no engorda el bundle inicial).
 const ChartCard = lazy(() => import('../charts/ChartCard'))
@@ -58,7 +59,7 @@ function cleanAI(text: string): string {
 export function ModelPill({ model }: { model?: string }) {
   if (!model) return null
   return (
-    <span className="model-pill" title={`Generado por ${model}`}>
+    <span className="model-pill" title={t.modelPill(model)}>
       ✦ {model}
     </span>
   )
@@ -66,10 +67,10 @@ export function ModelPill({ model }: { model?: string }) {
 
 // Etiqueta humana del tipo de coincidencia RAG (la UI es española,
 // el motor devuelve claves técnicas).
-export function matchTypeLabel(matchType?: string): string | null {
-  if (matchType === 'lexical') return 'literal'
-  if (matchType === 'vector') return 'semántica'
-  if (matchType === 'hybrid') return 'combinada'
+export function matchTypeLabel(matchType?: string, t?: ReturnType<typeof useLocale>['t']): string | null {
+  if (matchType === 'lexical') return t?.matchLexical ?? 'literal'
+  if (matchType === 'vector') return t?.matchVector ?? 'semántica'
+  if (matchType === 'hybrid') return t?.matchHybrid ?? 'combinada'
   return matchType || null
 }
 
@@ -90,7 +91,7 @@ function truncateName(name: string): string {
 // cuántas cifras hay en local (heurística de tokens numéricos, la misma del
 // pre-chequeo). Distingue "documento narrativo" de "cifras sin serie".
 // Puro, nunca lanza; null si no aplica.
-function describeNoChart(pages: number[] | null | undefined): string | null {
+function describeNoChart(pages: number[] | null | undefined, t: ReturnType<typeof useLocale>['t']): string | null {
   if (!pages || pages.length === 0) return null
   const range = formatPageRange(pages)
   let n: number | null = null
@@ -99,13 +100,9 @@ function describeNoChart(pages: number[] | null | undefined): string | null {
   } catch {
     n = null
   }
-  if (n === null) return `El modelo no encontró cifras comparables en ${range} y no devolvió gráfica.`
-  if (n === 0)
-    return `Analicé ${range} y no detecté cifras: el documento es narrativo y no hay serie que graficar. ` +
-      `Pídeme un resumen por etapas o por puntos en el chat.`
-  return `Analicé ${range} y detecté ${n} cifra${n === 1 ? '' : 's'} suelta${n === 1 ? '' : 's'}, ` +
-    `pero sin serie comparable para graficar (distintas unidades o sin evolución). ` +
-    `Prueba con un documento con tablas o pregúntame por los datos en el chat.`
+  if (n === null) return t.noChartRange(range)
+  if (n === 0) return t.noChartNarrative(range)
+  return t.noChartSingular(range, n)
 }
 
 // Minimal, dependency-free markdown: **bold**, *italic*, `code`.
@@ -186,8 +183,8 @@ function renderInlineWithCites(text: string, keyPrefix: string): React.ReactNode
         key={`${keyPrefix}-cite${key++}`}
         type="button"
         className="citation-badge citation-inline"
-        title={`Ver página ${page} en el visor`}
-        aria-label={`Ver página ${page} en el visor`}
+        title={t.viewPage(page)}
+        aria-label={t.viewPage(page)}
         onClick={() => gotoPage(pageNum)}
       >
         [Pág. {page}]
@@ -303,6 +300,7 @@ function renderRichText(text: string): React.ReactNode {
 
 export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void }) {
   const { pdfDoc } = useDashboard()
+  const { t } = useLocale()
 
   const [input, setInput] = useState('')
   const [muted, setMutedState] = useState(getMuted())
@@ -394,7 +392,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       const now = Date.now()
       setMessages((prev) => [
         ...prev,
-        { id: `u-cf-${now}`, role: 'user', content: `Generar gráfica del documento${scope}` },
+        { id: `u-cf-${now}`, role: 'user', content: `${t.cfTitle}${scope}` },
         { id: `a-cf-${now}`, role: 'assistant', content: d.text, chartPages: d.analyzedPages, model: d.model },
       ])
       setMascotaMood('exito')
@@ -490,7 +488,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   function handleDownloadMd(msg: ChatMsg) {
     const idx = messages.findIndex((m) => m.id === msg.id)
     const prevUser = [...messages.slice(0, idx)].reverse().find((m) => m.role === 'user')
-    const base = (pdfDoc?.filename ?? 'respuesta').replace(/\.pdf$/i, '') || 'respuesta'
+    const base = (pdfDoc?.filename ?? t.docFallback).replace(/\.pdf$/i, '') || t.docFallback
     const sources = (msg.citations ?? []).map((c) => `- Pág. ${c.pageNumber}: ${c.snippet}`).join('\n')
     const body = `# ${base}\n\n${prevUser ? `**Pregunta:** ${prevUser.content}\n\n` : ''}**Respuesta:**\n\n${stripChartBlock(cleanAI(msg.content))}\n\n${sources ? `**Fuentes:**\n\n${sources}\n` : ''}`
     downloadMarkdown(`${base}.md`, body)
@@ -546,9 +544,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     // de IA (PDF escaneado sin texto o indexación fallida). El LLM sin
     // fragmentos solo puede responder en genérico.
     if (pdfDoc && ragClient.getState().chunkCount === 0) {
-      const msg =
-        'No pude extraer texto de este documento — parece un PDF escaneado (solo imágenes). ' +
-        'MercurBot necesita texto para analizar: súbelo con texto seleccionable o pásalo por un OCR antes de cargarlo.'
+      const msg = t.scannedPdfError
       setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: msg } : m)))
       setStatus('done')
       setMascotaMood('neutro')
@@ -587,7 +583,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     const payloadContext = (pdfDoc || ragHits.length > 0)
       ? {
           documentType: 'pdf',
-          filename: pdfDoc?.filename ?? ragHits[0]?.docName ?? 'documento.pdf',
+          filename: pdfDoc?.filename ?? ragHits[0]?.docName ?? t.docFallback,
           totalPages: pdfDoc?.totalPages ?? Math.max(...ragHits.map((h) => h.pageNumber), 1),
           searchMode,
           ragHits: ragHits.map((h) => ({
@@ -607,7 +603,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: history, context: payloadContext }),
+        body: JSON.stringify({ messages: history, context: payloadContext, lang: locale }),
         signal: controller.signal,
       })
 
@@ -668,7 +664,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 )
               )
             } else if (evt.type === 'error') {
-              throw new Error(evt.message || 'Error del servidor')
+              throw new Error(evt.message || t.errServer)
             }
           } catch (e) {
             if (e instanceof Error && (e as any).type === 'error') throw e
@@ -704,7 +700,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 )
               )
             } else if (evt.type === 'error') {
-              throw new Error(evt.message || 'Error del servidor')
+              throw new Error(evt.message || t.errServer)
             }
           } catch (e) {
             if (e instanceof Error && (e as any).type === 'error') throw e
@@ -818,7 +814,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       // contexto real (idea 1) en vez de silencio.
       noChart,
       chartPages: pages ?? null,
-      noChartText: noChart ? describeNoChart(pages) : null,
+      noChartText: noChart ? describeNoChart(pages, t) : null,
     }
   }, [lastAiMsg])
 
@@ -843,7 +839,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   <strong>Algo no salió bien:</strong>
                 </div>
                 <div className="error-message-text">
-                  {error || 'No se pudo conectar con el servicio de IA.'}
+                  {error || t.errConnection}
                 </div>
                 <div className="error-help-hint">
                   {error.includes('429') || error.includes('Rate limit') ? (
@@ -853,22 +849,22 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   ) : error.includes('500') || error.includes('GEMINI_API_KEY') || error.includes('502') ? (
                     <span>El servicio de IA falló o falta configurar una key en tu servidor o Vercel (<code>GEMINI_API_KEY</code>, <code>GROQ_API_KEY</code> u <code>OPENROUTER_API_KEY</code>). Reintenta en unos segundos.</span>
                   ) : error.includes('504') ? (
-                    <span>El servidor tardó demasiado en responder (504, timeout). Reintenta en unos segundos; si usaste Generar gráfica con un documento grande, prueba de nuevo o con un PDF más corto.</span>
+                    <span>{t.timeoutError}</span>
                   ) : error.includes('fetch') || error.includes('Failed to fetch') || error.includes('NetworkError') ? (
                     <span>Sin conexión con el servidor. Revisa tu internet y que la app esté desplegada con <code>/api/chat</code> disponible.</span>
                   ) : (
-                    <span>Reintenta la consulta. Si persiste, recarga la página y vuelve a subir el PDF.</span>
+                    <span>{t.retryError}</span>
                   )}
                 </div>
                 <button type="button" className="btn btn-secondary small" onClick={regenerate} style={{ marginTop: 8 }}>
-                  <Icon name="reload" size={14} /> Reintentar consulta
+                  <Icon name="reload" size={14} /> {t.retryBtn}
                 </button>
               </div>
             ) : cleanedAi.text ? (
               <div className="speech-bubble-text">
                 {renderRichText(sanitizeRichText(cleanedAi.text))}
                 {lastAiMsg?.citations && lastAiMsg.citations.length > 0 && (
-                  <div className="ai-citations-row" aria-label="Fuentes del documento">
+                      <div className="ai-citations-row" aria-label={t.sourcesAria}>
                     <span className="citations-label">
                       Lo encontré en{lastAiMsg.searchMode ? ` · ${lastAiMsg.searchMode === 'hybrid' ? 'búsqueda combinada' : 'búsqueda literal'}` : ''}:
                     </span>
@@ -877,13 +873,13 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                         <summary title={c.snippet}><Icon name="file" size={14} /> Pág. {c.pageNumber}</summary>
                         <div className="citation-snippet">
                           <q>{c.snippet}</q>
-                          {matchTypeLabel(c.matchType) && <span className="citation-match"> · {matchTypeLabel(c.matchType)}</span>}
+                            {matchTypeLabel(c.matchType, t) && <span className="citation-match"> · {matchTypeLabel(c.matchType, t)}</span>}
                           {' · '}
                           <button
                             type="button"
                             className="citation-goto"
                             onClick={() => gotoPage(c.pageNumber, c.snippet)}
-                            aria-label={`Ver página ${c.pageNumber} en el visor`}
+                              aria-label={t.viewPage(c.pageNumber)}
                           >
                             Ver página →
                           </button>
@@ -909,7 +905,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 )}
                 {cleanedAi.rejected && (
                   <div className="chart-notice chart-rejected" role="status">
-                    Gráfica descartada: los datos no se verificaron en el documento.
+                      {t.chartDiscarded}
                   </div>
                 )}
                 {cleanedAi.noChart && cleanedAi.noChartText && (
@@ -919,10 +915,10 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 )}
                 <div className="ai-actions-row">
                   <ModelPill model={lastAiMsg?.model} />
-                  <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label="Copiar respuesta">
-                    <Icon name="copy" size={14} /> Copiar
+                  <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label={t.copyResponse}>
+                    <Icon name="copy" size={14} /> {t.copyBtn}
                   </button>
-                  <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && handleDownloadMd(lastAiMsg)} aria-label="Descargar respuesta en Markdown">
+                  <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && handleDownloadMd(lastAiMsg)} aria-label={t.downloadMdAria}>
                     <Icon name="download" size={14} /> .md
                   </button>
                   {lastAiMsg && copiedId === lastAiMsg.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
@@ -957,15 +953,15 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             aria-expanded={chatLogOpen}
           >
             <Icon name={chatLogOpen ? 'chevron-up' : 'message'} size={14} />
-            {chatLogOpen ? 'Ocultar historial de chat' : `Ver historial completo (${messages.length})`}
+            {chatLogOpen ? t.chatLogHide : t.chatLogShow(messages.length)}
           </button>
           <button
             type="button"
             className="btn btn-secondary small"
             onClick={clearChat}
-            title="Limpiar conversación"
+            title={t.clearChatAria}
           >
-            <Icon name="trash" size={14} /> Limpiar
+            <Icon name="trash" size={14} /> {t.clearChat}
           </button>
           {onOpenFilePicker && (
             <button
@@ -974,7 +970,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               onClick={onOpenFilePicker}
               title="Cargar otro documento PDF"
             >
-              <Icon name="upload" size={14} /> Cambiar archivo
+              <Icon name="upload" size={14} /> {t.changeFile}
             </button>
           )}
         </div>
@@ -1000,7 +996,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 <div className="excel-msg-body">
                   {renderRichText(sanitizeRichText(msgText))}
                   {m.citations && m.citations.length > 0 && (
-                    <div className="ai-citations-row" aria-label="Fuentes del documento">
+                  <div className="ai-citations-row" aria-label={t.sourcesAria}>
                       <span className="citations-label">
                         Lo encontré en{m.searchMode ? ` · ${m.searchMode === 'hybrid' ? 'búsqueda combinada' : 'búsqueda literal'}` : ''}:
                       </span>
@@ -1009,13 +1005,13 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                           <summary title={c.snippet}><Icon name="file" size={14} /> Pág. {c.pageNumber}</summary>
                           <div className="citation-snippet">
                             <q>{c.snippet}</q>
-                            {matchTypeLabel(c.matchType) && <span className="citation-match"> · {matchTypeLabel(c.matchType)}</span>}
+                          {matchTypeLabel(c.matchType, t) && <span className="citation-match"> · {matchTypeLabel(c.matchType, t)}</span>}
                             {' · '}
                             <button
                               type="button"
                               className="citation-goto"
                               onClick={() => gotoPage(c.pageNumber, c.snippet)}
-                              aria-label={`Ver página ${c.pageNumber} en el visor`}
+                            aria-label={t.viewPage(c.pageNumber)}
                             >
                               Ver página →
                             </button>
@@ -1028,7 +1024,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     <div className="ai-actions-row">
                       <ModelPill model={m.model} />
                       <button type="button" className="ai-action-btn" onClick={() => void handleCopy(m.id, m.content)} aria-label="Copiar respuesta">
-                        <Icon name="copy" size={14} /> Copiar
+                        <Icon name="copy" size={14} /> {t.copyBtn}
                       </button>
                       {copiedId === m.id && <span className="ai-copied-hint" role="status">¡Copiado!</span>}
                     </div>
@@ -1037,7 +1033,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                     <>
                       {msgVer.dropped > 0 && (
                         <div className="chart-notice" role="status">
-                          {msgVer.dropped} de {msgVer.total} datos no se verificaron en el documento; se muestran solo los verificados.
+                          {t.noDataVerified(msgVer.dropped, msgVer.total)}
                         </div>
                       )}
                       <Suspense fallback={<div className="chart-skeleton" role="status">Dibujando gráfica…</div>}>
@@ -1050,12 +1046,12 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   )}
                   {msgRejected && (
                     <div className="chart-notice chart-rejected" role="status">
-                      Gráfica descartada: los datos no se verificaron en el documento.
+                    {t.chartDiscarded}
                     </div>
                   )}
                   {msgNoChart && (
                     <div className="chart-notice" role="status">
-                      {describeNoChart(msgPages ?? undefined) ?? 'El modelo no encontró cifras comparables en el alcance analizado y no devolvió gráfica.'}
+                      {describeNoChart(msgPages ?? undefined, t) ?? t.noChartRange('the analyzed scope')}
                     </div>
                   )}
                 </div>
@@ -1066,7 +1062,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             <div className="excel-chat-error" role="alert">
               <div>
                 <strong>Error en la petición:</strong>
-                <p style={{ margin: '4px 0 0', fontSize: 12 }}>{error || 'Error de conexión con el servidor.'}</p>
+                <p style={{ margin: '4px 0 0', fontSize: 12 }}>{error || t.errConnection}</p>
               </div>
               <button type="button" className="btn btn-secondary small" onClick={regenerate}>Reintentar</button>
             </div>
@@ -1077,21 +1073,21 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       <div className="excel-dock">
         {!pdfDoc && messages.length === 0 && (
           <div className="excel-starters" role="group" aria-label="Cómo empezar">
-            <p className="excel-starters-title">Sube un PDF y pregunta con tus palabras — cada respuesta cita su página.</p>
+            <p className="excel-starters-title">{t.startersTitle}</p>
             {onOpenFilePicker && (
               <button type="button" className="suggestion-chip" onClick={onOpenFilePicker}>
-                <Icon name="upload" size={14} /> Subir mi PDF
+                <Icon name="upload" size={14} /> {t.uploadPdf}
               </button>
             )}
           </div>
         )}
         {pdfDoc && messages.length === 0 && !loading && (
-          <div className="excel-starters-row" role="group" aria-label="Capacidades: preguntas sugeridas">
+          <div className="excel-starters-row" role="group" aria-label={t.startersGroup}>
             {[
-              { label: 'Resumir en 3 puntos', query: 'Resume este documento en 3 puntos' },
-              { label: 'Preguntar con citas', query: '¿Cuáles son los puntos clave? Cita las páginas' },
-              { label: 'Buscar en el documento', query: '¿Qué dice el documento sobre ' },
-              { label: 'Graficar cifras', query: '¿Qué cifras comparables trae el documento? Incluye las páginas' },
+              { label: t.suggestResume, query: t.suggestResumeQ },
+              { label: t.suggestCite, query: t.suggestCiteQ },
+              { label: t.suggestSearch, query: t.suggestSearchQ },
+              { label: t.suggestChart, query: t.suggestChartQ },
             ].map((s) => (
               <button key={s.label} type="button" className="suggestion-chip" onClick={() => setInput(s.query)}>
                 {s.label}
@@ -1105,8 +1101,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               type="button"
               className="dock-attach-btn"
               onClick={onOpenFilePicker}
-              title="Subir documento PDF (.pdf)"
-              aria-label="Subir PDF"
+              title={t.changeFileAria}
+              aria-label={t.changeFile}
             >
               <Icon name="upload" size={16} />
             </button>
@@ -1115,12 +1111,12 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             const support = getDictationSupport()
             const unavailableTitle =
               support === 'no-api'
-                ? 'Dictado no disponible en este navegador (ej. Firefox): usa Chrome, Edge o Safari, o escribe la pregunta'
+                ? t.dictNoApi
                 : support === 'insecure-context'
-                  ? 'El dictado requiere HTTPS o localhost: escribe la pregunta o abre la app en conexión segura'
+                  ? t.dictNoHttps
                   : listening
-                    ? 'Detener dictado'
-                    : 'Dictar pregunta por voz'
+                    ? t.dictStop
+                    : t.dictStart
             return (
               <button
                 type="button"
@@ -1128,7 +1124,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 onClick={handleMicToggle}
                 disabled={loading || support !== 'supported'}
                 title={unavailableTitle}
-                aria-label={support === 'supported' ? (listening ? 'Detener dictado' : 'Dictar pregunta por voz') : unavailableTitle}
+                aria-label={support === 'supported' ? (listening ? t.dictStop : t.dictStart) : unavailableTitle}
                 aria-pressed={listening}
               >
                 <Icon name="mic" size={16} />
@@ -1140,8 +1136,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               type="button"
               className={`dock-attach-btn${muted ? ' dock-muted' : ''}`}
               onClick={toggleMute}
-              title={muted ? 'Activar voz de respuesta' : 'Silenciar voz de respuesta'}
-              aria-label={muted ? 'Activar voz de respuesta' : 'Silenciar voz de respuesta'}
+              title={muted ? t.ttsOn : t.ttsOff}
+              aria-label={muted ? t.ttsOn : t.ttsOff}
               aria-pressed={!muted}
             >
               <Icon name={muted ? 'volume-x' : 'volume'} size={16} />
@@ -1152,8 +1148,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               type="button"
               className="dock-attach-btn"
               onClick={cancelTts}
-              title="Parar audio"
-              aria-label="Parar audio"
+              title={t.stopAudio}
+              aria-label={t.stopAudio}
             >
               <Icon name="pause" size={16} />
             </button>
@@ -1162,8 +1158,8 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             type="button"
             className="dock-attach-btn"
             onClick={() => setWorkflowQuickOpen(true)}
-            title="Automatizaciones"
-            aria-label="Abrir automatizaciones"
+            title={t.workflowBtn}
+            aria-label={t.workflowAria}
           >
             <Icon name="send" size={16} />
           </button>
@@ -1171,17 +1167,17 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             className="excel-text-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={pdfDoc ? `Pregunta sobre ${truncateName(pdfDoc.filename)}… (ej. Resume los 3 puntos clave)` : 'Sube un PDF y conversamos…'}
-            aria-label="Escribe tu consulta"
+            placeholder={pdfDoc ? t.inputPlaceholder(truncateName(pdfDoc.filename)) : t.inputPlaceholderEmpty}
+            aria-label={t.inputAria}
             disabled={loading}
           />
           {loading ? (
-            <button type="button" className="btn btn-primary btn-dock" onClick={stop} aria-label="Detener">
-              <Icon name="close" size={16} /> Detener
+            <button type="button" className="btn btn-primary btn-dock" onClick={stop} aria-label={t.stopBtn}>
+              <Icon name="close" size={16} /> {t.stopBtn}
             </button>
           ) : (
-            <button type="submit" className="btn btn-primary btn-dock" disabled={!input.trim()} aria-label="Enviar">
-              <Icon name="send" size={16} /> Enviar
+            <button type="submit" className="btn btn-primary btn-dock" disabled={!input.trim()} aria-label={t.sendBtn}>
+              <Icon name="send" size={16} /> {t.sendBtn}
             </button>
           )}
         </form>
@@ -1192,7 +1188,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             ) : (
               <>
                 <span className="dock-voice-dot" aria-hidden="true" />
-                Escuchando… {dictationInterim ? `«${dictationInterim}»` : 'habla ahora'}
+                {t.listening} {dictationInterim ? `«${dictationInterim}»` : t.speakNow}
               </>
             )}
           </p>

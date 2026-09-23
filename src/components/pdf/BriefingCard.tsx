@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { sanitizeRichText, ModelPill } from '../excel/ExcelChat'
+import { useLocale } from '../../lib/locale'
 
 const PAGE_CITE_RE = /\[P[áa]g\.?\s*(\d+)\]|\[P[áa]gina\s*(\d+)\]|\[p\.\s*(\d+)\]/gi
 
@@ -9,7 +10,7 @@ function gotoPage(page: number) {
   }
 }
 
-function renderWithCites(text: string, keyPrefix: string): React.ReactNode[] {
+function renderWithCites(text: string, keyPrefix: string, viewPage: (n: number) => string): React.ReactNode[] {
   const nodes: React.ReactNode[] = []
   const re = new RegExp(PAGE_CITE_RE.source, 'gi')
   let last = 0
@@ -24,8 +25,8 @@ function renderWithCites(text: string, keyPrefix: string): React.ReactNode[] {
         key={`${keyPrefix}-c${key++}`}
         type="button"
         className="citation-badge citation-inline"
-        title={`Ver página ${page} en el visor`}
-        aria-label={`Ver página ${page} en el visor`}
+        title={viewPage(pageNum)}
+        aria-label={viewPage(pageNum)}
         onClick={() => gotoPage(pageNum)}
       >
         [Pág. {page}]
@@ -43,12 +44,8 @@ interface BriefingCardProps {
   model?: string
 }
 
-/**
- * Briefing proactivo (Fase 24C): la IA trabaja antes de que escribas.
- * Muestra los 3 puntos clave del documento con citas clicables al visor.
- * Si la generación falla, App no la monta (degradado silencioso).
- */
 export function BriefingCard({ text, loading, model }: BriefingCardProps) {
+  const { t } = useLocale()
   const points = useMemo(() => {
     if (!text) return []
     return text
@@ -61,10 +58,10 @@ export function BriefingCard({ text, loading, model }: BriefingCardProps) {
   if (!loading && points.length === 0) return null
 
   return (
-    <div className="briefing-card" aria-label="Resumen del documento" aria-live="polite">
+    <div className="briefing-card" aria-label={t.briefAria} aria-live="polite">
       <div className="briefing-head">
         <span className="briefing-sparkle" aria-hidden>✦</span>
-        <strong>Este documento en 3 puntos</strong>
+        <strong>{t.briefTitle}</strong>
         <ModelPill model={model} />
       </div>
       {loading ? (
@@ -72,12 +69,12 @@ export function BriefingCard({ text, loading, model }: BriefingCardProps) {
           <span className="skeleton-dot" />
           <span className="skeleton-dot" />
           <span className="skeleton-dot" />
-          <span>Leyendo lo esencial…</span>
+          <span>{t.briefLoading}</span>
         </div>
       ) : (
         <ul className="briefing-list">
           {points.map((p, i) => (
-            <li key={i}>{renderWithCites(sanitizeRichText(p), `b${i}`)}</li>
+            <li key={i}>{renderWithCites(sanitizeRichText(p), `b${i}`, t.viewPage)}</li>
           ))}
         </ul>
       )}

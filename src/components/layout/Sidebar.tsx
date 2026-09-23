@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { listLibrary, removeFromLibrary, type LibDoc } from '../../lib/docLibrary'
 import { Icon } from '../ui/Icon'
 import { EngineStatus } from './EngineStatus'
+import { useLocale } from '../../lib/locale'
 
 interface SidebarProps {
   currentId: string | null
@@ -26,11 +27,6 @@ function fmtSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-/**
- * Sidebar estilo QwenWork, contenido honesto (sin backend §5.4/§31):
- * Nuevo análisis + Recientes reales (OPFS) + Capacidades locales +
- * usuario local. Sin Skills/Connectors/Drive/Scheduled.
- */
 export function Sidebar({
   currentId,
   refreshToken,
@@ -48,6 +44,7 @@ export function Sidebar({
   onToggleWayflow,
 }: SidebarProps) {
   const [docs, setDocs] = useState<LibDoc[]>([])
+  const { locale, setLocale, t } = useLocale()
 
   useEffect(() => {
     setDocs(listLibrary())
@@ -58,31 +55,33 @@ export function Sidebar({
     onRemoved()
   }
 
-  // Rail contraído estilo Copilot: mismos accesos, solo iconos con tooltip.
-  // Recientes no se hojea a ciegas: su icono expande el menú.
   if (collapsed) {
     return (
       <div className="sidebar-body rail-body">
         <EngineStatus compact />
-        <button type="button" className="btn btn-secondary rail-btn" onClick={onNewAnalysis} title="Nuevo análisis" aria-label="Nuevo análisis">
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onNewAnalysis} title={t.sbNewAnalysis} aria-label={t.sbNewAnalysis}>
           <Icon name="plus" size={16} />
         </button>
-        <button type="button" className="btn btn-secondary rail-btn" onClick={onUpload} title="Cargar PDF" aria-label="Cargar PDF">
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onUpload} title={t.sbUpload} aria-label={t.sbUpload}>
           <Icon name="upload" size={16} />
         </button>
-        <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleWayflow} title="Automatización" aria-label="Automatización">
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleWayflow} title={t.sbWorkflow} aria-label={t.sbWorkflow}>
           <Icon name="send" size={16} />
         </button>
-        <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleRail} title="Recientes — expandir menú" aria-label="Recientes — expandir menú" aria-expanded={false}>
+        <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleRail} title={t.sbRecentsExpand} aria-label={t.sbRecentsExpand} aria-expanded={false}>
           <Icon name="file" size={16} />
         </button>
         <div className="sidebar-footer rail-footer">
+          <div className="locale-toggle" role="radiogroup" aria-label="Idioma / Language">
+            <button type="button" className={`locale-toggle-btn${locale === 'en' ? ' active' : ''}`} onClick={() => setLocale('en')} role="radio" aria-checked={locale === 'en'} aria-label="English">EN</button>
+            <button type="button" className={`locale-toggle-btn${locale === 'es' ? ' active' : ''}`} onClick={() => setLocale('es')} role="radio" aria-checked={locale === 'es'} aria-label="Español">ES</button>
+          </div>
           <button
             type="button"
             className="btn btn-secondary rail-btn"
             onClick={onCustomize}
-            title={`${userName || 'Lector local'} · Personalizar ${robotName}`}
-            aria-label={`${userName || 'Lector local'} · Personalizar ${robotName}`}
+            title={t.sbCustomize(userName, robotName)}
+            aria-label={t.sbCustomize(userName, robotName)}
           >
             <Icon name="user" size={16} />
           </button>
@@ -90,8 +89,8 @@ export function Sidebar({
             type="button"
             className="btn btn-secondary rail-btn"
             onClick={onToggleRail}
-            title="Expandir menú"
-            aria-label="Expandir menú"
+            title={t.sbExpand}
+            aria-label={t.sbExpand}
             aria-expanded={false}
           >
             <Icon name="chevron-right" size={16} />
@@ -105,19 +104,19 @@ export function Sidebar({
     <div className="sidebar-body">
       <EngineStatus />
       <button type="button" className="btn btn-primary sidebar-new" onClick={onNewAnalysis}>
-        <Icon name="plus" size={16} /> Nuevo análisis
+        <Icon name="plus" size={16} /> {t.sbNewAnalysis}
       </button>
       <button type="button" className="btn btn-secondary sidebar-new" onClick={onUpload}>
-        <Icon name="upload" size={16} /> Cargar PDF
+        <Icon name="upload" size={16} /> {t.sbUpload}
       </button>
       <button type="button" className="btn btn-secondary sidebar-new" onClick={onToggleWayflow}>
-        <Icon name="send" size={16} /> Automatización
+        <Icon name="send" size={16} /> {t.sbWorkflow}
       </button>
 
-      <nav className="sidebar-section" aria-label="Documentos recientes">
-        <h2 className="sidebar-heading">Recientes</h2>
+      <nav className="sidebar-section" aria-label={t.sbRecents}>
+        <h2 className="sidebar-heading">{t.sbRecents}</h2>
         {docs.length === 0 ? (
-          <p className="sidebar-empty">Aún no hay documentos. Carga tu primer PDF.</p>
+          <p className="sidebar-empty">{t.sbEmpty}</p>
         ) : (
           <ul className="sidebar-recents">
             {docs.map((d) => (
@@ -137,8 +136,8 @@ export function Sidebar({
                   type="button"
                   className="sidebar-recent-remove"
                   onClick={() => void removeDoc(d.id)}
-                  title="Quitar de recientes"
-                  aria-label={`Quitar ${d.name} de recientes`}
+                  title={t.sbRemove(d.name)}
+                  aria-label={t.sbRemove(d.name)}
                 >
                   <Icon name="close" size={14} />
                 </button>
@@ -149,33 +148,37 @@ export function Sidebar({
       </nav>
 
       <p className="sidebar-privacy">
-        <Icon name="lock" size={14} /> Tu PDF nunca sale de este navegador.
+        <Icon name="lock" size={14} /> {t.sbPrivacy}
       </p>
 
       <div className="sidebar-footer">
-        <div className="sidebar-user" title={userName || 'Lector local'}>
+        <div className="sidebar-user" title={userName || t.sbLocalUser}>
           <Icon name="user" size={16} />
           <span className="sidebar-user-names">
-            <strong>{userName || 'Lector local'}</strong>
-            <small>{hasDocument ? 'leyendo un PDF' : 'sin documento'} · {robotName}</small>
+            <strong>{userName || t.sbLocalUser}</strong>
+            <small>{hasDocument ? t.sbReadingPdf : t.sbNoDoc} · {robotName}</small>
           </span>
         </div>
         <div className="sidebar-footer-actions">
           <button type="button" className="btn btn-secondary small" onClick={onCustomize}>
-            <Icon name="robot" size={14} /> Personalizar
+            <Icon name="robot" size={14} /> {t.sbCustomizeBtn}
           </button>
           <button type="button" className="btn btn-secondary small" onClick={onHowItWorks}>
-            ¿Cómo funciona?
+            {t.sbHowItWorks}
           </button>
+          <div className="locale-toggle" role="radiogroup" aria-label="Idioma / Language">
+            <button type="button" className={`locale-toggle-btn${locale === 'en' ? ' active' : ''}`} onClick={() => setLocale('en')} role="radio" aria-checked={locale === 'en'} aria-label="English">EN</button>
+            <button type="button" className={`locale-toggle-btn${locale === 'es' ? ' active' : ''}`} onClick={() => setLocale('es')} role="radio" aria-checked={locale === 'es'} aria-label="Español">ES</button>
+          </div>
           <button
             type="button"
             className="btn btn-secondary small"
             onClick={onToggleRail}
-            title="Contraer menú (solo iconos)"
-            aria-label="Contraer menú (solo iconos)"
+            title={t.sbCollapse}
+            aria-label={t.sbCollapse}
             aria-expanded={true}
           >
-            <Icon name="chevron-left" size={14} /> Contraer
+            <Icon name="chevron-left" size={14} /> {t.sbCollapse}
           </button>
         </div>
       </div>
