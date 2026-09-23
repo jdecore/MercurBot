@@ -423,33 +423,6 @@ function MainDashboard() {
     if (file) parseFile(file)
   }, [parseFile])
 
-  // "Nuevo análisis" del sidebar: vuelve al estado vacío sin borrar la
-  // biblioteca. El historial del chat es por documento y se recarga solo.
-  const newAnalysis = useCallback(() => {
-    try {
-      abortControllerRef.current?.abort()
-    } catch {
-      /* ignore */
-    }
-    abortControllerRef.current = null
-    briefingReqRef.current++
-    setPdfDoc(null)
-    setPdfFile(null)
-    setBriefing(null)
-    setBriefingModel(undefined)
-    setBriefingLoading(false)
-    setPdfProcessing(null)
-    setError(null)
-    setLoading(false)
-    setPanelHighlight(null)
-    setPanelVisible(true)
-    setPanelPage(1)
-    setCurrentLibId(null)
-    setSidebarOpen(false)
-    setMascotaMood('neutro')
-    setMascotaSubtitulo('')
-  }, [setError, setLoading, setPdfDoc])
-
   // Fase A — split layout: con documento y panel visible, chat a la
   // izquierda y PDF a la derecha; sin documento (o panel oculto), vista
   // centrada original.
@@ -472,8 +445,6 @@ function MainDashboard() {
       robotName={robotName}
       collapsed={railCollapsed}
       onToggleRail={toggleRail}
-      onNewAnalysis={newAnalysis}
-      onUpload={() => inputRef.current?.click()}
       onOpenDoc={(doc) => {
         blurActive()
         setSidebarOpen(false)
@@ -540,24 +511,29 @@ function MainDashboard() {
           {/* ─── LANDING (no document) ─── */}
           {!hasDocument && (
             <div className="landing">
-              {/* Hero */}
               <header className="landing-hero">
                 <div className="landing-hero-badge">{t.heroTag}</div>
                 <h1 className="landing-hero-title">{t.heroTitle}</h1>
                 <p className="landing-hero-sub">{t.heroSub}</p>
-                <div className="landing-hero-actions">
-                  <button type="button" className="btn btn-primary landing-cta" onClick={() => inputRef.current?.click()}>
-                    {t.heroCTATry}
-                  </button>
-                </div>
-                <div className="landing-hero-robot">
-                  <Mascota
-                    variant={mascotRobot}
-                    config={robotConfig}
-                    mood={mascotaMood}
-                    subtitulo=""
-                    size={120}
-                  />
+                <div className="landing-hero-dropzone" onClick={() => inputRef.current?.click()} role="button" tabIndex={0}>
+                  <div className="landing-hero-robot">
+                    <Mascota
+                      variant={mascotRobot}
+                      config={robotConfig}
+                      mood={mascotaMood}
+                      subtitulo=""
+                      size={120}
+                    />
+                  </div>
+                  <div className="landing-dropzone-text">
+                    <strong className="landing-dropzone-title">{t.dropTitle}</strong>
+                    <span className="landing-dropzone-hint">{t.dropHint}</span>
+                  </div>
+                  <div className="landing-hero-actions">
+                    <button type="button" className="btn btn-primary landing-cta" onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}>
+                      {t.heroCTATry}
+                    </button>
+                  </div>
                 </div>
               </header>
             </div>

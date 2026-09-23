@@ -12,8 +12,6 @@ interface SidebarProps {
   robotName: string
   collapsed: boolean
   onToggleRail: () => void
-  onNewAnalysis: () => void
-  onUpload: () => void
   onOpenDoc: (doc: LibDoc) => void
   onRemoved: () => void
   onCustomize: () => void
@@ -35,8 +33,6 @@ export function Sidebar({
   robotName,
   collapsed,
   onToggleRail,
-  onNewAnalysis,
-  onUpload,
   onOpenDoc,
   onRemoved,
   onCustomize,
@@ -59,12 +55,6 @@ export function Sidebar({
     return (
       <div className="sidebar-body rail-body">
         <EngineStatus compact />
-        <button type="button" className="btn btn-secondary rail-btn" onClick={onNewAnalysis} title={t.sbNewAnalysis} aria-label={t.sbNewAnalysis}>
-          <Icon name="plus" size={16} />
-        </button>
-        <button type="button" className="btn btn-secondary rail-btn" onClick={onUpload} title={t.sbUpload} aria-label={t.sbUpload}>
-          <Icon name="upload" size={16} />
-        </button>
         <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleWayflow} title={t.sbWorkflow} aria-label={t.sbWorkflow}>
           <Icon name="send" size={16} />
         </button>
@@ -103,12 +93,6 @@ export function Sidebar({
   return (
     <div className="sidebar-body">
       <EngineStatus />
-      <button type="button" className="btn btn-primary sidebar-new" onClick={onNewAnalysis}>
-        <Icon name="plus" size={16} /> {t.sbNewAnalysis}
-      </button>
-      <button type="button" className="btn btn-secondary sidebar-new" onClick={onUpload}>
-        <Icon name="upload" size={16} /> {t.sbUpload}
-      </button>
       <button type="button" className="btn btn-secondary sidebar-new" onClick={onToggleWayflow}>
         <Icon name="send" size={16} /> {t.sbWorkflow}
       </button>

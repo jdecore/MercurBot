@@ -65,6 +65,7 @@ export type ProductDict = {
   dictUnavailable: string; dictInsecure: string; dictStop: string; dictStart: string
   ttsOn: string; ttsOff: string; stopAudio: string; workflowBtn: string; workflowAria: string
   placeholderDoc: (name: string) => string; placeholderNoDoc: string; inputAria: string
+  dropOr: string
   stopBtn: string; sendBtn: string; listening: string; speakNow: string; dictNoApi: string; dictNoHttps: string
   noChartRange: (range: string) => string; noChartNarrative: (range: string) => string
   noChartSingular: (range: string, n: number) => string; modelPill: (model: string) => string
@@ -289,6 +290,7 @@ const enDict: FullDict = {
   workflowAria: 'Open automations',
   placeholderDoc: (n: string) => `Ask about ${n}… (e.g. Summarize the 3 key points)`,
   placeholderNoDoc: 'Upload a PDF and let\'s chat…',
+  dropOr: 'or',
   listening: 'Listening…',
   speakNow: 'speak now',
   dictNoApi: 'Dictation not available in this browser (e.g. Firefox): use Chrome, Edge, or Safari, or type the question',
@@ -668,6 +670,7 @@ const esDict: FullDict = {
   workflowAria: 'Abrir automatizaciones',
   placeholderDoc: (n: string) => `Pregunta sobre ${n}… (ej. Resume los 3 puntos clave)`,
   placeholderNoDoc: 'Sube un PDF y conversamos…',
+  dropOr: 'o',
   stopBtn: 'Detener',
   sendBtn: 'Enviar',
   listening: 'Escuchando…',

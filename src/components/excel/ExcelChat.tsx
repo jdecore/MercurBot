@@ -927,19 +927,9 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               </div>
             ) : pdfDoc ? (
               <div className="speech-bubble-idle">
-                <p>¿Qué quieres saber de <strong>{pdfDoc.filename}</strong>?</p>
+                <p>{t.placeholderDoc(pdfDoc.filename)}</p>
               </div>
-            ) : (
-              <div className="welcome-dropzone" onClick={onOpenFilePicker} role="button" tabIndex={0}>
-                <div className="dropzone-icon-ring">
-                  <Icon name="folder" size={22} />
-                </div>
-                <div className="dropzone-text">
-                  <strong className="dropzone-title">Suelta tu PDF aquí — lo leo contigo</strong>
-                  <span className="dropzone-hint">PDF con texto · o haz clic para buscarlo · nada se sube</span>
-                </div>
-              </div>
-            )}
+            ) : null}
 
           </div>
         </div>
