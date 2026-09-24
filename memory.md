@@ -30,6 +30,19 @@ src/components/dashboard/PdfProcessingCard.tsx
 
 ## Qué se hizo en la última sesión
 
+### Galaxy Phase 4 — Vista documento Galaxy ✅ (23/09)
+
+**Objetivo:** Robot con orbe en pecho, anillo orbital, consola de cristal, píldora flotante.
+
+**Archivos modificados:**
+- `src/components/ui/Mascota.tsx` — Orb en pecho SVG (cx=100, cy=148, r=6 con gradient + core + highlight)
+- `src/components/ui/MascotaSvg.css` — Orb CSS states: breathe, listen (pulse), think (rotate), speak (strong pulse), success (burst). +48 lines
+- `src/App.tsx` — Document view: wrapper `.robot-orbit` con `data-state` (idle/listening/thinking/speaking)
+- `src/App.css` — Orbital ring CSS (`::before` ring + `::after` gradient spin, 4 data-state speeds), Galaxy crystal chat (glass + blur), floating pill dock (rounded-full glass), speech bubble glass, card glass, btn Galaxy, btn-primary gradient, citation badges galaxy, engine-status galaxy, skeleton galaxy, table/tabs glass, landing sections Galaxy (evo badges, steps, roadmap, footer, tech pills). Dead canvas selectors removed. Token aliases added: `--color-card`, `--color-foreground`, `--color-muted-foreground`
+- `src/index.css` — Added missing token aliases for card/foreground/muted-foreground
+
+**Resultado:** toda la app (landing + documento) usa Galaxy dark cosmos. Build OK.
+
 ### Product i18n Migration (Phase 2) — 23/09
 
 **Objetivo:** Migrar todos los strings del producto (UI) al diccionario bilingüe ES/EN.
@@ -172,14 +185,14 @@ Tokens `--galaxy-bg`, `--galaxy-surface`, `--galaxy-accent`, estrellas con `radi
 ### Fase 1 — Landing (coronar lo existente) ✅
 Robot 225px con halo radial azul-galaxy, agujero negro centrado abajo, badge + tagline con brillo sobre fondo estrellado.
 
-### Fase 2 — Sidebar → riel Galaxy
+### Fase 2 — Sidebar → riel Galaxy ✅
 Riel oscuro translúcido: logo mini → recientes cristal → abajo solo Personalizar. Drawer cristal en móvil.
 
 ### Fase 3 — Idioma automático + robot por idioma ✅
 Auto-detección (`navigator.language` + timezone), quitar toggle del sidebar. EN = frío/azul, ES = cálido/rojo.
 
-### Fase 4 — Vista documento Galaxy + orbe + bocadillo vivo
-Robot-planeta arriba con anillo de 4 estados, consola de cristal, píldora flotante, visor PDF plegable, streaming token a token en bocadillo.
+### Fase 4 — Vista documento Galaxy + orbe + bocadillo vivo ✅
+Robot con orbe en pecho (4 estados CSS: breathe/pulse/rotate/glow), anillo orbital con 4 estados (idle/listening/thinking/speaking), consola de cristal (glass + blur), píldora flotante (input rounded-full), chat messages glass, citations galaxy, buttons/links/capsule todos Galaxy. Limpieza de dead canvas selectors.
 
 ### Fase 5 — Quitar automatización
 Fuera: BriefingCard, Wayflow, workflows, starters, speakInteraction auto, copixi:reread.

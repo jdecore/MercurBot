@@ -534,17 +534,19 @@ function MainDashboard() {
 
           {/* ─── PRODUCT (with document) ─── */}
           {hasDocument && (
-            <div className={`mascot-stage compact`}>
-              <Mascota
-                variant={mascotRobot}
-                config={robotConfig}
-                mood={mascotaMood}
-                subtitulo={mascotaSubtitulo}
-                size={72}
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('copixi:reread'))
-                }}
-              />
+            <div className="mascot-stage compact">
+              <div className="robot-orbit" data-state={mascotaMood === 'pensando' ? 'thinking' : mascotaMood === 'hablando' ? 'speaking' : mascotaMood === 'escuchando' ? 'listening' : 'idle'}>
+                <Mascota
+                  variant={mascotRobot}
+                  config={robotConfig}
+                  mood={mascotaMood}
+                  subtitulo={mascotaSubtitulo}
+                  size={72}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('copixi:reread'))
+                  }}
+                />
+              </div>
               <p className="mascot-greeting" aria-live="polite">
                 {mascotaSubtitulo || t.greetingDoc(robotName, pdfDoc?.filename ?? '')}
               </p>

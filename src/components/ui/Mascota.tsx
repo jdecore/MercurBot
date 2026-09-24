@@ -601,6 +601,10 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
           {/* Body */}
           <ellipse cx="100" cy="148" rx="36" ry="26" fill={`url(#bg-${uid})`} stroke="#E2E8F0" strokeWidth="1.5" />
           <ellipse cx="100" cy="140" rx="22" ry="8" fill="#fff" opacity="0.35" />
+          {/* Orb in chest */}
+          <circle cx="100" cy="148" r="6" fill={`url(#tg-${uid})`} className="svg-orb" />
+          <circle cx="100" cy="148" r="4" fill={accent} opacity="0.7" className="svg-orb-core" />
+          <circle cx="98" cy="146" r="1.5" fill="#fff" opacity="0.8" />
           {/* Left arm */}
           <g transform="rotate(-12 64 138)">
             <rect x="54" y="136" width="12" height="34" rx="6" fill={`url(#bg-${uid})`} stroke="#E2E8F0" strokeWidth="1" />

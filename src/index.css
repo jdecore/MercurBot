@@ -44,6 +44,9 @@
   --color-tropical-hover: #6EE7B7;
   --color-on-tropical: #022C22;
   --color-border: var(--galaxy-border);
+  --color-card: var(--galaxy-surface);
+  --color-foreground: var(--galaxy-text);
+  --color-muted-foreground: var(--galaxy-text-muted);
   --color-success: var(--color-tropical);
   --color-warning: #FBBF24;
   --color-danger: #F87171;
@@ -148,6 +151,9 @@ body.light {
   --color-tropical-hover: #0A5F53;
   --color-on-tropical: #FFFFFF;
   --color-border: #D5D5CB;
+  --color-card: #FFFFFF;
+  --color-foreground: #1C1E1C;
+  --color-muted-foreground: #5A5E58;
   --color-success: var(--color-tropical);
   --color-warning: #8a5a00;
   --color-danger: #9E2B47;

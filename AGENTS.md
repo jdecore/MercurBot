@@ -65,9 +65,9 @@
 |------|--------|-------------|
 | 0 | ✅ | Fundación Galaxy — tokens + cielo estrellado |
 | 1 | ✅ | Landing — robot 225px + halo + agujero negro centrado |
-| 2 | ⏳ | Sidebar → riel Galaxy oscuro translúcido |
+| 2 | ✅ | Sidebar → riel Galaxy oscuro translúcido |
 | 3 | ✅ | Idioma auto (navigator + timezone) + robot por idioma (frío/cálido) |
-| 4 | ⏳ | Vista documento — robot-planeta con orbe + bocadillo streaming |
+| 4 | ✅ | Vista documento — robot orbe + anillo orbital + consola cristal + píldora flotante |
 | 5 | ⏳ | Quitar automatización (briefing, wayflow, starters, speakInteraction) |
 | 6 | ⏳ | Voz en vivo (sesión continua, auto-envío, barge-in, volumeMeter) |
 | 7 | ⏳ | Laya ONNX en caché + portero de embeddings (literal vs semántico) |
