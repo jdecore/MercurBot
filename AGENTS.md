@@ -72,8 +72,51 @@
 
 ## 7. Memoria del Agente (`memory.md`)
 
-`memory.md` es la memoria persistente. Siempre leer al inicio y actualizar al terminar una tarea.
+`memory.md` es la **bitácora de estado y aprendizajes** del proyecto. Su propósito es que cualquier agente nuevo pueda entender el estado actual, el historial de decisiones, y los errores/éxitos pasados sin tener que reconstruir todo desde cero.
 
-1. **Al inicio:** Leer `memory.md` completo
-2. **Al terminar tarea:** Actualizar con qué se hizo, por qué, resultado, aprendizajes
-3. **Si excede ~400 líneas:** Resumir entradas antiguas (3-5 líneas por sesión), agregar nueva info
+### Reglas de uso
+
+1. **Al inicio de toda sesión:** leer `memory.md` completo. Es la fuente de verdad del estado del proyecto.
+2. **Al terminar una tarea:** actualizar `memory.md` con una nueva entrada que incluya:
+   - Qué se hizo
+   - Por qué se hizo
+   - Resultado (éxito/error/parcial)
+   - Aprendizajes o decisiones clave para el futuro
+3. **Si excede ~400 líneas:** resumir entradas antiguas (3-5 líneas por sesión), agregar nueva info
+4. **Tono:** técnico, conciso, sin relleno. Otros agentes leerán esto para entender el proyecto.
+
+### Estructura recomendada
+
+```
+# memory.md — Bitácora del Proyecto
+
+> **Última actualización:** YYYY-MM-DD | Rama: main
+
+---
+
+## Estado actual (live)
+- Fase X: [descripción corta]
+- Bloqueos conocidos: [lista o "ninguno"]
+
+## Qué se hizo en la última sesión
+### [Fecha] — [Tarea corta] ✅/❌/⏸️
+- Cambios clave
+- Resultado
+- Aprendizajes
+
+## Decisiones clave (formato tabla)
+| Decisión | Razón | Fecha |
+|----------|-------|-------|
+| ... | ... | ... |
+
+## Pendientes conocidos
+1. ...
+2. ...
+
+## Cómo retomar
+```bash
+pnpm build
+pnpm lint
+pnpm dev
+```
+```
