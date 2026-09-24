@@ -70,6 +70,36 @@
 
 ---
 
+## 6.1 Verificación oculta en producción
+
+Toda feature crítica que afecte modelos, pipelines o integraciones externas debe incluir una vía de verificación **sin UI visible**.
+
+- Implementar `src/lib/debug.ts` con:
+  - `window.__MERUCBOT_DEBUG__`
+  - Toggle oculto: `Ctrl+Shift+D`
+  - Comandos de consola: `__merucbot.check()`, `__merucbot.state()`, `__merucbot.toggle()`
+- Integrar el debugger en `App.tsx` para reflejar:
+  - Estado de prewarm (embeddings + Laya)
+  - Estado del engine (`hybrid` / `lexical`)
+  - Estado de indexación RAG
+- Prohibido agregar badges, paneles o tooltips visibles para el usuario final con este fin.
+
+---
+
+## 6.2 Recomendación: revisión de versiones de dependencias
+
+Se debe mantener awareness del estado de versiones del proyecto, pero sin actualizar ciegamente.
+
+- Revisar periódicamente si las versiones actuales tienen vulnerabilidades conocidas o deprecaciones críticas.
+- Antes de aplicar un update mayor, evaluar:
+  - Si rompe el stack prohibido.
+  - Si requiere migración de API.
+  - Si el cambio es safe patch/minor.
+- Documentar en `memory.md` las decisiones de versionado y aprendizajes.
+- Si un paquete queda deprecado (como ocurrió con `@google/generative-ai`), priorizar la migración al reemplazo oficial.
+
+---
+
 ## 7. Memoria del Agente (`memory.md`)
 
 `memory.md` es la **bitácora de estado y aprendizajes** del proyecto. Su propósito es que cualquier agente nuevo pueda entender el estado actual, el historial de decisiones, y los errores/éxitos pasados sin tener que reconstruir todo desde cero.

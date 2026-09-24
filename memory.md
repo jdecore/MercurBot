@@ -56,6 +56,13 @@
   - Integrado en `App.tsx`: prewarm, engine status, RAG index
 - **Uso en Edge:** Abrir DevTools (F12), ir a pestaña Console, escribir `__merucbot.check()` y enter.
 
+### Production hardening: CSP + COEP + debugger ✅ (24/09)
+- **CSP:** agregado `blob:` a `script-src` en `vercel.json` para permitir scripts dinámicos de ONNX Runtime JSEP.
+- **COEP:** cambiado de `require-corp` a `credentialless` para evitar bloqueo de iframes/worker cross-origin sin CORS. Sigue habilitando SharedArrayBuffer.
+- **Permissions-Policy warnings:** en `vercel.json` actual está limpio; los errores reportados son de un deploy anterior cacheado. Se resolverán al redespengar.
+- **Debugger en producción:** `initDebug()` ahora registra `__merucbot` inmediatamente al montar, no solo al toggle. Comandos disponibles en consola sin activación previa.
+- **Worker RAG:** el fallback a léxico ya estaba implementado en `ragClient.ts`; con `credentialless` debería dejar de dispararse por bloqueo de recursos.
+
 ---
 
 ## Decisiones clave
@@ -71,6 +78,7 @@
 | CSS nativo vs Tailwind | Stack constraint AGENTS.md | previo |
 | Pixelarticons vs lucide/FA | Stack constraint AGENTS.md | previo |
 | ALLOWED_ORIGINS vía env var | Preparado para cambio de dominio | previo |
+| Debugger oculto DevTools | Verificación sin UI; toggle Ctrl+Shift+D | 24/09 |
 
 ---
 

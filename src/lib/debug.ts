@@ -58,9 +58,8 @@ export function setDebugEnabled(enabled: boolean): void {
   if (enabled) {
     log('MercurBot Debugger enabled', 'use Ctrl+Shift+D to toggle')
     log('Commands:', '__merucbot.check()', '__merucbot.state()', '__merucbot.toggle()')
-    registerConsoleCommands()
   } else {
-    log('Merucbot Debugger disabled')
+    log('MercurBot Debugger disabled')
   }
   notify()
 }
@@ -93,6 +92,8 @@ export function initDebug(): () => void {
 
   const global = window as any
   global.__MERUCBOT_DEBUG__ = STATE
+  global.__merucbot = global.__merucbot || {}
+  registerConsoleCommands()
 
   const handler = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
@@ -101,7 +102,6 @@ export function initDebug(): () => void {
     }
   }
   window.addEventListener('keydown', handler)
-  log('MercurBot debugger ready. Press Ctrl+Shift+D to toggle.')
   return () => window.removeEventListener('keydown', handler)
 }
 
