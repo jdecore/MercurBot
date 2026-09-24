@@ -20,7 +20,8 @@ import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
 import { LocaleProvider, useLocale } from './lib/locale'
 import { BlackHoleUpload } from './components/ui/BlackHoleUpload'
-import { prewarmModels } from './lib/preload'
+import { prewarmModels, getPrewarmState, onPrewarmProgress } from './lib/preload'
+import { initDebug, updateDebugState } from './lib/debug'
 
 function MainDashboard() {
   const {
@@ -71,6 +72,18 @@ function MainDashboard() {
   // Pre-warm models (embeddings + Laya) in parallel at app startup
   useEffect(() => {
     void prewarmModels()
+  }, [])
+
+  // Initialize hidden debugger
+  useEffect(() => {
+    return initDebug()
+  }, [])
+
+  // Mirror prewarm state into debugger
+  useEffect(() => {
+    return onPrewarmProgress(() => {
+      updateDebugState({ prewarm: getPrewarmState() })
+    })
   }, [])
 
   // Track setTimeout IDs to clear them on unmount (prevents state updates on
@@ -183,6 +196,9 @@ function MainDashboard() {
 
       await ragClient.indexDocument(pdfResult.docId, file.name, pdfResult.chunks)
 
+      // Debugger: RAG indexed
+      updateDebugState({ rag: { indexed: true, chunks: pdfResult.chunks.length, lastError: null } })
+
       // Ready!
       if (!pdfResult.fullText.trim()) {
         throw new Error(t.errScannedPdf)
@@ -224,6 +240,7 @@ function MainDashboard() {
       setMascotaMood('duda')
       setPdfProcessing(null)
       abortControllerRef.current = null
+      updateDebugState({ rag: { indexed: false, chunks: 0, lastError: err instanceof Error ? err.message : String(err) } })
       const msg = errName === 'PasswordException'
         ? t.errPassword
         : err instanceof Error ? err.message : 'Failed to parse file'
@@ -325,6 +342,24 @@ function MainDashboard() {
       if (timer !== null) window.clearTimeout(timer)
     }
   }, [hasDocument])
+
+  // Debugger: mirror engine status
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ mode?: 'hybrid' | 'lexical'; model?: string | null; streaming?: boolean }>).detail
+      if (detail) {
+        updateDebugState({
+          engine: {
+            mode: detail.mode ?? null,
+            model: detail.model ?? null,
+            streaming: !!detail.streaming,
+          },
+        })
+      }
+    }
+    window.addEventListener('copixi:engine-status', handler as EventListener)
+    return () => window.removeEventListener('copixi:engine-status', handler as EventListener)
+  }, [])
 
   useEffect(() => {
     const handler = (e: Event) => {

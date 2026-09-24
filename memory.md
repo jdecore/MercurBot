@@ -47,6 +47,15 @@
 
 **Resultado:** menor tiempo percibido, mejor feedback visual, y mayor tolerancia a fallos de red.
 
+### Debugger oculto para testing en producción ✅ (24/09)
+- **Problema:** No había forma de verificar el estado de modelos/pipeline/engine sin agregar UI visible.
+- **Solución:** `src/lib/debug.ts` — debugger invisible para DevTools:
+  - `window.__MERUCBOT_DEBUG__` con estado en vivo
+  - Toggle con `Ctrl+Shift+D`
+  - Comandos de consola: `__merucbot.check()`, `__merucbot.state()`, `__merucbot.toggle()`
+  - Integrado en `App.tsx`: prewarm, engine status, RAG index
+- **Uso en Edge:** Abrir DevTools (F12), ir a pestaña Console, escribir `__merucbot.check()` y enter.
+
 ---
 
 ## Decisiones clave
@@ -66,11 +75,10 @@
 ---
 
 ## Pendientes conocidos
-1. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates)
+1. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates, debugger, CSP fixes)
 2. **QA visual live:** verificar deploy real
 3. **og:image:** public/og-cover.png 1200×630 pendiente
 4. **E2E completo:** PDF escaneado, mobile, oscuro, gráficas, citas
-5. **api/chat system prompt:** ya respeta locale (lang en request body)
 
 ---
 
