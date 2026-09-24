@@ -6,36 +6,51 @@
 /* Iconos: Pixelarticons como SVG inline vía src/components/ui/Icon.tsx
    (el woff2 con <i> vacíos no renderiza ningún glifo). */
 
+/* ═══════════════════════════════════════════════════════════════════
+   FASE 0 — Galaxy (cosmos oscuro como base, claro como excepción).
+   El tema oscuro-cósmico es el default. body.light activa el claro.
+   Ver memory.md §Plan Galaxy para el roadmap completo.
+   ═══════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* colors — "Gris + Maracuyá + Hoja": base gris neutra, atención
-     amarillo maracuyá, apoyo verde hoja (Fase 43) */
-  --color-bg: #E7E7E3;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #DBDBD6;
-  --color-text: #1C1E1C;
-  --color-muted: #5A5E58;
-  --color-primary: #2F3A3C;
-  --color-primary-hover: #232B2D;
+  /* ── Galaxy base (dark cosmos) ── */
+  --galaxy-bg: #070B18;
+  --galaxy-surface: rgba(255, 255, 255, 0.06);
+  --galaxy-surface-hover: rgba(255, 255, 255, 0.10);
+  --galaxy-border: rgba(255, 255, 255, 0.08);
+  --galaxy-blur: 16px;
+  --galaxy-accent-from: #2F5BEA;
+  --galaxy-accent-to: #A9BEFF;
+  --galaxy-accent-gradient: linear-gradient(135deg, var(--galaxy-accent-from), var(--galaxy-accent-to));
+  --galaxy-orb-glow: rgba(47, 91, 234, 0.35);
+  --galaxy-text: #E2E8F0;
+  --galaxy-text-muted: #94A3B8;
+  --galaxy-ring: rgba(169, 190, 255, 0.25);
+
+  /* colors — Galaxy dark cosmos */
+  --color-bg: var(--galaxy-bg);
+  --color-surface: var(--galaxy-surface);
+  --color-surface-2: rgba(255, 255, 255, 0.04);
+  --color-text: var(--galaxy-text);
+  --color-muted: var(--galaxy-text-muted);
+  --color-primary: var(--galaxy-accent-from);
+  --color-primary-hover: #4A7BF7;
   --color-on-primary: #FFFFFF;
-  --color-accent: #E3A008;
-  --color-accent-hover: #C98A00;
-  --color-on-accent: #1C1A10;
-  /* Tinta de acento: el maracuyá brillante como primer plano sobre claro
-     falla AA (1.82). Este mostaza quemado pasa (5.31 gris / 6.59 blanco).
-     Regla: accent = solo rellenos con on-accent encima; accent-ink = texto,
-     bordes, focos y puntos sobre fondo claro. */
-  --color-accent-ink: #7C5600;
-  --color-tropical: #0E7C6B;
-  --color-tropical-hover: #0A5F53;
-  --color-on-tropical: #FFFFFF;
-  --color-border: #D5D5CB;
+  --color-accent: var(--galaxy-accent-from);
+  --color-accent-hover: #4A7BF7;
+  --color-on-accent: #FFFFFF;
+  --color-accent-ink: var(--galaxy-accent-to);
+  --color-tropical: #3DD598;
+  --color-tropical-hover: #6EE7B7;
+  --color-on-tropical: #022C22;
+  --color-border: var(--galaxy-border);
   --color-success: var(--color-tropical);
-  --color-warning: #8a5a00;
-  --color-danger: #9E2B47;
-  /* softs derivados (auto-adaptan a oscuro por referenciar tokens) */
-  --color-danger-soft: color-mix(in srgb, var(--color-danger) 9%, var(--color-surface));
-  --color-warning-soft: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
-  --color-accent-soft: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  --color-warning: #FBBF24;
+  --color-danger: #F87171;
+  /* softs derivados */
+  --color-danger-soft: rgba(248, 113, 113, 0.12);
+  --color-warning-soft: rgba(251, 191, 36, 0.12);
+  --color-accent-soft: rgba(47, 91, 234, 0.15);
 
   /* spacing */
   --space-xs: 4px;
@@ -63,9 +78,10 @@
   --text-2xl: 2rem;
   --text-3xl: 2.5rem;
 
-  /* shadows */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 10px 15px rgba(0,0,0,0.05);
+  /* shadows — galaxy */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px var(--galaxy-orb-glow);
 
   /* transitions */
   --transition-fast: 120ms ease;
@@ -88,16 +104,16 @@
   --gryph-feather: #fff7ed;
   --gryph-feather-mid: #fde6d0;
   --gryph-feather-shadow: #e8b4a0;
-  --gryph-mane: #d4926b;        /* cobre claro */
-  --gryph-mane-deep: #a05a2c;   /* cobre oscuro */
-  --gryph-mane-mid: #cb7a4a;    /* cobre medio */
+  --gryph-mane: #d4926b;
+  --gryph-mane-deep: #a05a2c;
+  --gryph-mane-mid: #cb7a4a;
   --gryph-body: #f5d6bf;
   --gryph-body-shadow: #dca88e;
-  --gryph-body-outline: #9c5a2e; /* borde cobre tostado */
-  --gryph-beak: #e8a04a;        /* pico cobre dorado */
-  --gryph-beak-deep: #b87333;   /* cobre puro */
+  --gryph-body-outline: #9c5a2e;
+  --gryph-beak: #e8a04a;
+  --gryph-beak-deep: #b87333;
   --gryph-beak-light: #fde6c8;
-  --gryph-eye: #b87333;         /* iris cobre */
+  --gryph-eye: #b87333;
   --gryph-eye-bright: #d4926b;
   --gryph-eye-glow: rgba(184, 115, 51, 0.55);
   --gryph-cheek: rgba(212, 146, 107, 0.35);
@@ -105,7 +121,7 @@
   --gryph-nose: #7a3b1a;
   --slime-glow: radial-gradient(circle, rgba(184,115,51,0.22) 0%, transparent 70%);
 
-  color-scheme: light;
+  color-scheme: dark;
   font-family: var(--font-sans);
   line-height: 1.5;
   color: var(--color-text);
@@ -114,51 +130,101 @@
   -webkit-font-smoothing: antialiased;
 }
 
-* { box-sizing: border-box; }
-*::selection { background: rgba(227, 160, 8, 0.28); }
-
-/* Modo oscuro (P2): sigue al sistema, solo remapea tokens + superficies clave.
-   Los componentes usan var(--color-*) así que la mayoría cambia solo. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark palette — deeper navy + teal primary + orange CTA (UI Pro Max) */
-    --color-bg: #0F172A;
-    --color-surface: #1E293B;
-    --color-surface-2: #334155;
-    --color-text: #F1F5F9;
-    --color-muted: #94A3B8;
-    --color-primary: #0D9488;
-    --color-primary-hover: #14B8A6;
-    --color-on-primary: #000000;
-    --color-accent: #F97316;
-    --color-accent-hover: #FB923C;
-    --color-on-accent: #000000;
-    --color-accent-ink: #FDBA74;
-    --color-tropical: #3DD598;
-    --color-tropical-hover: #6EE7B7;
-    --color-on-tropical: #022C22;
-    --color-border: #475569;
-    --color-success: var(--color-tropical);
-    --color-warning: #FBBF24;
-    --color-danger: #F87171;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5), 0 10px 15px rgba(0, 0, 0, 0.4);
-    color-scheme: dark;
-  }
-  ::-webkit-scrollbar-thumb { background: #334155; }
+/* ── Modo claro (excepción Galaxy) ── */
+body.light {
+  --color-bg: #E7E7E3;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #DBDBD6;
+  --color-text: #1C1E1C;
+  --color-muted: #5A5E58;
+  --color-primary: #2F3A3C;
+  --color-primary-hover: #232B2D;
+  --color-on-primary: #FFFFFF;
+  --color-accent: #E3A008;
+  --color-accent-hover: #C98A00;
+  --color-on-accent: #1C1A10;
+  --color-accent-ink: #7C5600;
+  --color-tropical: #0E7C6B;
+  --color-tropical-hover: #0A5F53;
+  --color-on-tropical: #FFFFFF;
+  --color-border: #D5D5CB;
+  --color-success: var(--color-tropical);
+  --color-warning: #8a5a00;
+  --color-danger: #9E2B47;
+  --color-danger-soft: color-mix(in srgb, var(--color-danger) 9%, var(--color-surface));
+  --color-warning-soft: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 10px 15px rgba(0,0,0,0.05);
+  color-scheme: light;
 }
+
+body.light ::-webkit-scrollbar-thumb { background: #D5D5CB; }
+
+* { box-sizing: border-box; }
+*::selection { background: rgba(47, 91, 234, 0.35); }
+
+body.light *::selection { background: rgba(227, 160, 8, 0.28); }
 
 html, body { margin: 0; padding: 0; min-height: 100%; background: var(--color-bg); }
 body { min-height: 100svh; }
+
+/* ── Cielo estrellado (solo en modo Galaxy) ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 35%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 8%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 55%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 85% 45%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 35% 65%, rgba(169,190,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 5% 90%, rgba(47,91,234,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 48% 40%, rgba(255,255,255,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 70%, rgba(255,255,255,0.35) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 50%, rgba(169,190,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 95%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 65% 5%, rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 50% 90%, rgba(47,91,234,0.3) 0%, transparent 100%);
+  animation: galaxy-twinkle 8s ease-in-out infinite alternate;
+}
+
+@keyframes galaxy-twinkle {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Congelar estrellas si el usuario prefiere menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
+body.light::before {
+  display: none;
+}
 
 a { color: var(--color-primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 :focus-visible {
-  outline: 2px solid var(--color-tropical);
+  outline: 2px solid var(--galaxy-accent-to);
   outline-offset: 2px;
 }
-/* D8: el anillo solo con teclado; con mouse no hay ruido visual. */
+body.light :focus-visible {
+  outline-color: var(--color-tropical);
+}
 :focus:not(:focus-visible) {
   outline: none;
 }

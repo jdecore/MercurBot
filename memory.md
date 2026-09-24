@@ -161,4 +161,40 @@ git push
 
 ---
 
+## Plan Galaxy 🌌 — Rediseño completo por fases
+
+> **Objetivo:** Estilo cosmos oscuro en toda la app, robot con orbe/estado, chat en consola de cristal, voz en vivo, Laya como portero de embeddings.
+> **Stack intacto:** CSS nativo, Pixelarticons, Radix, pnpm. Sin Tailwind/Framer/lucide.
+
+### Fase 0 — Fundación Galaxy (tokens + cielo)
+Tokens `--galaxy-bg`, `--galaxy-surface`, `--galaxy-accent`, estrellas con `radial-gradient` en `body::before`, `prefers-reduced-motion`.
+
+### Fase 1 — Landing (coronar lo existente)
+Robot 225px con halo, agujero negro centrado abajo, badge + tagline con brillo sobre fondo estrellado.
+
+### Fase 2 — Sidebar → riel Galaxy
+Riel oscuro translúcido: logo mini → recientes cristal → abajo solo Personalizar. Drawer cristal en móvil.
+
+### Fase 3 — Idioma automático + robot por idioma
+Auto-detección (`navigator.language` + timezone), quitar toggle del sidebar. EN = frío/azul, ES = cálido/rojo.
+
+### Fase 4 — Vista documento Galaxy + orbe + bocadillo vivo
+Robot-planeta arriba con anillo de 4 estados, consola de cristal, píldora flotante, visor PDF plegable, streaming token a token en bocadillo.
+
+### Fase 5 — Quitar automatización
+Fuera: BriefingCard, Wayflow, workflows, starters, speakInteraction auto, copixi:reread.
+
+### Fase 6 — Voz en vivo
+Sesión continua, auto-envío 1.2s silencio, barge-in, mute, X/Esc, volumeMeter AnalyserNode → --level, moods.
+
+### Fase 7 — Laya: descarga en Personalizar + portero
+Onboarding paso 4 + tab cerebro, pesos ONNX a Cache/OPFS, Laya decide literal vs semántico, indexación vectorial perezosa.
+
+### Fase 8 — Diálogos + QA final
+Tarjetas cristal, errores borde ámbar/rojo, gate: pnpm build OK, grep sin tailwind/framer/lucide, 1 Function, responsive.
+
+**Orden:** 0 → 1 → 2 → 3 → 4 → 5 → 8 → 6 → 7. Cada fase = 1 commit reversible.
+
+---
+
 *"Los datos se quedan en el navegador."*

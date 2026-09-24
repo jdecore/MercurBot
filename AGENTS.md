@@ -57,7 +57,28 @@
 
 ---
 
-## 6. Quality Gate (antes de marcar done)
+## 9. Plan Galaxy 🌌 (Rediseño UI completo)
+
+> **Autorizado:** 2026-09-23. Estilo cosmos oscuro en toda la app. Ver `memory.md` para detalle.
+
+| Fase | Estado | Descripción |
+|------|--------|-------------|
+| 0 | 🟡 En curso | Fundación Galaxy — tokens + cielo estrellado |
+| 1 | ⏳ | Landing — robot 225px + halo + agujero negro centrado |
+| 2 | ⏳ | Sidebar → riel Galaxy oscuro translúcido |
+| 3 | ⏳ | Idioma auto (navigator + timezone) + robot por idioma (frío/cálido) |
+| 4 | ⏳ | Vista documento — robot-planeta con orbe + bocadillo streaming |
+| 5 | ⏳ | Quitar automatización (briefing, wayflow, starters, speakInteraction) |
+| 6 | ⏳ | Voz en vivo (sesión continua, auto-envío, barge-in, volumeMeter) |
+| 7 | ⏳ | Laya ONNX en caché + portero de embeddings (literal vs semántico) |
+| 8 | ⏳ | Diálogos cristal + QA final (pnpm build, grep, 1 Function, responsive) |
+
+**Orden:** 0→1→2→3→4→5→8→6→7. Cada fase = 1 commit reversible.
+**Dependencia nueva justificada §34:** `@receptron/laya` u `onnxruntime-web` (Fase 7, pesos ~650MB en Cache/OPFS, §4 intacta).
+
+---
+
+## 10. Quality Gate (antes de marcar done)
 
 ```
 [ ] pnpm install / dev / build OK sin errores TS
@@ -70,7 +91,7 @@
 
 ---
 
-## 7. Cambios Arquitectónicos
+## 11. Cambios Arquitectónicos
 
 Si algo requiere cambiar stack, prohibiciones, o privacidad:
 
@@ -82,7 +103,7 @@ Solo después de autorización. Actualizar este archivo.
 
 ---
 
-## 8. Orden de Decisión
+## 12. Orden de Decisión
 
 ```
 1. Simplicidad  2. Seguridad  3. UX  4. Performance  5. Mantenibilidad
