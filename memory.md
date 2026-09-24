@@ -166,11 +166,11 @@ git push
 > **Objetivo:** Estilo cosmos oscuro en toda la app, robot con orbe/estado, chat en consola de cristal, voz en vivo, Laya como portero de embeddings.
 > **Stack intacto:** CSS nativo, Pixelarticons, Radix, pnpm. Sin Tailwind/Framer/lucide.
 
-### Fase 0 — Fundación Galaxy (tokens + cielo)
+### Fase 0 — Fundación Galaxy (tokens + cielo) ✅
 Tokens `--galaxy-bg`, `--galaxy-surface`, `--galaxy-accent`, estrellas con `radial-gradient` en `body::before`, `prefers-reduced-motion`.
 
-### Fase 1 — Landing (coronar lo existente)
-Robot 225px con halo, agujero negro centrado abajo, badge + tagline con brillo sobre fondo estrellado.
+### Fase 1 — Landing (coronar lo existente) ✅
+Robot 225px con halo radial azul-galaxy, agujero negro centrado abajo, badge + tagline con brillo sobre fondo estrellado.
 
 ### Fase 2 — Sidebar → riel Galaxy
 Riel oscuro translúcido: logo mini → recientes cristal → abajo solo Personalizar. Drawer cristal en móvil.

@@ -8,6 +8,23 @@ import { getPreferences, savePreferences } from './storage'
 export type Locale = 'es' | 'en'
 
 /* ──────────────────────────────────────────────────────────────────────
+   AUTO-DETECT: navigator.language + Intl timezone → locale.
+   Saved preference overrides auto-detect. No manual toggle on sidebar.
+   ────────────────────────────────────────────────────────────────────── */
+function detectLocale(): Locale {
+  try {
+    const lang = (navigator.language || '').toLowerCase().slice(0, 2)
+    if (lang === 'es') return 'es'
+    if (lang === 'en') return 'en'
+    // Fallback: timezone heuristic for Spanish speakers
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+    if (tz.startsWith('America/') && tz !== 'America/New_York' && tz !== 'America/Los_Angeles') return 'es'
+    if (tz === 'Europe/Madrid') return 'es'
+  } catch { /* ignore */ }
+  return 'en'
+}
+
+/* ──────────────────────────────────────────────────────────────────────
    LANDING DICT
    ────────────────────────────────────────────────────────────────────── */
 export type LandingDict = {
@@ -124,6 +141,9 @@ export type ProductDict = {
   mcDesignAria: string; mcDesignHeading: string; mcDesignLabel: (l: string) => string
   mcEyesHeading: string; mcEyesGroupAria: string
   mcAccHeading: string; mcAccGroupAria: string
+  // ── Locale Override ──
+  mcLangHeading: string; mcLangGroupAria: string
+  mcLangAuto: string; mcLangEs: string; mcLangEn: string
   // ── ErrorBoundary ──
   ebTitle: string; ebMsg: string; ebHint: string; ebRetry: string
   // ── Processing Card ──
@@ -486,6 +506,12 @@ const enDict: FullDict = {
   mcEyesGroupAria: 'Robot eyes',
   mcAccHeading: 'Extra',
   mcAccGroupAria: 'Robot accessory',
+  // ── Locale Override ──
+  mcLangHeading: 'Language',
+  mcLangGroupAria: 'Language override',
+  mcLangAuto: 'Auto (detect)',
+  mcLangEs: 'Español',
+  mcLangEn: 'English',
 
   // ── ErrorBoundary ──
   ebTitle: 'Something went wrong',
@@ -866,6 +892,12 @@ const esDict: FullDict = {
   mcEyesGroupAria: 'Ojos del robot',
   mcAccHeading: 'Extra',
   mcAccGroupAria: 'Accesorio del robot',
+  // ── Locale Override ──
+  mcLangHeading: 'Idioma',
+  mcLangGroupAria: 'Forzar idioma',
+  mcLangAuto: 'Auto (detectar)',
+  mcLangEs: 'Español',
+  mcLangEn: 'English',
 
   // ── ErrorBoundary ──
   ebTitle: 'Algo salió mal',
@@ -941,13 +973,22 @@ export function useLocale() {
   return useContext(LocaleContext)
 }
 
-/** Get current locale from preferences (for use outside React components). */
+/** Get current locale from preferences (for use outside React components).
+ *  Priority: saved preference > auto-detect > default 'en'. */
 export function getLocale(): Locale {
   try {
     const stored = getPreferences()
     if (stored.locale === 'es' || stored.locale === 'en') return stored.locale
   } catch { /* ignore */ }
-  return 'en'
+  return detectLocale()
+}
+
+/** Reset locale to auto-detect mode (clears saved preference). */
+export function resetLocaleToAuto(): Locale {
+  try {
+    savePreferences({ ...getPreferences(), locale: undefined })
+  } catch { /* ignore */ }
+  return detectLocale()
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
@@ -956,7 +997,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       const stored = getPreferences()
       if (stored.locale === 'es' || stored.locale === 'en') return stored.locale
     } catch {}
-    return 'en'
+    return detectLocale()
   })
 
   const setLocale = useCallback((l: Locale) => {

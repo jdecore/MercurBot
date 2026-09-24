@@ -63,8 +63,8 @@
 
 | Fase | Estado | Descripción |
 |------|--------|-------------|
-| 0 | 🟡 En curso | Fundación Galaxy — tokens + cielo estrellado |
-| 1 | ⏳ | Landing — robot 225px + halo + agujero negro centrado |
+| 0 | ✅ | Fundación Galaxy — tokens + cielo estrellado |
+| 1 | ✅ | Landing — robot 225px + halo + agujero negro centrado |
 | 2 | ⏳ | Sidebar → riel Galaxy oscuro translúcido |
 | 3 | ⏳ | Idioma auto (navigator + timezone) + robot por idioma (frío/cálido) |
 | 4 | ⏳ | Vista documento — robot-planeta con orbe + bocadillo streaming |

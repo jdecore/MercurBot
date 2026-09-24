@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
-import { DEFAULT_ROBOT_NAME } from '../../lib/storage'
+import { DEFAULT_ROBOT_NAME, getPreferences, savePreferences } from '../../lib/storage'
 import type { RobotUnitId } from '../../types/mascota'
 import { ROBOT_DESIGN_LIST, QUICK_THEMES, designFromName, sanitizeRobotName, type RobotAccessory, type RobotConfig, type RobotEyes } from '../../lib/robotSeed'
 import { Mascota } from './Mascota'
 import { Icon } from './Icon'
-import { useLocale } from '../../lib/locale'
+import { useLocale, resetLocaleToAuto } from '../../lib/locale'
 
 const MAX_NAME = 24
 
@@ -20,10 +20,16 @@ export function MascotCustomizer({ robot, robotName, config, onChange }: MascotC
   const [robotDraft, setRobotDraft] = useState(robotName)
   const [tab, setTab] = useState<'rapido' | 'avanzado'>('rapido')
   const touchedRef = useRef(false)
-  const { t } = useLocale()
+  const { t, locale, setLocale } = useLocale()
 
   const EYES_LABELS: Record<RobotEyes, string> = { round: t.mcEyesRound, visor: t.mcEyesVisor, happy: t.mcEyesHappy, sleepy: t.mcEyesSleepy, big: t.mcEyesBig }
   const ACC_LABELS: Record<RobotAccessory, string> = { none: t.mcAccNone, antenna: t.mcAccAntenna, fins: t.mcAccFins, headphones: t.mcAccHeadphones, tuft: t.mcAccTuft, glasses: t.mcAccGlasses, bow: t.mcAccBow, cap: t.mcAccCap }
+
+  // Filter designs by locale family: EN→cold, ES→warm, auto→all
+  const familyFilter = locale === 'en' ? 'cold' : locale === 'es' ? 'warm' : null
+  const filteredDesigns = familyFilter
+    ? ROBOT_DESIGN_LIST.filter((d) => d.family === familyFilter || d.family === 'neutral')
+    : ROBOT_DESIGN_LIST
 
   const applyRobotName = () => {
     const clean = sanitizeRobotName(robotDraft, DEFAULT_ROBOT_NAME); setRobotDraft(clean)
@@ -82,7 +88,7 @@ export function MascotCustomizer({ robot, robotName, config, onChange }: MascotC
           <section className="customizer-section" aria-label={t.mcDesignAria}>
             <h3 className="customizer-section-title">{t.mcDesignHeading}</h3>
             <div className="mascot-design-picker" role="radiogroup" aria-label={t.mcDesignAria}>
-              {ROBOT_DESIGN_LIST.map((d) => (
+              {filteredDesigns.map((d) => (
                 <button key={d.id} type="button" role="radio" aria-checked={config.color === d.id} title={d.label}
                   aria-label={t.mcDesignLabel(d.label)} className={`design-btn ${config.color === d.id ? 'active' : ''}`}
                   style={{ ['--design-color' as string]: d.hex } as React.CSSProperties}
@@ -108,6 +114,27 @@ export function MascotCustomizer({ robot, robotName, config, onChange }: MascotC
                 <button key={id} type="button" role="radio" aria-checked={config.accessory === id} className={`face-btn ${config.accessory === id ? 'active' : ''}`}
                   onClick={() => pickTrait({ accessory: id })}>{ACC_LABELS[id]}</button>
               ))}
+            </div>
+          </section>
+          <section className="customizer-section" aria-label={t.mcLangGroupAria}>
+            <h3 className="customizer-section-title">{t.mcLangHeading}</h3>
+            <div className="mascot-face-toggle" role="radiogroup" aria-label={t.mcLangGroupAria}>
+              {(['auto', 'es', 'en'] as const).map((l) => {
+                const active = l === 'auto' ? !getPreferences().locale : locale === l
+                const label = l === 'auto' ? t.mcLangAuto : l === 'es' ? t.mcLangEs : t.mcLangEn
+                return (
+                  <button key={l} type="button" role="radio" aria-checked={active}
+                    className={`face-btn ${active ? 'active' : ''}`}
+                    onClick={() => {
+                      if (l === 'auto') {
+                        setLocale(resetLocaleToAuto())
+                      } else {
+                        savePreferences({ ...getPreferences(), locale: l })
+                        setLocale(l)
+                      }
+                    }}>{label}</button>
+                )
+              })}
             </div>
           </section>
         </>

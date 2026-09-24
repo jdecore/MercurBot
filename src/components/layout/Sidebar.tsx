@@ -40,7 +40,7 @@ export function Sidebar({
   onToggleWayflow,
 }: SidebarProps) {
   const [docs, setDocs] = useState<LibDoc[]>([])
-  const { locale, setLocale, t } = useLocale()
+  const { t } = useLocale()
 
   useEffect(() => {
     setDocs(listLibrary())
@@ -62,10 +62,6 @@ export function Sidebar({
           <Icon name="file" size={16} />
         </button>
         <div className="sidebar-footer rail-footer">
-          <div className="locale-toggle" role="radiogroup" aria-label="Idioma / Language">
-            <button type="button" className={`locale-toggle-btn${locale === 'en' ? ' active' : ''}`} onClick={() => setLocale('en')} role="radio" aria-checked={locale === 'en'} aria-label="English">EN</button>
-            <button type="button" className={`locale-toggle-btn${locale === 'es' ? ' active' : ''}`} onClick={() => setLocale('es')} role="radio" aria-checked={locale === 'es'} aria-label="Español">ES</button>
-          </div>
           <button
             type="button"
             className="btn btn-secondary rail-btn"
@@ -150,10 +146,6 @@ export function Sidebar({
           <button type="button" className="btn btn-secondary small" onClick={onHowItWorks}>
             {t.sbHowItWorks}
           </button>
-          <div className="locale-toggle" role="radiogroup" aria-label="Idioma / Language">
-            <button type="button" className={`locale-toggle-btn${locale === 'en' ? ' active' : ''}`} onClick={() => setLocale('en')} role="radio" aria-checked={locale === 'en'} aria-label="English">EN</button>
-            <button type="button" className={`locale-toggle-btn${locale === 'es' ? ' active' : ''}`} onClick={() => setLocale('es')} role="radio" aria-checked={locale === 'es'} aria-label="Español">ES</button>
-          </div>
           <button
             type="button"
             className="btn btn-secondary small"

@@ -22,6 +22,8 @@ export interface RobotDesign extends RobotConfig {
   hex: string
   /** Color del aura/hábitat derivado. */
   aura: string
+  /** Locale family: cold (EN, azules) / warm (ES, rojos) / neutral (ambos). */
+  family?: 'cold' | 'warm' | 'neutral'
 }
 
 /**
@@ -30,25 +32,25 @@ export interface RobotDesign extends RobotConfig {
  * rasgo por rasgo en el personalizador.
  */
 export const ROBOT_DESIGNS: Record<RobotColorId, RobotDesign> = {
-  brasita: { id: 'brasita', label: 'Brasita', hex: '#B34A24', aura: '#B34A24', color: 'brasita', eyes: 'visor', accessory: 'antenna' },
-  miel: { id: 'miel', label: 'Miel', hex: '#C99A2E', aura: '#C99A2E', color: 'miel', eyes: 'round', accessory: 'fins' },
-  salvia: { id: 'salvia', label: 'Salvia', hex: '#6B7F5E', aura: '#6B7F5E', color: 'salvia', eyes: 'happy', accessory: 'headphones' },
-  tinta: { id: 'tinta', label: 'Tinta', hex: '#2E2A26', aura: '#2E2A26', color: 'tinta', eyes: 'visor', accessory: 'none' },
-  arena: { id: 'arena', label: 'Arena', hex: '#D9B98A', aura: '#B98A4A', color: 'arena', eyes: 'round', accessory: 'tuft' },
-  cobre: { id: 'cobre', label: 'Cobre', hex: '#A05A2C', aura: '#A05A2C', color: 'cobre', eyes: 'happy', accessory: 'antenna' },
-  oliva: { id: 'oliva', label: 'Oliva', hex: '#7C7440', aura: '#7C7440', color: 'oliva', eyes: 'big', accessory: 'glasses' },
-  ciruela: { id: 'ciruela', label: 'Ciruela', hex: '#8E4B5E', aura: '#8E4B5E', color: 'ciruela', eyes: 'sleepy', accessory: 'bow' },
-  niebla: { id: 'niebla', label: 'Niebla', hex: '#5E7683', aura: '#5E7683', color: 'niebla', eyes: 'happy', accessory: 'cap' },
-  teja: { id: 'teja', label: 'Teja', hex: '#BE6B3F', aura: '#BE6B3F', color: 'teja', eyes: 'round', accessory: 'none' },
-  mostaza: { id: 'mostaza', label: 'Mostaza', hex: '#D9A62E', aura: '#B8891F', color: 'mostaza', eyes: 'happy', accessory: 'fins' },
-  musgo: { id: 'musgo', label: 'Musgo', hex: '#5F7355', aura: '#5F7355', color: 'musgo', eyes: 'visor', accessory: 'tuft' },
-  vino: { id: 'vino', label: 'Vino', hex: '#7A3B47', aura: '#7A3B47', color: 'vino', eyes: 'sleepy', accessory: 'none' },
-  petroleo: { id: 'petroleo', label: 'Petróleo', hex: '#3E5C5B', aura: '#3E5C5B', color: 'petroleo', eyes: 'round', accessory: 'headphones' },
-  lavanda: { id: 'lavanda', label: 'Lavanda', hex: '#7B6F8E', aura: '#7B6F8E', color: 'lavanda', eyes: 'big', accessory: 'bow' },
-  cafe: { id: 'cafe', label: 'Café', hex: '#5C4632', aura: '#5C4632', color: 'cafe', eyes: 'visor', accessory: 'glasses' },
-  melocoton: { id: 'melocoton', label: 'Melocotón', hex: '#D99B77', aura: '#B57A4E', color: 'melocoton', eyes: 'happy', accessory: 'tuft' },
-  pizarra: { id: 'pizarra', label: 'Pizarra', hex: '#4A4E57', aura: '#4A4E57', color: 'pizarra', eyes: 'sleepy', accessory: 'cap' },
-  lino: { id: 'lino', label: 'Lino', hex: '#C9B48A', aura: '#A8894F', color: 'lino', eyes: 'big', accessory: 'antenna' },
+  brasita: { id: 'brasita', label: 'Brasita', hex: '#B34A24', aura: '#B34A24', color: 'brasita', eyes: 'visor', accessory: 'antenna', family: 'warm' },
+  miel: { id: 'miel', label: 'Miel', hex: '#C99A2E', aura: '#C99A2E', color: 'miel', eyes: 'round', accessory: 'fins', family: 'neutral' },
+  salvia: { id: 'salvia', label: 'Salvia', hex: '#6B7F5E', aura: '#6B7F5E', color: 'salvia', eyes: 'happy', accessory: 'headphones', family: 'cold' },
+  tinta: { id: 'tinta', label: 'Tinta', hex: '#2E2A26', aura: '#2E2A26', color: 'tinta', eyes: 'visor', accessory: 'none', family: 'neutral' },
+  arena: { id: 'arena', label: 'Arena', hex: '#D9B98A', aura: '#B98A4A', color: 'arena', eyes: 'round', accessory: 'tuft', family: 'neutral' },
+  cobre: { id: 'cobre', label: 'Cobre', hex: '#A05A2C', aura: '#A05A2C', color: 'cobre', eyes: 'happy', accessory: 'antenna', family: 'warm' },
+  oliva: { id: 'oliva', label: 'Oliva', hex: '#7C7440', aura: '#7C7440', color: 'oliva', eyes: 'big', accessory: 'glasses', family: 'neutral' },
+  ciruela: { id: 'ciruela', label: 'Ciruela', hex: '#8E4B5E', aura: '#8E4B5E', color: 'ciruela', eyes: 'sleepy', accessory: 'bow', family: 'warm' },
+  niebla: { id: 'niebla', label: 'Niebla', hex: '#5E7683', aura: '#5E7683', color: 'niebla', eyes: 'happy', accessory: 'cap', family: 'cold' },
+  teja: { id: 'teja', label: 'Teja', hex: '#BE6B3F', aura: '#BE6B3F', color: 'teja', eyes: 'round', accessory: 'none', family: 'warm' },
+  mostaza: { id: 'mostaza', label: 'Mostaza', hex: '#D9A62E', aura: '#B8891F', color: 'mostaza', eyes: 'happy', accessory: 'fins', family: 'warm' },
+  musgo: { id: 'musgo', label: 'Musgo', hex: '#5F7355', aura: '#5F7355', color: 'musgo', eyes: 'visor', accessory: 'tuft', family: 'cold' },
+  vino: { id: 'vino', label: 'Vino', hex: '#7A3B47', aura: '#7A3B47', color: 'vino', eyes: 'sleepy', accessory: 'none', family: 'warm' },
+  petroleo: { id: 'petroleo', label: 'Petróleo', hex: '#3E5C5B', aura: '#3E5C5B', color: 'petroleo', eyes: 'round', accessory: 'headphones', family: 'cold' },
+  lavanda: { id: 'lavanda', label: 'Lavanda', hex: '#7B6F8E', aura: '#7B6F8E', color: 'lavanda', eyes: 'big', accessory: 'bow', family: 'cold' },
+  cafe: { id: 'cafe', label: 'Café', hex: '#5C4632', aura: '#5C4632', color: 'cafe', eyes: 'visor', accessory: 'glasses', family: 'neutral' },
+  melocoton: { id: 'melocoton', label: 'Melocotón', hex: '#D99B77', aura: '#B57A4E', color: 'melocoton', eyes: 'happy', accessory: 'tuft', family: 'warm' },
+  pizarra: { id: 'pizarra', label: 'Pizarra', hex: '#4A4E57', aura: '#4A4E57', color: 'pizarra', eyes: 'sleepy', accessory: 'cap', family: 'cold' },
+  lino: { id: 'lino', label: 'Lino', hex: '#C9B48A', aura: '#A8894F', color: 'lino', eyes: 'big', accessory: 'antenna', family: 'cold' },
 }
 
 export const ROBOT_DESIGN_LIST: RobotDesign[] = Object.values(ROBOT_DESIGNS)
