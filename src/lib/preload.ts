@@ -8,6 +8,8 @@ import { isLayaCached, downloadLayaModel, loadLayaSession } from './laya'
 let embeddingsReady = false
 let layaReady = false
 let prewarmStarted = false
+let embeddingsProgress = 0
+let embeddingsMessage = ''
 const listeners = new Set<() => void>()
 
 export function onPrewarmProgress(cb: () => void): () => void {
@@ -18,18 +20,23 @@ export function onPrewarmProgress(cb: () => void): () => void {
 function notify() { for (const cb of listeners) cb() }
 
 export function getPrewarmState() {
-  return { embeddingsReady, layaReady }
+  return {
+    embeddingsReady,
+    layaReady,
+    embeddingsProgress,
+    embeddingsMessage,
+  }
 }
 
 /**
- * Start parallel pre-warm of both models.
+ * Start sequential pre-warm: embeddings first, then Laya.
  * Safe to call multiple times (idempotent).
  */
 export async function prewarmModels(): Promise<void> {
   if (prewarmStarted) return
   prewarmStarted = true
 
-  const ragWorkerReady = prewarmEmbeddings()
+  await prewarmEmbeddings()
 
   const layaReadyPromise = (async () => {
     try {
@@ -49,8 +56,6 @@ export async function prewarmModels(): Promise<void> {
     }
   })()
 
-  // Don't await — both run in background
-  void ragWorkerReady
   void layaReadyPromise
 }
 
@@ -67,8 +72,14 @@ function prewarmEmbeddings(): Promise<void> {
     // happen naturally on first INDEX_DOCUMENT. For true pre-warm,
     // we send a fake index that gets replaced later.
     ragClient.setProgressListener((p) => {
+      if (p.phase === 'model_download' && typeof p.percent === 'number') {
+        embeddingsProgress = p.percent
+        embeddingsMessage = p.message || ''
+        notify()
+      }
       if (p.phase === 'complete' || p.phase === 'lexical_ready') {
         embeddingsReady = true
+        embeddingsProgress = 100
         notify()
       }
     })

@@ -49,10 +49,14 @@ export function EngineStatus({ compact = false }: { compact?: boolean }) {
           </span>
         )
       }
+      const progressText = prewarm.embeddingsProgress > 0 && prewarm.embeddingsProgress < 100
+        ? ` (${prewarm.embeddingsProgress}%)`
+        : ''
       return (
         <span className="engine-status" title={t.esIdleTitle}>
           <span className="engine-dot busy" aria-hidden />
           {t.esDownloadingModels}
+          {progressText}
         </span>
       )
     }

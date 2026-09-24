@@ -140,12 +140,16 @@ export async function deleteLayaCache(): Promise<void> {
 
 /**
  * Download a file to OPFS and return its ArrayBuffer.
+ *
+ * Retry policy: only retries on network/stream errors, not HTTP errors.
  */
 async function downloadToOPFS(
   url: string,
   dirName: string,
   fileName: string,
   onProgress?: (pct: number) => void,
+  retries = 3,
+  baseDelayMs = 1000,
 ): Promise<ArrayBuffer> {
   const root = await navigator.storage.getDirectory()
   const dir = await root.getDirectoryHandle(dirName, { create: true })
@@ -162,64 +166,82 @@ async function downloadToOPFS(
     /* not cached, download */
   }
 
-  const response = await fetch(url)
-  if (!response.ok) throw new Error(`Failed to download ${fileName}: ${response.status}`)
+  let lastError: unknown
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`Failed to download ${fileName}: ${response.status}`)
 
-  const contentLength = Number(response.headers.get('content-length')) || 0
-  const reader = response.body!.getReader()
-  const chunks: Uint8Array[] = []
-  let received = 0
+      const contentLength = Number(response.headers.get('content-length')) || 0
+      const reader = response.body!.getReader()
+      const chunks: Uint8Array[] = []
+      let received = 0
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-    received += value.length
-    if (contentLength > 0) {
-      onProgress?.(Math.round((received / contentLength) * 100))
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        chunks.push(value)
+        received += value.length
+        if (contentLength > 0) {
+          onProgress?.(Math.round((received / contentLength) * 100))
+        }
+      }
+
+      const totalLength = chunks.reduce((acc, c) => acc + c.length, 0)
+      const result = new Uint8Array(totalLength)
+      let offset = 0
+      for (const chunk of chunks) {
+        result.set(chunk, offset)
+        offset += chunk.length
+      }
+
+      const fileHandle = await dir.getFileHandle(fileName, { create: true })
+      const writable = await fileHandle.createWritable()
+      await writable.write(result)
+      await writable.close()
+
+      onProgress?.(100)
+      return result.buffer
+    } catch (err) {
+      lastError = err
+      if (attempt < retries - 1) {
+        const delay = baseDelayMs * 2 ** attempt
+        await new Promise((r) => setTimeout(r, delay))
+      }
     }
   }
 
-  const totalLength = chunks.reduce((acc, c) => acc + c.length, 0)
-  const result = new Uint8Array(totalLength)
-  let offset = 0
-  for (const chunk of chunks) {
-    result.set(chunk, offset)
-    offset += chunk.length
-  }
-
-  // Write to OPFS
-  const fileHandle = await dir.getFileHandle(fileName, { create: true })
-  const writable = await fileHandle.createWritable()
-  await writable.write(result)
-  await writable.close()
-
-  onProgress?.(100)
-  return result.buffer
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }
 
 /**
- * Download Laya model + tokenizer to OPFS.
+ * Download Laya model + tokenizer + config in parallel.
+ * Model goes to OPFS; tokenizer/config are validated but not persisted,
+ * because the current runtime only needs them during session creation.
  */
 export async function downloadLayaModel(
   onProgress?: (phase: string, pct: number) => void,
 ): Promise<void> {
   onProgress?.('model', 0)
-  await downloadToOPFS(LAYA_MODEL_URL, CACHE_KEY, 'model_int8.onnx', (p) =>
-    onProgress?.('model', p),
-  )
-
   onProgress?.('tokenizer', 0)
-  const tokResp = await fetch(LAYA_TOKENIZER_URL)
-  if (!tokResp.ok) throw new Error(`Failed to download tokenizer: ${tokResp.status}`)
-  await tokResp.json()
-
   onProgress?.('config', 0)
-  const cfgResp = await fetch(LAYA_CONFIG_URL)
-  if (!cfgResp.ok) throw new Error(`Failed to download config: ${cfgResp.status}`)
-  await cfgResp.json()
 
-  onProgress?.('done', 100)
+  const [_, tokResp, cfgResp] = await Promise.all([
+    downloadToOPFS(LAYA_MODEL_URL, CACHE_KEY, 'model_int8.onnx', (p) =>
+      onProgress?.('model', p),
+    ),
+    fetch(LAYA_TOKENIZER_URL).then((r) => {
+      if (!r.ok) throw new Error(`Failed to download tokenizer: ${r.status}`)
+      return r
+    }),
+    fetch(LAYA_CONFIG_URL).then((r) => {
+      if (!r.ok) throw new Error(`Failed to download config: ${r.status}`)
+      return r
+    }),
+  ])
+
+  await tokResp.json()
+  await cfgResp.json()
 }
 
 /**
@@ -235,6 +257,12 @@ export async function preloadLaya(): Promise<void> {
     await loadLayaSession()
   } catch (err) {
     console.warn('[Laya] Pre-warm failed, using heuristic fallback.', err)
+    try {
+      await downloadLayaModel()
+      await loadLayaSession()
+    } catch (retryErr) {
+      console.warn('[Laya] Retry failed, using heuristic fallback.', retryErr)
+    }
   }
 }
 
