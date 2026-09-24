@@ -175,7 +175,7 @@ Robot 225px con halo radial azul-galaxy, agujero negro centrado abajo, badge + t
 ### Fase 2 — Sidebar → riel Galaxy
 Riel oscuro translúcido: logo mini → recientes cristal → abajo solo Personalizar. Drawer cristal en móvil.
 
-### Fase 3 — Idioma automático + robot por idioma
+### Fase 3 — Idioma automático + robot por idioma ✅
 Auto-detección (`navigator.language` + timezone), quitar toggle del sidebar. EN = frío/azul, ES = cálido/rojo.
 
 ### Fase 4 — Vista documento Galaxy + orbe + bocadillo vivo
