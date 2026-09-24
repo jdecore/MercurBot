@@ -12,7 +12,7 @@
  *     Excepción documentada a §8 en AGENTS.md (§41): el usuario consiente
  *     enviar el texto (máx. 250 KB) al proveedor de IA; nada se persiste.
  *
- * Generation uses the official @google/generative-ai SDK (Gemini). If it fails
+ * Generation uses the official @google/genai SDK (Gemini). If it fails
  * or no key is set, it falls back to Groq and then OpenRouter (both
  * OpenAI-compatible). The chat
  * response is a plain SSE string (no streaming Response object) so Vercel never
@@ -22,7 +22,7 @@
  * Never raw rows.
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 20
@@ -233,10 +233,18 @@ const OPENROUTER_TIMEOUT_MS = 20_000
 async function genGemini(prompt: string, system: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY?.trim()
   if (!key) throw new Error('no GEMINI_API_KEY')
-  const genAI = new GoogleGenerativeAI(key)
-  const model = genAI.getGenerativeModel({ model: GEMINI_MODEL, systemInstruction: system })
-  const res = await model.generateContent(prompt, { signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS) })
-  return res.response.text()
+  const ai = new GoogleGenAI({ apiKey: key })
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: prompt,
+    config: {
+      systemInstruction: system,
+      abortSignal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+    },
+  })
+  const text = response.text
+  if (!text) throw new Error('Empty Gemini response')
+  return text
 }
 
 async function genGroq(prompt: string, system: string): Promise<string> {

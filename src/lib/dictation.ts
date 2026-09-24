@@ -8,7 +8,7 @@
  *   (parcial, prefijo webkit), Samsung Internet y Chrome Android. Firefox lo
  *   mantiene desactivado por defecto (llegando en 155/156 según Mozilla).
  * - Alternativa evaluada y descartada: Whisper local con
- *   `@xenova/transformers` (ya es dep del proyecto) funcionaría en Firefox y
+ *   `@huggingface/transformers` (ya es dep del proyecto) funcionaría en Firefox y
  *   offline, pero exige descargar ~40-250 MB y tarda segundos por frase corta:
  *   sobreingeniería para dictar una pregunta (§40.1 simplicidad primero).
  *   Si Firefox gana peso, ese es el fallback a añadir — sin servidor (§8).

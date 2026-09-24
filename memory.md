@@ -1,12 +1,12 @@
 # memory.md — Diario de Agente
 
-> **Última actualización:** 2026-09-23 | Rama: `main`
+> **Última actualización:** 2026-09-24 | Rama: `main`
 
 ---
 
 ## Estado actual (live)
 
-El deploy en `https://copixi.vercel.app/` tiene hasta **Fase 44** (sidebar estilo Copilot + modelos elegidos por el usuario). Los cambios de la sesión del 20/09 (rename a MercurBot/Mercur, SVG robot, ojos, brazos, TTS, sonidos, animaciones) están **sin commitear**. Nuevos cambios de 23/09: landing bilingüe Makers Fellowship + hardcoded audit.
+Galaxy Plan completo (Fases 0-8 ✅). Última sesión: pre-warm automático de modelos, IndexedDB, onboarding 6 pasos, fix WASM CDN + Permissions-Policy.
 
 ---
 
@@ -146,6 +146,14 @@ src/components/dashboard/PdfProcessingCard.tsx
 - `src/App.css` — Onboarding glass style: backdrop-filter blur, customizer-matching border-radius/shadow/padding, animated dots with "done" state
 
 **Resultado:** cada paso = 1 pregunta, robot visible siempre, estilo cristal transparente. ~30-60s de onboarding permite que Laya (424MB) descargue en background.
+
+### Fix ONNX WASM + Permissions-Policy (24/09)
+
+**Problema:** ONNX Runtime Web intentaba cargar `ort-wasm-simd.wasm` desde el origen (404). Permissions-Policy tenía features no reconocidas por Chrome.
+
+**Solución:**
+- `src/lib/laya.ts` — `ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/'` (WASM desde CDN)
+- `vercel.json` — Removidas features inválidas: `ambient-light-sensor`, `run-ad-auction`, `join-ad-interest-group`, `private-aggregation`, `attribution-reporting`
 
 ### Product i18n Migration (Phase 2) — 23/09
 

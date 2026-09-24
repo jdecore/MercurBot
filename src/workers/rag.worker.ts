@@ -88,9 +88,9 @@ async function getPipeline(): Promise<any> {
       payload: { phase: 'model_download', percent: 10, message: 'Cargando modelo de embeddings...' },
     })
 
-    const { pipeline: createPipeline, env } = await import('@xenova/transformers')
+    const { pipeline: createPipeline, env } = await import('@huggingface/transformers')
     env.allowLocalModels = false
-    env.useBrowserCache = true
+    env.allowRemoteModels = true
 
     pipeline = await createPipeline('feature-extraction', MODEL_NAME, {
       progress_callback: (progressInfo: any) => {

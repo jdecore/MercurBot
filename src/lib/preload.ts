@@ -56,7 +56,7 @@ export async function prewarmModels(): Promise<void> {
 
 /**
  * Pre-warm the embeddings model by sending a PING to the worker.
- * The worker lazy-loads @xenova/transformers on INDEX_DOCUMENT.
+ * The worker lazy-loads @huggingface/transformers on INDEX_DOCUMENT.
  * We trigger a lightweight load here so the model downloads in background.
  */
 function prewarmEmbeddings(): Promise<void> {

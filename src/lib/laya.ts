@@ -328,7 +328,7 @@ export async function loadLayaSession(): Promise<void> {
   const ort = await import('onnxruntime-web' as string)
 
   // Configure WASM to load from CDN (not origin)
-  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/'
+  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/'
 
   const root = await navigator.storage.getDirectory()
   const dir = await root.getDirectoryHandle(CACHE_KEY)

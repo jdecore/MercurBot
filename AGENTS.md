@@ -1,16 +1,16 @@
-# AGENTS.md — MercurBot | Mandamientos
+# AGENTS.md — MercurBot
 
 > **LEER ANTES DE MODIFICAR EL PROYECTO.**
 
 ---
 
-## 1. Qué es MercurBot
+## 1. Qué es
 
 **AI PDF Analyst.** El usuario carga un PDF, se vectoriza en el navegador, y pregunta lo que quiera con citas verificables `[Pág. N]`.
 
 ---
 
-## 2. Stack (no cambiar sin justificación §41)
+## 2. Stack
 
 | Categoría | Tecnología |
 |-----------|------------|
@@ -34,7 +34,7 @@
 4. **Sin backend tradicional** — frontend-first, solo 1 Vercel Function proxy
 5. **Sin `VITE_*` secrets** — API keys en server env vars
 6. **Sin npm/yarn/bun** — solo pnpm
-7. **Sin dependencias nuevas sin justificar** — ver §34
+7. **Sin dependencias nuevas sin justificar**
 
 ---
 
@@ -44,7 +44,7 @@
 
 - Nunca subir el PDF completo a un servidor
 - El LLM recibe solo Top 3 fragmentos RAG + contexto agregado
-- Excepción documentada: "Generar gráfica" envía texto completo (tope 250KB) bajo consentimiento explícito del usuario
+- Excepción: "Generar gráfica" envía texto completo (tope 250KB) bajo consentimiento explícito
 
 ---
 
@@ -52,59 +52,28 @@
 
 - `GEMINI_API_KEY` solo en `api/chat/index.ts` (server)
 - Nunca exponer en frontend, logs, o respuestas
-- CSP en `vercel.json` con `connect-src` para huggingface/jsdelivr (embeddings)
-- Permissions-Policy hardened en `vercel.json`: deshabilita geolocation, camera, y features de ad-related/privacy-sandbox no utilizadas (`run-ad-auction`, `join-ad-interest-group`, `private-aggregation`, `attribution-reporting`, etc.)
+- CSP en `vercel.json` con `connect-src` para huggingface/jsdelivr (embeddings + ONNX WASM CDN)
+- Permissions-Policy hardened en `vercel.json`
 
 ---
 
-## 9. Plan Galaxy 🌌 (Rediseño UI completo)
-
-> **Autorizado:** 2026-09-23. Estilo cosmos oscuro en toda la app. Ver `memory.md` para detalle.
-
-| Fase | Estado | Descripción |
-|------|--------|-------------|
-| 0 | ✅ | Fundación Galaxy — tokens + cielo estrellado |
-| 1 | ✅ | Landing — robot 225px + halo + agujero negro centrado |
-| 2 | ✅ | Sidebar → riel Galaxy oscuro translúcido |
-| 3 | ✅ | Idioma auto (navigator + timezone) + robot por idioma (frío/cálido) |
-| 4 | ✅ | Vista documento — robot orbe + anillo orbital + consola cristal + píldora flotante |
-| 5 | ✅ | Quitar automatización (briefing, wayflow, starters, speakInteraction) |
-| 6 | ✅ | Voz en vivo (sesión continua, auto-envío, barge-in, volumeMeter) |
-| 7 | ✅ | Laya ONNX pre-warm automático + portero de embeddings (literal vs semántico) + IndexedDB |
-| 8 | ✅ | Diálogos cristal + QA final (pnpm build, grep, 1 Function, responsive) |
-
-**Orden:** 0→1→2→3→4→5→8→6→7. Cada fase = 1 commit reversible.
-**Dependencia nueva justificada §34:** `@receptron/laya` u `onnxruntime-web` (Fase 7, pesos ~650MB en Cache/OPFS, §4 intacta).
-
----
-
-## 10. Quality Gate (antes de marcar done)
+## 6. Calidad (antes de marcar done)
 
 ```
-[ ] pnpm install / dev / build OK sin errores TS
-[ ] Sin violaciones de stack (grep tailwind/shadcn/lucide)
+[ ] tsc + vite build OK
+[ ] Sin violaciones de stack
 [ ] Sin VITE_ secrets
-[ ] Solo 1 Vercel Function (api/chat)
-[ ] Responsive funciona
-[ ] Error handling no deja pantalla vacía
+[ ] Solo 1 Vercel Function
+[ ] Responsive OK
+[ ] Error handling OK
 ```
 
 ---
 
-## 11. Cambios Arquitectónicos
+## 7. Memoria del Agente (`memory.md`)
 
-Si algo requiere cambiar stack, prohibiciones, o privacidad:
+`memory.md` es la memoria persistente. Siempre leer al inicio y actualizar al terminar una tarea.
 
-```
-Current approach → Problem → Proposed change → Why → Trade-offs → Impact
-```
-
-Solo después de autorización. Actualizar este archivo.
-
----
-
-## 12. Orden de Decisión
-
-```
-1. Simplicidad  2. Seguridad  3. UX  4. Performance  5. Mantenibilidad
-```
+1. **Al inicio:** Leer `memory.md` completo
+2. **Al terminar tarea:** Actualizar con qué se hizo, por qué, resultado, aprendizajes
+3. **Si excede ~400 líneas:** Resumir entradas antiguas (3-5 líneas por sesión), agregar nueva info

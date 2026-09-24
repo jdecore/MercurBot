@@ -21,7 +21,7 @@ export default defineConfig({
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react'
           if (id.includes('node_modules/recharts')) return 'recharts'
           if (id.includes('node_modules/papaparse')) return 'papaparse'
-          if (id.includes('node_modules/@google/generative-ai')) return 'gemini'
+          if (id.includes('node_modules/@google/genai')) return 'gemini'
           if (id.includes('node_modules/xlsx')) return 'excel'
           if (id.includes('node_modules/pdfjs-dist')) return 'pdf'
           if (id.includes('node_modules/mammoth')) return 'docx'
