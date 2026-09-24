@@ -2811,8 +2811,8 @@ button.citation-inline:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   LANDING — Makers Fellowship (bilingual, ES/EN)
-   Only renders when !hasDocument. Product UI unchanged.
+   LANDING — Galaxy (cosmos oscuro, robot con halo, agujero negro al fondo)
+   Solo renderiza cuando !hasDocument. Product UI sin cambios.
    ═══════════════════════════════════════════════════════════════════════ */
 
 .landing {
@@ -2823,6 +2823,7 @@ button.citation-inline:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
   min-height: calc(100svh - 100px);
 }
 
@@ -2830,6 +2831,9 @@ button.citation-inline:focus-visible {
 .landing-hero {
   text-align: center;
   padding: var(--space-2xl) 0 var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .landing-hero-badge {
   display: inline-block;
@@ -2837,51 +2841,68 @@ button.citation-inline:focus-visible {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-tropical);
-  background: color-mix(in srgb, var(--color-tropical) 10%, var(--color-surface));
-  border: 1px solid color-mix(in srgb, var(--color-tropical) 25%, transparent);
+  color: var(--galaxy-accent-to);
+  background: rgba(47, 91, 234, 0.12);
+  border: 1px solid rgba(169, 190, 255, 0.2);
   border-radius: var(--radius-full);
   padding: 4px 14px;
   margin-bottom: var(--space-md);
+  text-shadow: 0 0 12px rgba(169, 190, 255, 0.3);
 }
 .landing-hero-title {
   font-family: var(--font-display);
   font-size: clamp(2.2rem, 5vw, 3.2rem);
   line-height: 1.1;
-  color: var(--color-text);
+  color: var(--galaxy-text);
   margin: 0 0 var(--space-md);
+  text-shadow: 0 0 30px rgba(169, 190, 255, 0.15);
 }
 .landing-hero-sub {
   font-size: var(--text-lg);
   line-height: 1.55;
-  color: var(--color-muted);
+  color: var(--galaxy-text-muted);
   max-width: 560px;
   margin: 0 auto var(--space-xl);
 }
-.landing-hero-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-lg);
-}
-.landing-hero-actions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: var(--space-xl);
-}
-.landing-cta {
-  padding: 10px 22px;
-  font-size: var(--text-base);
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  text-decoration: none;
-}
+
+/* Robot con halo cósmico */
 .landing-hero-robot {
+  position: relative;
   display: flex;
   justify-content: center;
-  opacity: 0.85;
+  align-items: center;
+}
+.landing-hero-robot::before {
+  content: '';
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(47, 91, 234, 0.20) 0%,
+    rgba(47, 91, 234, 0.08) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: galaxy-halo-pulse 4s ease-in-out infinite alternate;
+}
+@keyframes galaxy-halo-pulse {
+  0% { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-robot::before {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
+/* Agujero negro centrado abajo */
+.landing-blackhole {
+  padding-bottom: var(--space-3xl);
+  display: flex;
+  justify-content: center;
 }
 
 /* ── Sections (shared) ── */
@@ -3206,7 +3227,14 @@ button.citation-inline:focus-visible {
     padding: 0;
   }
   .landing-hero {
-    padding: var(--space-2xl) 0 var(--space-xl);
+    padding: var(--space-xl) 0 var(--space-lg);
+  }
+  .landing-hero-robot::before {
+    width: 240px;
+    height: 240px;
+  }
+  .landing-blackhole {
+    padding-bottom: var(--space-2xl);
   }
   .landing-section {
     padding: var(--space-2xl) 0;
@@ -3225,7 +3253,6 @@ button.citation-inline:focus-visible {
   justify-content: center;
   transition: transform 0.3s ease, filter 0.3s ease;
   outline: none;
-  margin-top: auto;
 }
 
 .black-hole-upload:hover {

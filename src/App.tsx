@@ -516,7 +516,7 @@ function MainDashboard() {
                 <div className="landing-hero-badge">{t.heroTag}</div>
                 <h1 className="landing-hero-title">{t.heroTitle}</h1>
                 <p className="landing-hero-sub">{t.heroSub}</p>
-                <div className="landing-hero-content">
+                <div className="landing-hero-robot">
                   <Mascota
                     variant={mascotRobot}
                     config={robotConfig}
@@ -526,7 +526,9 @@ function MainDashboard() {
                   />
                 </div>
               </header>
-              <BlackHoleUpload onFile={parseFile} size={180} />
+              <div className="landing-blackhole">
+                <BlackHoleUpload onFile={parseFile} size={180} />
+              </div>
             </div>
           )}
 
