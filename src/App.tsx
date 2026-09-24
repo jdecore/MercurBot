@@ -20,6 +20,7 @@ import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
 import { LocaleProvider, useLocale } from './lib/locale'
 import { BlackHoleUpload } from './components/ui/BlackHoleUpload'
+import { prewarmModels } from './lib/preload'
 
 function MainDashboard() {
   const {
@@ -65,6 +66,11 @@ function MainDashboard() {
     }
     window.addEventListener('copixi:voice-session', handler as EventListener)
     return () => window.removeEventListener('copixi:voice-session', handler as EventListener)
+  }, [])
+
+  // Pre-warm models (embeddings + Laya) in parallel at app startup
+  useEffect(() => {
+    void prewarmModels()
   }, [])
 
   // Track setTimeout IDs to clear them on unmount (prevents state updates on

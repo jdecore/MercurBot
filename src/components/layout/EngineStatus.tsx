@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useDashboard } from '../../state/DashboardContext'
 import { useLocale } from '../../lib/locale'
+import { onPrewarmProgress, getPrewarmState } from '../../lib/preload'
 
 interface EngineInfo {
   mode: 'hybrid' | 'lexical' | null
@@ -14,6 +15,7 @@ export function EngineStatus({ compact = false }: { compact?: boolean }) {
   const docId = pdfDoc?.docId ?? null
   const [info, setInfo] = useState<EngineInfo>({ mode: null, model: null, streaming: false })
   const [seenDoc, setSeenDoc] = useState<string | null>(docId)
+  const [prewarm, setPrewarm] = useState(getPrewarmState())
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -24,12 +26,36 @@ export function EngineStatus({ compact = false }: { compact?: boolean }) {
     return () => window.removeEventListener('copixi:engine-status', handler as EventListener)
   }, [])
 
+  // Pre-warm progress listener
+  useEffect(() => {
+    return onPrewarmProgress(() => setPrewarm(getPrewarmState()))
+  }, [])
+
   if (seenDoc !== docId) {
     setSeenDoc(docId)
     setInfo({ mode: null, model: null, streaming: false })
   }
 
   if (!pdfDoc) {
+    // Show pre-warm status when no document is loaded
+    if (!prewarm.embeddingsReady || !prewarm.layaReady) {
+      const parts: string[] = []
+      if (!prewarm.embeddingsReady) parts.push('embeddings')
+      if (!prewarm.layaReady) parts.push('Laya')
+      if (compact) {
+        return (
+          <span className="engine-status compact" title={t.esIdleTitle} aria-label={t.esIdleCompact} role="status">
+            <span className="engine-dot busy" aria-hidden />
+          </span>
+        )
+      }
+      return (
+        <span className="engine-status" title={t.esIdleTitle}>
+          <span className="engine-dot busy" aria-hidden />
+          {t.esDownloadingModels}
+        </span>
+      )
+    }
     if (compact) {
       return (
         <span className="engine-status compact" title={t.esIdleTitle} aria-label={t.esIdleCompact} role="status">

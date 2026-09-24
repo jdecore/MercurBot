@@ -102,6 +102,37 @@ src/components/dashboard/PdfProcessingCard.tsx
 
 **Resultado:** clasificador ejecuta en <1ms (heurístico) o ~33ms (Laya ONNX). Consultas literales ahorran tiempo de vectorización. Build OK (205KB JS + 552KB ort-web chunk).
 
+### Galaxy Phase 7 — Pre-warm automático + IndexedDB ✅ (24/09, refactor)
+
+**Objetivo:** Descarga automática de modelos en paralelo + persistencia robusta del robot.
+
+**Archivos creados:**
+- `src/lib/preload.ts` — `prewarmModels()`: lanza embeddings + Laya en paralelo al montar App, idempotente, event listeners para progreso
+- `src/lib/idb.ts` — IndexedDB wrapper: `idbGet`, `idbSet`, `idbDelete`, `migrateToIDB`
+
+**Archivos modificados:**
+- `src/lib/laya.ts` — Added `preloadLaya()`, removed manual download UI references
+- `src/lib/storage.ts` — `getPreferences()` now uses IndexedDB with localStorage fallback, `savePreferences()` writes to both, `loadPreferences()` async for startup migration
+- `src/App.tsx` — `useEffect(() => prewarmModels())` at startup
+- `src/components/layout/EngineStatus.tsx` — Subtle "Descargando modelos IA..." badge during pre-warm
+- `src/lib/locale.tsx` — Added `esDownloadingModels` (EN + ES)
+
+**Archivos eliminados:**
+- `src/lib/useLayaModel.ts` — No longer needed (auto-download)
+- Cerebro tab from MascotCustomizer
+- Cerebro locale strings (mcTabCerebro, mcCerebro*, etc.)
+- Cerebro CSS (.cerebro-*, .customizer-hint)
+
+**Cómo funciona:**
+1. App monta → `prewarmModels()` lanza ambas descargas en paralelo
+2. Embeddings (23MB) listo en ~5s, Laya (424MB) en ~30-60s
+3. Mientras descarga: heuristic classifier (<1ms) ya funciona
+4. Cuando Laya esté listo → se activa automáticamente
+5. EngineStatus muestra badge sutil durante la descarga
+6. Preferencias del robot → IndexedDB (survive Clear Site Data)
+
+**Resultado:** modelos siempre activos, sin UX de descarga, preferencias persistentes. Build OK.
+
 ### Product i18n Migration (Phase 2) — 23/09
 
 **Objetivo:** Migrar todos los strings del producto (UI) al diccionario bilingüe ES/EN.
@@ -259,8 +290,16 @@ Fuera: BriefingCard (import + render + state + loadBriefing function), WayflowPa
 ### Fase 6 — Voz en vivo ✅
 Sesión continua con `useVoiceSession` hook: mic abierto, auto-send 1.2s silencio, barge-in (cancel TTS al detectar voz), volume meter (AnalyserNode → `--voice-level` CSS var 0–1), X/Esc para parar, max 2 min, auto-restart en Chrome. Robot reacciona: orb pulse con `--voice-level`, aura brightness, wave bars scale. Evento `copixi:voice-session` comunica estado a App.tsx → Mascota `voice-active` class.
 
-### Fase 7 — Laya: descarga en Personalizar + portero ✅
-Clasificador literal vs semántico para RAG gatekeeper. Heuristic classifier (instant, no download) + optional Laya ONNX (424MB int8, tozp/laya-onnx). OPFS cache, cerebro tab in MascotCustomizer, RAG worker skips vector search for high-confidence literal queries.
+### Fase 7 — Laya: descarga en Personalizar + portero ✅ → Refactor: pre-warm automático + IndexedDB
+
+**Original:** Cerebro tab manual para descargar Laya.
+**Refactor (24/09):** Descarga automática en paralelo al startup. Sin UI de descarga.
+- `src/lib/preload.ts` — `prewarmModels()`: lanza embeddings + Laya en paralelo al montar App
+- `src/lib/laya.ts` — `preloadLaya()`: descarga + carga en background, heuristic fallback
+- `src/lib/idb.ts` — IndexedDB wrapper para persistencia robusta de preferencias
+- `src/lib/storage.ts` — `getPreferences()` ahora usa IndexedDB con fallback localStorage
+- `src/components/layout/EngineStatus.tsx` — badge sutil "Descargando modelos IA..." cuando descarga
+- Eliminado: cerebro tab, useLayaModel.ts, cerebro CSS, cerebro locale strings
 
 ### Fase 8 — QA final + limpieza ✅
 Quality gates: tsc OK, vite build OK (197KB JS, 850ms), grep sin tailwind/shadcn/lucide/framer/heroicons/fontawesome, 1 Vercel Function (api/chat), sin VITE_ secrets, responsive (640px + 900px breakpoints), ErrorBoundary con fallback. Limpieza: borrado `src/features/wayflow/` (6 archivos), `src/components/pdf/BriefingCard.tsx`, dead CSS (briefing-card, doc-split-triple, wf-quick-*, wayflow-*). Tokens `--color-card`, `--color-foreground`, `--color-muted-foreground` agregados para compatibilidad.

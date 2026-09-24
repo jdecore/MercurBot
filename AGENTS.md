@@ -70,7 +70,7 @@
 | 4 | ✅ | Vista documento — robot orbe + anillo orbital + consola cristal + píldora flotante |
 | 5 | ✅ | Quitar automatización (briefing, wayflow, starters, speakInteraction) |
 | 6 | ✅ | Voz en vivo (sesión continua, auto-envío, barge-in, volumeMeter) |
-| 7 | ✅ | Laya ONNX en caché + portero de embeddings (literal vs semántico) |
+| 7 | ✅ | Laya ONNX pre-warm automático + portero de embeddings (literal vs semántico) + IndexedDB |
 | 8 | ✅ | Diálogos cristal + QA final (pnpm build, grep, 1 Function, responsive) |
 
 **Orden:** 0→1→2→3→4→5→8→6→7. Cada fase = 1 commit reversible.

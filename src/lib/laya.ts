@@ -212,16 +212,30 @@ export async function downloadLayaModel(
   onProgress?.('tokenizer', 0)
   const tokResp = await fetch(LAYA_TOKENIZER_URL)
   if (!tokResp.ok) throw new Error(`Failed to download tokenizer: ${tokResp.status}`)
-  // Tokenizer downloaded and validated (used by classifyWithLaya)
   await tokResp.json()
 
   onProgress?.('config', 0)
   const cfgResp = await fetch(LAYA_CONFIG_URL)
   if (!cfgResp.ok) throw new Error(`Failed to download config: ${cfgResp.status}`)
-  // Config downloaded and validated (temperatures for inference)
   await cfgResp.json()
 
   onProgress?.('done', 100)
+}
+
+/**
+ * Pre-warm: download Laya model if not cached, then load session.
+ * Runs in background, never blocks UI.
+ */
+export async function preloadLaya(): Promise<void> {
+  try {
+    const cached = await isLayaCached()
+    if (!cached) {
+      await downloadLayaModel()
+    }
+    await loadLayaSession()
+  } catch (err) {
+    console.warn('[Laya] Pre-warm failed, using heuristic fallback.', err)
+  }
 }
 
 /**

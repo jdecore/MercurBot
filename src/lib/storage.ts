@@ -2,10 +2,14 @@
  * MercurBot Storage — frontend-first persistence (§31, §32 Fase 5)
  * InsForge-compatible local abstraction: no backend, no secrets,
  * data stays in browser (§8). When InsForge SDK is added, swap impl.
+ *
+ * Preferences use IndexedDB for persistence (survives Clear Site Data better
+ * than localStorage). Other data stays in localStorage for simplicity.
  */
 import type { Filter, ChartConfig } from '../data/types'
 import type { RobotUnitId } from '../types/mascota'
 import { ROBOT_DESIGNS, type RobotConfig } from './robotSeed'
+import { idbGet, idbSet, migrateToIDB } from './idb'
 
 export type SavedDataset = {
   id: string
@@ -101,7 +105,7 @@ export function saveDataset(d: SavedDataset): void {
   localStorage.setItem(KEY_DATASETS, JSON.stringify(list))
 }
 
-// Preferences (anomaly threshold, method, mascot)
+// Preferences (anomaly threshold, method, mascot) — IndexedDB for persistence
 export const DEFAULT_ROBOT_NAME = 'Mercur'
 const brasita = ROBOT_DESIGNS.brasita
 const DEFAULT_PREFS: Preferences = {
@@ -113,18 +117,70 @@ const DEFAULT_PREFS: Preferences = {
   robotConfig: { color: brasita.color, eyes: brasita.eyes, accessory: brasita.accessory },
   sidebarCollapsed: false,
 }
-export function getPreferences(): Preferences {
-  if (typeof localStorage === 'undefined') return DEFAULT_PREFS
-  const stored = safeParse<Partial<Preferences>>(localStorage.getItem(KEY_PREFS), {})
-  // Fusión profunda de robotConfig: migra prefs viejas sin romper.
-  return {
+
+// In-memory cache synced with IndexedDB
+let cachedPrefs: Preferences | null = null
+
+/**
+ * Load preferences from IndexedDB (with localStorage migration).
+ * Returns cached value if already loaded.
+ */
+export async function loadPreferences(): Promise<Preferences> {
+  if (cachedPrefs) return cachedPrefs
+
+  // Try IndexedDB first
+  let stored = await idbGet<Partial<Preferences>>(KEY_PREFS)
+
+  // Migrate from localStorage if not in IDB yet
+  if (!stored) {
+    stored = await migrateToIDB<Partial<Preferences>>(KEY_PREFS)
+  }
+
+  cachedPrefs = {
     ...DEFAULT_PREFS,
-    ...stored,
-    robotConfig: { ...DEFAULT_PREFS.robotConfig, ...(stored.robotConfig ?? {}) },
+    ...(stored ?? {}),
+    robotConfig: { ...DEFAULT_PREFS.robotConfig, ...(stored?.robotConfig ?? {}) },
+  }
+  return cachedPrefs
+}
+
+/**
+ * Get preferences synchronously (from cache or localStorage fallback).
+ * For components that can't use async.
+ */
+export function getPreferences(): Preferences {
+  if (cachedPrefs) return cachedPrefs
+
+  // Synchronous fallback: try localStorage
+  if (typeof localStorage !== 'undefined') {
+    const stored = safeParse<Partial<Preferences>>(localStorage.getItem(KEY_PREFS), {})
+    cachedPrefs = {
+      ...DEFAULT_PREFS,
+      ...stored,
+      robotConfig: { ...DEFAULT_PREFS.robotConfig, ...(stored.robotConfig ?? {}) },
+    }
+    return cachedPrefs
+  }
+
+  return DEFAULT_PREFS
+}
+
+export function savePreferences(p: Preferences): void {
+  cachedPrefs = p
+  // Write to IndexedDB (async, non-blocking)
+  void idbSet(KEY_PREFS, p)
+  // Also write to localStorage as fallback
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(KEY_PREFS, JSON.stringify(p))
   }
 }
-export function savePreferences(p: Preferences): void {
-  localStorage.setItem(KEY_PREFS, JSON.stringify(p))
+
+/**
+ * Initialize preferences on app startup.
+ * Migrates from localStorage to IndexedDB if needed.
+ */
+export async function initPreferences(): Promise<void> {
+  await loadPreferences()
 }
 
 // Chat history per document (P1: persists conversation across reloads/switches)

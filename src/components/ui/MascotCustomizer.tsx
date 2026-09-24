@@ -5,7 +5,6 @@ import { ROBOT_DESIGN_LIST, QUICK_THEMES, designFromName, sanitizeRobotName, typ
 import { Mascota } from './Mascota'
 import { Icon } from './Icon'
 import { useLocale, resetLocaleToAuto } from '../../lib/locale'
-import { useLayaModel } from '../../lib/useLayaModel'
 
 const MAX_NAME = 24
 
@@ -19,10 +18,9 @@ const ACC_IDS: RobotAccessory[] = ['none', 'antenna', 'fins', 'headphones', 'tuf
 
 export function MascotCustomizer({ robot, robotName, config, onChange }: MascotCustomizerProps) {
   const [robotDraft, setRobotDraft] = useState(robotName)
-  const [tab, setTab] = useState<'rapido' | 'avanzado' | 'cerebro'>('rapido')
+  const [tab, setTab] = useState<'rapido' | 'avanzado'>('rapido')
   const touchedRef = useRef(false)
   const { t, locale, setLocale } = useLocale()
-  const laya = useLayaModel()
 
   const EYES_LABELS: Record<RobotEyes, string> = { round: t.mcEyesRound, visor: t.mcEyesVisor, happy: t.mcEyesHappy, sleepy: t.mcEyesSleepy, big: t.mcEyesBig }
   const ACC_LABELS: Record<RobotAccessory, string> = { none: t.mcAccNone, antenna: t.mcAccAntenna, fins: t.mcAccFins, headphones: t.mcAccHeadphones, tuft: t.mcAccTuft, glasses: t.mcAccGlasses, bow: t.mcAccBow, cap: t.mcAccCap }
@@ -49,7 +47,6 @@ export function MascotCustomizer({ robot, robotName, config, onChange }: MascotC
       <div className="customizer-tabs" role="tablist" aria-label={t.mcTabsAria}>
         <button type="button" role="tab" aria-selected={tab === 'rapido'} className={`customizer-tab ${tab === 'rapido' ? 'active' : ''}`} onClick={() => setTab('rapido')}>{t.mcTabStyle}</button>
         <button type="button" role="tab" aria-selected={tab === 'avanzado'} className={`customizer-tab ${tab === 'avanzado' ? 'active' : ''}`} onClick={() => setTab('avanzado')}>{t.mcTabDetails}</button>
-        <button type="button" role="tab" aria-selected={tab === 'cerebro'} className={`customizer-tab ${tab === 'cerebro' ? 'active' : ''}`} onClick={() => setTab('cerebro')}><Icon name="cerebro" size={14} /> {t.mcTabCerebro}</button>
       </div>
       {tab === 'rapido' && (
         <>
@@ -139,42 +136,6 @@ export function MascotCustomizer({ robot, robotName, config, onChange }: MascotC
                 )
               })}
             </div>
-          </section>
-        </>
-      )}
-      {tab === 'cerebro' && (
-        <>
-          <section className="customizer-section" aria-label={t.mcCerebroAria}>
-            <h3 className="customizer-section-title">{t.mcCerebroHeading}</h3>
-            <p className="customizer-hint">{t.mcCerebroDesc}</p>
-            <div className="cerebro-status">
-              <div className="cerebro-status-row">
-                <Icon name="cerebro" size={16} />
-                <span>{laya.downloaded ? t.mcCerebroInstalled : t.mcCerebroNotInstalled}</span>
-                {laya.sizeBytes != null && (
-                  <span className="cerebro-size">{(laya.sizeBytes / 1024 / 1024).toFixed(0)} MB</span>
-                )}
-              </div>
-              {laya.progress && (
-                <div className="cerebro-progress">
-                  <div className="cerebro-progress-bar" style={{ width: `${laya.progress.percent}%` }} />
-                  <span className="cerebro-progress-label">{laya.progress.phase} {laya.progress.percent}%</span>
-                </div>
-              )}
-              {laya.error && <p className="cerebro-error">{laya.error}</p>}
-            </div>
-            <div className="cerebro-actions">
-              {!laya.downloaded ? (
-                <button type="button" className="btn btn-primary" onClick={laya.download} disabled={laya.loading}>
-                  <Icon name="download" size={14} /> {laya.loading ? t.mcCerebroDownloading : t.mcCerebroDownload}
-                </button>
-              ) : (
-                <button type="button" className="btn btn-secondary" onClick={laya.deleteModel}>
-                  <Icon name="trash" size={14} /> {t.mcCerebroDelete}
-                </button>
-              )}
-            </div>
-            <p className="customizer-hint small">{t.mcCerebroHint}</p>
           </section>
         </>
       )}

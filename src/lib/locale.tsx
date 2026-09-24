@@ -115,7 +115,7 @@ export type ProductDict = {
   sbLocalUser: string; sbReadingPdf: string; sbNoDoc: string; sbCustomizeBtn: string
   sbHowItWorks: string; sbCollapse: string
   // ── Engine Status ──
-  esIdleTitle: string; esIdleCompact: string; esIdleFull: string
+  esIdleTitle: string; esIdleCompact: string; esIdleFull: string; esDownloadingModels: string
   esStreamTitle: string; esStreamCompact: string; esStreamFull: string
   esModeHybrid: string; esModeLiteral: string; esModeReady: string
   esReadyTitle: (mode: string, model?: string) => string; esIndexedTitle: string
@@ -141,11 +141,6 @@ export type ProductDict = {
   mcDesignAria: string; mcDesignHeading: string; mcDesignLabel: (l: string) => string
   mcEyesHeading: string; mcEyesGroupAria: string
   mcAccHeading: string; mcAccGroupAria: string
-  // ── Cerebro (Laya ONNX) ──
-  mcTabCerebro: string; mcCerebroAria: string; mcCerebroHeading: string; mcCerebroDesc: string
-  mcCerebroInstalled: string; mcCerebroNotInstalled: string
-  mcCerebroDownload: string; mcCerebroDownloading: string; mcCerebroDelete: string
-  mcCerebroHint: string
   // ── Locale Override ──
   mcLangHeading: string; mcLangGroupAria: string
   mcLangAuto: string; mcLangEs: string; mcLangEn: string
@@ -446,6 +441,7 @@ const enDict: FullDict = {
   esIdleTitle: 'Upload a PDF to enable local search',
   esIdleCompact: '100% local',
   esIdleFull: '100% local',
+  esDownloadingModels: 'Downloading AI models...',
   esStreamTitle: 'The AI is reading your PDF fragments',
   esStreamCompact: 'thinking…',
   esStreamFull: 'thinking…',
@@ -511,17 +507,6 @@ const enDict: FullDict = {
   mcEyesGroupAria: 'Robot eyes',
   mcAccHeading: 'Extra',
   mcAccGroupAria: 'Robot accessory',
-  // ── Cerebro (Laya ONNX) ──
-  mcTabCerebro: 'Cerebro',
-  mcCerebroAria: 'AI brain settings',
-  mcCerebroHeading: 'Cerebro IA',
-  mcCerebroDesc: 'Clasificador semántico que decide cuándo usar búsqueda léxica (palabras exactas) vs semántica (significado). Se ejecuta en tu navegador.',
-  mcCerebroInstalled: 'Modelo Laya instalado',
-  mcCerebroNotInstalled: 'Modelo Laya no instalado',
-  mcCerebroDownload: 'Descargar modelo',
-  mcCerebroDownloading: 'Descargando...',
-  mcCerebroDelete: 'Eliminar modelo',
-  mcCerebroHint: 'El modelo Laya (~424 MB) mejora la clasificación de consultas. Sin él, se usa un clasificador heurístico rápido.',
   // ── Locale Override ──
   mcLangHeading: 'Language',
   mcLangGroupAria: 'Language override',
@@ -843,6 +828,7 @@ const esDict: FullDict = {
   esIdleTitle: 'Carga un PDF para activar la búsqueda local',
   esIdleCompact: '100% local',
   esIdleFull: 'personalización 100% local',
+  esDownloadingModels: 'Descargando modelos IA...',
   esStreamTitle: 'La IA está leyendo los fragmentos de tu PDF',
   esStreamCompact: 'pensando…',
   esStreamFull: 'pensando…',
@@ -908,17 +894,6 @@ const esDict: FullDict = {
   mcEyesGroupAria: 'Ojos del robot',
   mcAccHeading: 'Extra',
   mcAccGroupAria: 'Accesorio del robot',
-  // ── Cerebro (Laya ONNX) ──
-  mcTabCerebro: 'Cerebro',
-  mcCerebroAria: 'Configuración del cerebro IA',
-  mcCerebroHeading: 'Cerebro IA',
-  mcCerebroDesc: 'Clasificador semántico que decide cuándo usar búsqueda léxica (palabras exactas) vs semántica (significado). Se ejecuta en tu navegador.',
-  mcCerebroInstalled: 'Modelo Laya instalado',
-  mcCerebroNotInstalled: 'Modelo Laya no instalado',
-  mcCerebroDownload: 'Descargar modelo',
-  mcCerebroDownloading: 'Descargando...',
-  mcCerebroDelete: 'Eliminar modelo',
-  mcCerebroHint: 'El modelo Laya (~424 MB) mejora la clasificación de consultas. Sin él, se usa un clasificador heurístico rápido.',
   // ── Locale Override ──
   mcLangHeading: 'Idioma',
   mcLangGroupAria: 'Forzar idioma',
