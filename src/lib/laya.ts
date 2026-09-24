@@ -324,8 +324,11 @@ export async function classifyWithLaya(
 export async function loadLayaSession(): Promise<void> {
   if (layaSession) return
 
-  // Dynamic import of onnxruntime-web (transitive dep of @xenova/transformers)
+  // Dynamic import of onnxruntime-web
   const ort = await import('onnxruntime-web' as string)
+
+  // Configure WASM to load from CDN (not origin)
+  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/'
 
   const root = await navigator.storage.getDirectory()
   const dir = await root.getDirectoryHandle(CACHE_KEY)
