@@ -16,7 +16,6 @@ interface SidebarProps {
   onRemoved: () => void
   onCustomize: () => void
   onHowItWorks: () => void
-  onToggleWayflow: () => void
 }
 
 function fmtSize(bytes: number): string {
@@ -37,7 +36,6 @@ export function Sidebar({
   onRemoved,
   onCustomize,
   onHowItWorks,
-  onToggleWayflow,
 }: SidebarProps) {
   const [docs, setDocs] = useState<LibDoc[]>([])
   const { t } = useLocale()
@@ -55,9 +53,6 @@ export function Sidebar({
     return (
       <div className="sidebar-body rail-body">
         <EngineStatus compact />
-        <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleWayflow} title={t.sbWorkflow} aria-label={t.sbWorkflow}>
-          <Icon name="send" size={16} />
-        </button>
         <button type="button" className="btn btn-secondary rail-btn" onClick={onToggleRail} title={t.sbRecentsExpand} aria-label={t.sbRecentsExpand} aria-expanded={false}>
           <Icon name="file" size={16} />
         </button>
@@ -89,9 +84,6 @@ export function Sidebar({
   return (
     <div className="sidebar-body">
       <EngineStatus />
-      <button type="button" className="btn btn-secondary sidebar-new" onClick={onToggleWayflow}>
-        <Icon name="send" size={16} /> {t.sbWorkflow}
-      </button>
 
       <nav className="sidebar-section" aria-label={t.sbRecents}>
         <h2 className="sidebar-heading">{t.sbRecents}</h2>

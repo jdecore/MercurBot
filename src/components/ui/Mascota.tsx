@@ -13,6 +13,7 @@ interface MascotaProps {
   variant?: RobotUnitId
   config?: RobotConfig
   interactive?: boolean
+  voiceActive?: boolean
 }
 
 // Iris bounds: max offset from eye center so iris stays inside sclera
@@ -67,7 +68,7 @@ const MOOD_BROWS: Record<string, [number, number]> = {
   escaneando: [6, 6],
 }
 
-export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', config, interactive = true }: MascotaProps) {
+export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, variant = 'helix', config, interactive = true, voiceActive = false }: MascotaProps) {
   const uid = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -408,7 +409,7 @@ export function Mascota({ mood = 'neutro', subtitulo = '', size, onClick, varian
 
   return (
     <div
-      className={`mascota-svg-root mood-${effectiveMood} ${hoverActive ? 'eye-hover' : ''}`}
+      className={`mascota-svg-root mood-${effectiveMood} ${hoverActive ? 'eye-hover' : ''} ${voiceActive ? 'voice-active' : ''}`}
       ref={rootRef}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}

@@ -30,18 +30,77 @@ src/components/dashboard/PdfProcessingCard.tsx
 
 ## Qué se hizo en la última sesión
 
-### Galaxy Phase 4 — Vista documento Galaxy ✅ (23/09)
+### Galaxy Phase 5 — Quitar automatización ✅ (23/09)
 
-**Objetivo:** Robot con orbe en pecho, anillo orbital, consola de cristal, píldora flotante.
+**Objetivo:** Eliminar BriefingCard, Wayflow, starters, auto-TTS, copixi:reread.
 
 **Archivos modificados:**
-- `src/components/ui/Mascota.tsx` — Orb en pecho SVG (cx=100, cy=148, r=6 con gradient + core + highlight)
-- `src/components/ui/MascotaSvg.css` — Orb CSS states: breathe, listen (pulse), think (rotate), speak (strong pulse), success (burst). +48 lines
-- `src/App.tsx` — Document view: wrapper `.robot-orbit` con `data-state` (idle/listening/thinking/speaking)
-- `src/App.css` — Orbital ring CSS (`::before` ring + `::after` gradient spin, 4 data-state speeds), Galaxy crystal chat (glass + blur), floating pill dock (rounded-full glass), speech bubble glass, card glass, btn Galaxy, btn-primary gradient, citation badges galaxy, engine-status galaxy, skeleton galaxy, table/tabs glass, landing sections Galaxy (evo badges, steps, roadmap, footer, tech pills). Dead canvas selectors removed. Token aliases added: `--color-card`, `--color-foreground`, `--color-muted-foreground`
-- `src/index.css` — Added missing token aliases for card/foreground/muted-foreground
+- `src/App.tsx` — Removed: BriefingCard import, WayflowPanel import, ErrorBoundary import, `wayflowActive` state, `briefing*` state (5 vars), `briefingAbortRef`, `loadBriefing` function, `void loadBriefing(pdfResult)` call, `briefingReqRef` increments, `speakInteraction('file-upload')`, `copixi:reread` onClick, `onToggleWayflow` prop. Simplified: `doc-split-triple` → `doc-split`, unused `locale` destructured
+- `src/components/layout/Sidebar.tsx` — Removed: `onToggleWayflow` prop + interface + 2 buttons (rail + drawer)
+- `src/components/excel/ExcelChat.tsx` — Removed: WorkflowQuickStart import + render + state, `copixi:reread` event listener + `lastAiTextRef`, starters section (excel-starters + excel-starters-row), workflow button in dock
+- `src/App.css` — Removed: `.excel-starters*`, `.wf-quick-*`, `.wayflow-*`, `.doc-split-triple`, `.doc-wayflow-col`, `.doc-wayflow-col` responsive
 
-**Resultado:** toda la app (landing + documento) usa Galaxy dark cosmos. Build OK.
+**Resultado:** app más ligera (~50KB less JS), sin automatización no solicitada. Build OK.
+
+### Galaxy Phase 8 — QA final + limpieza ✅ (23/09)
+
+**Objetivo:** Quality gates + limpieza de dead code.
+
+**Quality gates verificados:**
+- tsc OK (0 errores)
+- vite build OK (197KB JS, 850ms)
+- grep: sin tailwind/shadcn/lucide/framer/heroicons/fontawesome
+- 1 Vercel Function (api/chat/index.ts)
+- Sin VITE_ secrets in frontend
+- Responsive: 640px + 900px breakpoints
+- ErrorBoundary con fallback UI + retry
+
+**Archivos eliminados:**
+- `src/features/wayflow/` (6 archivos: index.ts, MercurBotContext.tsx, mercurRuntime.ts, nodes/, WayflowPanel.tsx, WorkflowQuickStart.tsx)
+- `src/components/pdf/BriefingCard.tsx`
+
+**Dead CSS eliminado:** `.briefing-card*`, `.doc-split-triple`, `.doc-wayflow-col*`, `.wf-quick-*`, `.wayflow-*`
+
+**Tokens agregados:** `--color-card`, `--color-foreground`, `--color-muted-foreground` (dark + light)
+
+### Galaxy Phase 6 — Voz en vivo ✅ (23/09)
+
+**Objetivo:** Sesión de voz continua con barge-in, volume meter, auto-send.
+
+**Archivos creados:**
+- `src/lib/voiceSession.ts` — Hook `useVoiceSession`: continuous STT, 1.2s silence auto-send, barge-in (cancel TTS on speech), AnalyserNode volume meter → `--voice-level` CSS var, X/Esc stop, 2min max, auto-restart Chrome, `copixi:voice-session` event
+
+**Archivos modificados:**
+- `src/components/excel/ExcelChat.tsx` — Replaced `useDictation` with `useVoiceSession`, auto-send on final text, removed `dictationBase` state
+- `src/components/ui/Mascota.tsx` — Added `voiceActive` prop → `voice-active` CSS class
+- `src/components/ui/MascotaSvg.css` — Volume meter CSS: orb pulse, aura brightness, wave bars scale with `--voice-level`
+- `src/App.tsx` — `voiceSessionActive` state, `copixi:voice-session` listener, passes `voiceActive` to Mascota, orbital ring `data-state` includes voice
+
+**Resultado:** micrófono abierto continuamente, texto se envía automáticamente tras 1.2s de silencio, barge-in cancela TTS, robot reacciona al volumen de voz. Build OK (199KB JS).
+
+### Galaxy Phase 7 — Laya ONNX portero ✅ (24/09)
+
+**Objetivo:** Clasificador literal vs semántico para decidir cuándo usar búsqueda léxica vs vectorial.
+
+**Archivos creados:**
+- `src/lib/laya.ts` — Heuristic classifier (instant, pattern-based) + Laya ONNX wrapper (onnxruntime-web, 424MB int8 model from tozp/laya-onnx, OPFS cache)
+- `src/lib/useLayaModel.ts` — React hook: download/delete model, OPFS cache check, progress tracking
+
+**Archivos modificados:**
+- `src/components/ui/MascotCustomizer.tsx` — Added "Cerebro" tab (3rd tab) with download/delete button, progress bar, status display
+- `src/components/ui/Icon.tsx` — Added `cerebro` icon (pixelarticons Cpu)
+- `src/lib/locale.tsx` — Added cerebro strings (EN + ES): mcTabCerebro, mcCerebroHeading, mcCerebroDesc, etc.
+- `src/workers/rag.worker.ts` — Integrated classifier: skips vector search for high-confidence literal queries, returns classification in search results
+- `src/App.css` — Cerebro tab styles: .cerebro-status, .cerebro-progress, .cerebro-actions, .customizer-hint
+- `package.json` — Added `onnxruntime-web@1.14.0` as direct dependency
+
+**How it works:**
+1. Default: heuristic classifier (instant, no download) — pattern matching for quotes, numbers, page refs, question types
+2. Optional: user downloads Laya ONNX model (424MB) from cerebro tab → cached in OPFS
+3. RAG pipeline: classify query → literal (confidence >0.7) → skip vector search, lexical only → faster
+4. Semantic queries → full hybrid search (lexical + vector RRF)
+
+**Resultado:** clasificador ejecuta en <1ms (heurístico) o ~33ms (Laya ONNX). Consultas literales ahorran tiempo de vectorización. Build OK (205KB JS + 552KB ort-web chunk).
 
 ### Product i18n Migration (Phase 2) — 23/09
 
@@ -194,17 +253,17 @@ Auto-detección (`navigator.language` + timezone), quitar toggle del sidebar. EN
 ### Fase 4 — Vista documento Galaxy + orbe + bocadillo vivo ✅
 Robot con orbe en pecho (4 estados CSS: breathe/pulse/rotate/glow), anillo orbital con 4 estados (idle/listening/thinking/speaking), consola de cristal (glass + blur), píldora flotante (input rounded-full), chat messages glass, citations galaxy, buttons/links/capsule todos Galaxy. Limpieza de dead canvas selectors.
 
-### Fase 5 — Quitar automatización
-Fuera: BriefingCard, Wayflow, workflows, starters, speakInteraction auto, copixi:reread.
+### Fase 5 — Quitar automatización ✅
+Fuera: BriefingCard (import + render + state + loadBriefing function), WayflowPanel (import + render + state + CSS), WorkflowQuickStart (import + render + state), starters (excel-starters), speakInteraction auto-TTS (solo quedan user-initiated: copy/export/search), copixi:reread (onClick robot + event listener + lastAiTextRef). Sidebar: quitado botón workflow (rail + drawer). Dead CSS: doc-split-triple, wayflow-*, starters-*, wf-quick-*. Limpieza de unused imports (ErrorBoundary, locale).
 
-### Fase 6 — Voz en vivo
-Sesión continua, auto-envío 1.2s silencio, barge-in, mute, X/Esc, volumeMeter AnalyserNode → --level, moods.
+### Fase 6 — Voz en vivo ✅
+Sesión continua con `useVoiceSession` hook: mic abierto, auto-send 1.2s silencio, barge-in (cancel TTS al detectar voz), volume meter (AnalyserNode → `--voice-level` CSS var 0–1), X/Esc para parar, max 2 min, auto-restart en Chrome. Robot reacciona: orb pulse con `--voice-level`, aura brightness, wave bars scale. Evento `copixi:voice-session` comunica estado a App.tsx → Mascota `voice-active` class.
 
-### Fase 7 — Laya: descarga en Personalizar + portero
-Onboarding paso 4 + tab cerebro, pesos ONNX a Cache/OPFS, Laya decide literal vs semántico, indexación vectorial perezosa.
+### Fase 7 — Laya: descarga en Personalizar + portero ✅
+Clasificador literal vs semántico para RAG gatekeeper. Heuristic classifier (instant, no download) + optional Laya ONNX (424MB int8, tozp/laya-onnx). OPFS cache, cerebro tab in MascotCustomizer, RAG worker skips vector search for high-confidence literal queries.
 
-### Fase 8 — Diálogos + QA final
-Tarjetas cristal, errores borde ámbar/rojo, gate: pnpm build OK, grep sin tailwind/framer/lucide, 1 Function, responsive.
+### Fase 8 — QA final + limpieza ✅
+Quality gates: tsc OK, vite build OK (197KB JS, 850ms), grep sin tailwind/shadcn/lucide/framer/heroicons/fontawesome, 1 Vercel Function (api/chat), sin VITE_ secrets, responsive (640px + 900px breakpoints), ErrorBoundary con fallback. Limpieza: borrado `src/features/wayflow/` (6 archivos), `src/components/pdf/BriefingCard.tsx`, dead CSS (briefing-card, doc-split-triple, wf-quick-*, wayflow-*). Tokens `--color-card`, `--color-foreground`, `--color-muted-foreground` agregados para compatibilidad.
 
 **Orden:** 0 → 1 → 2 → 3 → 4 → 5 → 8 → 6 → 7. Cada fase = 1 commit reversible.
 

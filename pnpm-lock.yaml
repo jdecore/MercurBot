@@ -26,6 +26,9 @@ importers:
       minisearch:
         specifier: ^7.2.0
         version: 7.2.0
+      onnxruntime-web:
+        specifier: 1.14.0
+        version: 1.14.0
       pdfjs-dist:
         specifier: ^6.3.289
         version: 6.3.289

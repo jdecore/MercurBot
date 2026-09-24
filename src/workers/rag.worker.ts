@@ -1,5 +1,6 @@
 import MiniSearch from 'minisearch'
 import type { PdfChunk } from '../data/extractors/pdf'
+import { classifyHeuristic, type QueryClass } from '../lib/laya'
 
 export interface WorkerIndexPayload {
   docId: string
@@ -290,36 +291,43 @@ async function handleIndexDocument({ docId, docName, chunks }: WorkerIndexPayloa
   })
 }
 
-// Hybrid Search with RRF (Reciprocal Rank Fusion)
+// Hybrid Search with RRF (Reciprocal Rank Fusion) + Laya gatekeeper
 async function handleSearch({ query, topK = 3 }: WorkerSearchPayload) {
   if (!miniSearch || chunkStore.size === 0) {
     self.postMessage({ type: 'SEARCH_RESULTS', payload: { query, results: [] } })
     return
   }
 
-  // 1. Lexical Search
+  // Phase 7: Classify query as literal vs semantic
+  const queryClass: QueryClass = classifyHeuristic(query)
+  const classification = { class: queryClass, confidence: queryClass === 'literal' ? 0.8 : 0.6 }
+
+  // 1. Lexical Search (always runs)
   const lexicalMatches = miniSearch.search(query).slice(0, 15)
   const lexicalRanks = new Map<string, number>()
   lexicalMatches.forEach((m, idx) => lexicalRanks.set(m.id, idx + 1))
 
-  // 2. Vector Search (if available)
+  // 2. Vector Search (skip for high-confidence literal queries)
   const vectorRanks = new Map<string, number>()
-  const pipe = await getPipeline()
+  const skipVector = queryClass === 'literal' && classification.confidence > 0.7
 
-  if (pipe && vectorStore.size > 0) {
-    try {
-      const qOutput = await pipe(`query: ${query}`, { pooling: 'mean', normalize: true })
-      const slice = qOutput.dims.length > 1 ? qOutput.data.slice(0, qOutput.dims[1]) : qOutput.data
-      const qVec = normalizeL2(new Float32Array(Array.from(slice as unknown as number[])))
+  if (!skipVector) {
+    const pipe = await getPipeline()
+    if (pipe && vectorStore.size > 0) {
+      try {
+        const qOutput = await pipe(`query: ${query}`, { pooling: 'mean', normalize: true })
+        const slice = qOutput.dims.length > 1 ? qOutput.data.slice(0, qOutput.dims[1]) : qOutput.data
+        const qVec = normalizeL2(new Float32Array(Array.from(slice as unknown as number[])))
 
-      const scored: { id: string; score: number }[] = []
-      for (const [id, cVec] of vectorStore) {
-        scored.push({ id, score: dotProduct(qVec, cVec) })
+        const scored: { id: string; score: number }[] = []
+        for (const [id, cVec] of vectorStore) {
+          scored.push({ id, score: dotProduct(qVec, cVec) })
+        }
+        scored.sort((a, b) => b.score - a.score)
+        scored.slice(0, 15).forEach((s, idx) => vectorRanks.set(s.id, idx + 1))
+      } catch (vErr) {
+        console.warn('[RAG Worker] Vector query failed. Usando solo léxico.', vErr)
       }
-      scored.sort((a, b) => b.score - a.score)
-      scored.slice(0, 15).forEach((s, idx) => vectorRanks.set(s.id, idx + 1))
-    } catch (vErr) {
-      console.warn('[RAG Worker] Vector query failed. Usando solo léxico.', vErr)
     }
   }
 
@@ -367,7 +375,7 @@ async function handleSearch({ query, topK = 3 }: WorkerSearchPayload) {
 
   self.postMessage({
     type: 'SEARCH_RESULTS',
-    payload: { query, results: finalHits },
+    payload: { query, results: finalHits, classification },
   })
 }
 

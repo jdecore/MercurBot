@@ -141,6 +141,11 @@ export type ProductDict = {
   mcDesignAria: string; mcDesignHeading: string; mcDesignLabel: (l: string) => string
   mcEyesHeading: string; mcEyesGroupAria: string
   mcAccHeading: string; mcAccGroupAria: string
+  // ── Cerebro (Laya ONNX) ──
+  mcTabCerebro: string; mcCerebroAria: string; mcCerebroHeading: string; mcCerebroDesc: string
+  mcCerebroInstalled: string; mcCerebroNotInstalled: string
+  mcCerebroDownload: string; mcCerebroDownloading: string; mcCerebroDelete: string
+  mcCerebroHint: string
   // ── Locale Override ──
   mcLangHeading: string; mcLangGroupAria: string
   mcLangAuto: string; mcLangEs: string; mcLangEn: string
@@ -506,6 +511,17 @@ const enDict: FullDict = {
   mcEyesGroupAria: 'Robot eyes',
   mcAccHeading: 'Extra',
   mcAccGroupAria: 'Robot accessory',
+  // ── Cerebro (Laya ONNX) ──
+  mcTabCerebro: 'Cerebro',
+  mcCerebroAria: 'AI brain settings',
+  mcCerebroHeading: 'Cerebro IA',
+  mcCerebroDesc: 'Clasificador semántico que decide cuándo usar búsqueda léxica (palabras exactas) vs semántica (significado). Se ejecuta en tu navegador.',
+  mcCerebroInstalled: 'Modelo Laya instalado',
+  mcCerebroNotInstalled: 'Modelo Laya no instalado',
+  mcCerebroDownload: 'Descargar modelo',
+  mcCerebroDownloading: 'Descargando...',
+  mcCerebroDelete: 'Eliminar modelo',
+  mcCerebroHint: 'El modelo Laya (~424 MB) mejora la clasificación de consultas. Sin él, se usa un clasificador heurístico rápido.',
   // ── Locale Override ──
   mcLangHeading: 'Language',
   mcLangGroupAria: 'Language override',
@@ -892,6 +908,17 @@ const esDict: FullDict = {
   mcEyesGroupAria: 'Ojos del robot',
   mcAccHeading: 'Extra',
   mcAccGroupAria: 'Accesorio del robot',
+  // ── Cerebro (Laya ONNX) ──
+  mcTabCerebro: 'Cerebro',
+  mcCerebroAria: 'Configuración del cerebro IA',
+  mcCerebroHeading: 'Cerebro IA',
+  mcCerebroDesc: 'Clasificador semántico que decide cuándo usar búsqueda léxica (palabras exactas) vs semántica (significado). Se ejecuta en tu navegador.',
+  mcCerebroInstalled: 'Modelo Laya instalado',
+  mcCerebroNotInstalled: 'Modelo Laya no instalado',
+  mcCerebroDownload: 'Descargar modelo',
+  mcCerebroDownloading: 'Descargando...',
+  mcCerebroDelete: 'Eliminar modelo',
+  mcCerebroHint: 'El modelo Laya (~424 MB) mejora la clasificación de consultas. Sin él, se usa un clasificador heurístico rápido.',
   // ── Locale Override ──
   mcLangHeading: 'Idioma',
   mcLangGroupAria: 'Forzar idioma',

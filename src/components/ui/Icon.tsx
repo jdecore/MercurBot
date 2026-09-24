@@ -24,6 +24,7 @@ import { ChevronLeft } from 'pixelarticons/react/ChevronLeft.js'
 import { ChevronRight } from 'pixelarticons/react/ChevronRight.js'
 import { Robot } from 'pixelarticons/react/Robot.js'
 import { User } from 'pixelarticons/react/User.js'
+import { Cpu } from 'pixelarticons/react/Cpu.js'
 
 const MAP = {
   alert: WarningDiamond,
@@ -51,6 +52,7 @@ const MAP = {
   'chevron-right': ChevronRight,
   robot: Robot,
   user: User,
+  cerebro: Cpu,
 } as const
 
 export type IconName = keyof typeof MAP

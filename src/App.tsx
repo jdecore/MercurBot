@@ -6,9 +6,8 @@ import { DashboardProvider, useDashboard } from './state/DashboardContext'
 import { Mascota } from './components/ui/Mascota'
 import { Icon } from './components/ui/Icon'
 import { MascotCustomizer } from './components/ui/MascotCustomizer'
-import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { ExcelChat } from './components/excel/ExcelChat'
-import { speak, speakInteraction } from './lib/tts'
+import { speak } from './lib/tts'
 import { getPreferences, savePreferences, hasOnboarded, setOnboarded } from './lib/storage'
 import type { RobotConfig } from './lib/robotSeed'
 import { OnboardingTour } from './components/onboarding/OnboardingTour'
@@ -16,11 +15,9 @@ import { type MascotaMood, type RobotUnitId } from './types/mascota'
 import { ragClient } from './lib/ragClient'
 import { PdfProcessingCard, type PdfProcessingState } from './components/dashboard/PdfProcessingCard'
 import { PdfViewerDialog, PdfViewerPanel } from './components/pdf/PdfViewer'
-import { BriefingCard } from './components/pdf/BriefingCard'
 import { Sidebar } from './components/layout/Sidebar'
 import { savePdfToLibrary, getPdfBytes, listLibrary } from './lib/docLibrary'
 import { hashPdfFile } from './lib/fileHash'
-import { WayflowPanel } from './features/wayflow'
 import { LocaleProvider, useLocale } from './lib/locale'
 import { BlackHoleUpload } from './components/ui/BlackHoleUpload'
 
@@ -29,7 +26,7 @@ function MainDashboard() {
     error, setError, setLoading,
     pdfDoc, setPdfDoc,
   } = useDashboard()
-  const { t, locale } = useLocale()
+  const { t } = useLocale()
 
   const [dragging, setDragging] = useState(false)
   const [mascotaMood, setMascotaMood] = useState<MascotaMood>('neutro')
@@ -40,11 +37,8 @@ function MainDashboard() {
   const [userName, setUserName] = useState<string>(() => getPreferences().userName)
   const [tourOpen, setTourOpen] = useState(() => !hasOnboarded())
   const [pdfProcessing, setPdfProcessing] = useState<PdfProcessingState | null>(null)
-  const [briefing, setBriefing] = useState<string | null>(null)
-  const [briefingModel, setBriefingModel] = useState<string | undefined>(undefined)
-  const [briefingLoading, setBriefingLoading] = useState(false)
-  const briefingReqRef = useRef(0)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [voiceSessionActive, setVoiceSessionActive] = useState(false)
   const [viewer, setViewer] = useState<{ open: boolean; page: number }>({ open: false, page: 1 })
   // Fase A — panel lateral: página visible + visibilidad (volver a vista centrada).
   const [panelPage, setPanelPage] = useState(1)
@@ -55,7 +49,6 @@ function MainDashboard() {
   const [libraryToken, setLibraryToken] = useState(0)
   const [customizerOpen, setCustomizerOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [wayflowActive, setWayflowActive] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(() => getPreferences().sidebarCollapsed)
 
   const speakRef = useRef(speak)
@@ -63,6 +56,16 @@ function MainDashboard() {
   useEffect(() => {
     speakRef.current = speak
   })
+
+  // Voice session listener (Phase 6): robot shows voice-active state
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ active: boolean }>).detail
+      if (detail) setVoiceSessionActive(detail.active)
+    }
+    window.addEventListener('copixi:voice-session', handler as EventListener)
+    return () => window.removeEventListener('copixi:voice-session', handler as EventListener)
+  }, [])
 
   // Track setTimeout IDs to clear them on unmount (prevents state updates on
   // unmounted components and memory leaks from lingering closures).
@@ -91,10 +94,6 @@ function MainDashboard() {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
-    briefingReqRef.current++ // el briefing en vuelo ya no corresponde
-    setBriefing(null)
-    setBriefingModel(undefined)
-    setBriefingLoading(false)
     setPdfProcessing(null)
     setLoading(false)
     setMascotaMood('duda')
@@ -108,54 +107,9 @@ function MainDashboard() {
     }, 4000)
   }, [setLoading])
 
-  // Briefing proactivo (Fase 24C): 1 llamada tras indexar; si falla, sin tarjeta.
-  // Con contador de petición: un briefing tardío nunca pisa a un documento nuevo.
-  // Abortable: si el componente se desmonta o el usuario cambia de doc, se cancela.
-  const briefingAbortRef = useRef<AbortController | null>(null)
-  const loadBriefing = useCallback(async (doc: { filename: string; totalPages: number; chunks: { length: number }; fullText: string }) => {
-    const my = ++briefingReqRef.current
-    setBriefing(null)
-    setBriefingModel(undefined)
-    setBriefingLoading(true)
-    // Cancel any previous in-flight briefing fetch.
-    briefingAbortRef.current?.abort()
-    const ctrl = new AbortController()
-    briefingAbortRef.current = ctrl
-    try {
-      const sample = doc.fullText.replace(/\s+/g, ' ').trim().slice(0, 4000)
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'summary',
-          context: {
-            documentType: 'pdf',
-            filename: doc.filename,
-            totalPages: doc.totalPages,
-            chunks: doc.chunks.length,
-            sample,
-          },
-          lang: locale,
-        }),
-        signal: ctrl.signal,
-      })
-      const json = (await res.json()) as { text?: string; model?: string; error?: string }
-      if (my !== briefingReqRef.current) return
-      if (res.ok && json.text?.trim()) {
-        setBriefing(json.text.trim())
-        if (typeof json.model === 'string' && json.model) setBriefingModel(json.model)
-      }
-    } catch {
-      /* degradado silencioso (AbortError incluido) */
-    } finally {
-      if (my === briefingReqRef.current) setBriefingLoading(false)
-    }
-  }, [])
-
   const parseFile = useCallback(async (file: File) => {
     const valid = validateAnyFile(file)
     if (!valid.valid) { setError(valid.error ?? t.errUnsupportedType); return }
-    briefingReqRef.current++ // invalida briefings en vuelo del documento anterior
     // Aborta una carga anterior solapada antes de empezar la nueva.
     try {
       abortControllerRef.current?.abort()
@@ -164,7 +118,6 @@ function MainDashboard() {
     }
     abortControllerRef.current = null
     setLoading(true); setError(null)
-    setBriefing(null); setBriefingModel(undefined); setBriefingLoading(false)
 
     try {
       const controller = new AbortController()
@@ -181,7 +134,6 @@ function MainDashboard() {
         canCancel: true,
       })
       speak(t.ttsGreeting(file.name))
-      speakInteraction('file-upload')
 
       // Fase 24A: huella estable → mismo archivo, mismo docId, caché OPFS válida.
       const docId = await hashPdfFile(file)
@@ -257,7 +209,6 @@ function MainDashboard() {
       speak(userName ? t.ttsReadyWithName(userName) : t.ttsReadyNoName)
       setPdfProcessing(null)
       abortControllerRef.current = null
-      void loadBriefing(pdfResult)
     } catch (err) {
       const errName = (err as { name?: string } | null)?.name
       if (errName === 'AbortError') {
@@ -277,7 +228,7 @@ function MainDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [setError, setLoading, setPdfDoc, loadBriefing, userName])
+  }, [setError, setLoading, setPdfDoc, userName])
 
   // Tutorial de bienvenida (Fase E): guarda nombres + diseño y saluda.
   const finishOnboarding = useCallback((user: string, rName: string, cfg: RobotConfig) => {
@@ -391,7 +342,6 @@ function MainDashboard() {
     return () => {
       if (cancelTimeoutRef.current !== null) clearTimeout(cancelTimeoutRef.current)
       if (onboardingTimeoutRef.current !== null) clearTimeout(onboardingTimeoutRef.current)
-      briefingAbortRef.current?.abort()
     }
   }, [])
 
@@ -465,7 +415,6 @@ function MainDashboard() {
         setSidebarOpen(false)
         setTourOpen(true)
       }}
-      onToggleWayflow={() => setWayflowActive((v) => !v)}
     />
   )
 
@@ -535,16 +484,14 @@ function MainDashboard() {
           {/* ─── PRODUCT (with document) ─── */}
           {hasDocument && (
             <div className="mascot-stage compact">
-              <div className="robot-orbit" data-state={mascotaMood === 'pensando' ? 'thinking' : mascotaMood === 'hablando' ? 'speaking' : mascotaMood === 'escuchando' ? 'listening' : 'idle'}>
+              <div className="robot-orbit" data-state={voiceSessionActive ? 'listening' : mascotaMood === 'pensando' ? 'thinking' : mascotaMood === 'hablando' ? 'speaking' : mascotaMood === 'escuchando' ? 'listening' : 'idle'}>
                 <Mascota
                   variant={mascotRobot}
                   config={robotConfig}
                   mood={mascotaMood}
                   subtitulo={mascotaSubtitulo}
                   size={72}
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('copixi:reread'))
-                  }}
+                  voiceActive={voiceSessionActive}
                 />
               </div>
               <p className="mascot-greeting" aria-live="polite">
@@ -596,11 +543,8 @@ function MainDashboard() {
           )}
 
           {/* Briefing proactivo (Fase 24C): la IA trabaja antes de que escribas */}
-          <div className={showSplit ? (wayflowActive ? 'doc-split-triple' : 'doc-split') : 'doc-stack'}>
+          <div className={showSplit ? 'doc-split' : 'doc-stack'}>
             <div className="doc-chat-col">
-              {(briefing || briefingLoading) && (
-                <BriefingCard text={briefing} loading={briefingLoading} model={briefingModel} />
-              )}
 
               {hasDocument && pdfFile && !panelVisible && (
                 <button
@@ -622,26 +566,6 @@ function MainDashboard() {
                 </div>
               )}
             </div>
-
-            {wayflowActive && (
-              <ErrorBoundary>
-                <WayflowPanel
-                  mercur={{
-                    pdfDoc: pdfDoc
-                      ? {
-                          filename: pdfDoc.filename,
-                          totalPages: pdfDoc.totalPages,
-                          pages: pdfDoc.pages,
-                          docId: pdfDoc.docId,
-                        }
-                      : null,
-                    ragClient: {
-                      searchMainThread: (query: string) => ragClient.searchMainThread(query, 3),
-                    },
-                  }}
-                />
-              </ErrorBoundary>
-            )}
 
             {showSplit && (
               <PdfViewerPanel

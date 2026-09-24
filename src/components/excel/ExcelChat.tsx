@@ -5,9 +5,9 @@ import type { MascotaMood } from '../../types/mascota'
 import { ragClient } from '../../lib/ragClient'
 import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg } from '../../lib/storage'
 import { Icon } from '../ui/Icon'
-import { WorkflowQuickStart } from '../../features/wayflow/WorkflowQuickStart'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../lib/ragPipeline'
-import { useDictation, getDictationSupport } from '../../lib/dictation'
+import { getDictationSupport } from '../../lib/dictation'
+import { useVoiceSession } from '../../lib/voiceSession'
 import { splitChartBlock, stripChartBlock, type ChartSpec } from '../../lib/chartJson'
 import { verifyChartSpec } from '../../lib/verifyChart'
 import { formatPageRange, countSelectionFigures } from '../../lib/chartFull'
@@ -307,7 +307,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const [muted, setMutedState] = useState(getMuted())
   const [ttsSpeaking, setTtsSpeaking] = useState(isSpeaking())
   const [chatLogOpen, setChatLogOpen] = useState(false)
-  const [workflowQuickOpen, setWorkflowQuickOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Chat state (self-contained, no external chat SDK)
@@ -317,20 +316,24 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const lastQueryRef = useRef('')
-  const [dictationBase, setDictationBase] = useState('')
 
-  // Dictado por voz: Web Speech API nativa (STT del navegador, sin deps).
-  // continuous=true + segmentos finales acumulados + errores accionables.
+  // Live voice session (Phase 6): continuous mic, auto-send 1.2s silence, barge-in, volume meter
   const {
-    listening,
-    interim: dictationInterim,
-    dictationError,
-    toggle: toggleDictation,
-    stop: stopDictation,
-    clearDictationError,
-  } = useDictation({
+    active: voiceActive,
+    interim: voiceInterim,
+    error: voiceError,
+    start: startVoice,
+    stop: stopVoice,
+    clearError: clearVoiceError,
+  } = useVoiceSession({
     lang: 'es-ES',
-    onFinalText: (text) => setInput((dictationBase ? dictationBase + ' ' : '') + text),
+    onFinalText: (text) => {
+      // Auto-send recognized text
+      setInput('')
+      pop()
+      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
+      void runQuery(text)
+    },
   })
 
   useEffect(() => {
@@ -408,24 +411,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       saveChatHistory(docId, messages)
     }
   }, [messages, docId, status])
-
-  // Tocar al robot compacto re-lee la última respuesta (evento copixi:reread
-  // desde App). Solo lee: no reenvía nada ni gasta cuota.
-  const lastAiTextRef = useRef('')
-  useEffect(() => {
-    const last = [...messages].reverse().find((m) => m.role === 'assistant' && m.content)
-    lastAiTextRef.current = last ? stripChartBlock(cleanAI(last.content)) : ''
-  }, [messages])
-  useEffect(() => {
-    const handler = () => {
-      const t = lastAiTextRef.current.trim()
-      if (!t) return
-      setMascotaMood('hablando')
-      speak(firstSentence(t))
-    }
-    window.addEventListener('copixi:reread', handler)
-    return () => window.removeEventListener('copixi:reread', handler)
-  }, [])
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -743,10 +728,9 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || loading) return
-    if (listening) stopDictation()
+    if (voiceActive) stopVoice()
     const t = input.trim()
     setInput('')
-    setDictationBase('')
     pop()
     // Eyes look at chat area (response will appear here)
     window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
@@ -754,11 +738,12 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   }
 
   const handleMicToggle = () => {
-    if (!listening) {
-      setDictationBase(input.trim())
-      clearDictationError()
+    if (voiceActive) {
+      stopVoice()
+    } else {
+      clearVoiceError()
+      startVoice()
     }
-    toggleDictation()
   }
 
   const stop = () => abortRef.current?.abort()
@@ -1064,25 +1049,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       )}
 
       <div className="excel-dock">
-        {!pdfDoc && messages.length === 0 && (
-          <div className="excel-starters" role="group" aria-label="Cómo empezar">
-            <p className="excel-starters-title">{t.startersTitle}</p>
-          </div>
-        )}
-        {pdfDoc && messages.length === 0 && !loading && (
-          <div className="excel-starters-row" role="group" aria-label={t.startersGroup}>
-            {[
-              { label: t.suggestResume, query: t.suggestResumeQ },
-              { label: t.suggestCite, query: t.suggestCiteQ },
-              { label: t.suggestSearch, query: t.suggestSearchQ },
-              { label: t.suggestChart, query: t.suggestChartQ },
-            ].map((s) => (
-              <button key={s.label} type="button" className="suggestion-chip" onClick={() => setInput(s.query)}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
         <form className="excel-dock-input" onSubmit={submit}>
           {(() => {
             const support = getDictationSupport()
@@ -1091,18 +1057,18 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                 ? t.dictNoApi
                 : support === 'insecure-context'
                   ? t.dictNoHttps
-                  : listening
+                  : voiceActive
                     ? t.dictStop
                     : t.dictStart
             return (
               <button
                 type="button"
-                className={`dock-attach-btn dock-mic-btn${listening ? ' recording' : ''}`}
+                className={`dock-attach-btn dock-mic-btn${voiceActive ? ' recording' : ''}`}
                 onClick={handleMicToggle}
                 disabled={loading || support !== 'supported'}
                 title={unavailableTitle}
-                aria-label={support === 'supported' ? (listening ? t.dictStop : t.dictStart) : unavailableTitle}
-                aria-pressed={listening}
+                aria-label={support === 'supported' ? (voiceActive ? t.dictStop : t.dictStart) : unavailableTitle}
+                aria-pressed={voiceActive}
               >
                 <Icon name="mic" size={16} />
               </button>
@@ -1131,15 +1097,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
               <Icon name="pause" size={16} />
             </button>
           )}
-          <button
-            type="button"
-            className="dock-attach-btn"
-            onClick={() => setWorkflowQuickOpen(true)}
-            title={t.workflowBtn}
-            aria-label={t.workflowAria}
-          >
-            <Icon name="send" size={16} />
-          </button>
           <input
             className="excel-text-input"
             value={input}
@@ -1158,27 +1115,19 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             </button>
           )}
         </form>
-        {(listening || dictationInterim || dictationError) && (
+        {(voiceActive || voiceInterim || voiceError) && (
           <p className="dock-voice-hint" role="status" aria-live="polite">
-            {dictationError ? (
-              dictationError
+            {voiceError ? (
+              voiceError
             ) : (
               <>
                 <span className="dock-voice-dot" aria-hidden="true" />
-                {t.listening} {dictationInterim ? `«${dictationInterim}»` : t.speakNow}
+                {t.listening} {voiceInterim ? `«${voiceInterim}»` : t.speakNow}
               </>
             )}
           </p>
         )}
       </div>
-      <WorkflowQuickStart
-        open={workflowQuickOpen}
-        onOpenChange={setWorkflowQuickOpen}
-        onSelect={(preset: string) => {
-          setWorkflowQuickOpen(false)
-          window.dispatchEvent(new CustomEvent('copixi:run-workflow', { detail: preset }))
-        }}
-      />
     </div>
   )
 }

@@ -267,6 +267,31 @@
   filter: brightness(1.1);
 }
 
+/* ==================== VOLUME METER (--voice-level 0–1) ==================== */
+
+/* Orb pulses with voice input level */
+.svg-orb {
+  --vl: 0;
+}
+.voice-active .svg-orb {
+  animation: orbVoicePulse 0.15s ease-out;
+}
+@keyframes orbVoicePulse {
+  0% { transform: scale(calc(0.9 + var(--voice-level, 0) * 0.6)); opacity: calc(0.5 + var(--voice-level, 0) * 0.5); }
+  100% { transform: scale(calc(0.9 + var(--voice-level, 0) * 0.8)); opacity: calc(0.6 + var(--voice-level, 0) * 0.4); }
+}
+
+/* Aura brightens with voice */
+.voice-active .svg-aura {
+  animation: svgAuraPulse 1.5s ease-in-out infinite alternate;
+}
+
+/* Wave bars scale with --voice-level */
+.voice-active .wave-rect {
+  animation: none;
+  transform: scaleY(calc(0.3 + var(--voice-level, 0) * 1.5));
+}
+
 /* ==================== SUBTITLES ==================== */
 .mascota-subtitles {
   position: absolute;
