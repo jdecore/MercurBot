@@ -121,14 +121,14 @@ export type ProductDict = {
   esReadyTitle: (mode: string, model?: string) => string; esIndexedTitle: string
   // ── Onboarding Tour ──
   otEyesRound: string; otEyesVisor: string; otEyesHappy: string; otEyesSleepy: string; otEyesBig: string
-  otStep0Title: string; otStep1Title: string; otStep2Title: string; otSrDesc: string
+  otStep0Title: string; otStep1Title: string; otStep2Title: string; otStep3Title: string; otStep4Title: string; otStep5Title: string; otSrDesc: string
   otIntro: string; otPrivacy: string
   otNameLabel: string; otNamePlaceholder: string; otNameAria: string
   otRobotLabel: string; otRobotAria: string
   otThemesLabel: string; otThemesAria: string; otEyesLabel: string; otEyesAria: string
   otRandomBtn: string
-  otStep2Drop: string; otStep2DropSub: string; otStep2Ask: string; otStep2AskSub: string
-  otStep2Cite: string; otStep2CiteSub: string
+  otStep5Drop: string; otStep5DropSub: string; otStep5Ask: string; otStep5AskSub: string
+  otStep5Cite: string; otStep5CiteSub: string
   otClosing: (user: string, robot: string) => string
   otBack: string; otNext: string; otStart: string; otSkipAria: string; otSkip: string
   // ── Mascot Customizer ──
@@ -455,27 +455,30 @@ const enDict: FullDict = {
   // ── Onboarding Tour ──
   otEyesRound: 'Round', otEyesVisor: 'Visor', otEyesHappy: 'Happy', otEyesSleepy: 'Sleepy', otEyesBig: 'Big',
   otStep0Title: 'Hi, I\'m your attentive reader',
-  otStep1Title: 'Choose your style',
-  otStep2Title: 'That\'s how easy it is',
-  otSrDesc: 'MercurBot welcome tutorial in 3 steps',
+  otStep1Title: 'What\'s your name?',
+  otStep2Title: 'What should I call myself?',
+  otStep3Title: 'Choose my colors',
+  otStep4Title: 'Pick my eyes',
+  otStep5Title: 'That\'s how easy it is',
+  otSrDesc: 'Onboarding tour — get to know your AI assistant',
   otIntro: 'I read your PDFs with you and answer pointing to the exact page.',
   otPrivacy: 'Everything happens in your browser — your document is never uploaded to any server.',
-  otNameLabel: 'What should I call you?',
-  otNamePlaceholder: 'Your name',
-  otNameAria: 'Your name',
-  otRobotLabel: 'And I\'m called… (my face is born from this name)',
-  otRobotAria: 'Robot name (defines its design)',
-  otThemesLabel: 'Quick theme',
-  otThemesAria: 'Prebuilt themes',
+  otNameLabel: 'Your name',
+  otNamePlaceholder: 'Optional',
+  otNameAria: 'Enter your name',
+  otRobotLabel: 'My name',
+  otRobotAria: 'Enter the robot\'s name',
+  otThemesLabel: 'Theme',
+  otThemesAria: 'Pick a color theme',
   otEyesLabel: 'Eyes',
-  otEyesAria: 'Robot eyes',
+  otEyesAria: 'Pick eye style',
   otRandomBtn: '🎲 Surprise me',
-  otStep2Drop: 'Drop your PDF here',
-  otStep2DropSub: '— I\'ll read it on your device.',
-  otStep2Ask: 'Ask me anything',
-  otStep2AskSub: '— in your own words.',
-  otStep2Cite: 'Tap [Page N]',
-  otStep2CiteSub: '— I\'ll show you the exact source.',
+  otStep5Drop: 'Drop your PDF here',
+  otStep5DropSub: '— I\'ll read it on your device.',
+  otStep5Ask: 'Ask me anything',
+  otStep5AskSub: '— in your own words.',
+  otStep5Cite: 'Tap [Page N]',
+  otStep5CiteSub: '— I\'ll show you the exact source.',
   otClosing: (u: string, r: string) => `Nice to meet you, ${u}! I'm ${r}. Let's begin.`,
   otBack: '← Back',
   otNext: 'Next →',
@@ -842,27 +845,30 @@ const esDict: FullDict = {
   // ── Onboarding Tour ──
   otEyesRound: 'Redondos', otEyesVisor: 'Visor', otEyesHappy: 'Felices', otEyesSleepy: 'Soñolientos', otEyesBig: 'Grandes',
   otStep0Title: 'Hola, soy tu lector atento',
-  otStep1Title: 'Elige tu estilo',
-  otStep2Title: 'Así de fácil',
-  otSrDesc: 'Tutorial de bienvenida de MercurBot en 3 pasos',
+  otStep1Title: '¿Cómo te llamas?',
+  otStep2Title: '¿Cómo me llamo yo?',
+  otStep3Title: 'Elige mis colores',
+  otStep4Title: 'Elige mis ojos',
+  otStep5Title: 'Así de fácil',
+  otSrDesc: 'Tutorial de bienvenida — conocé a tu asistente IA',
   otIntro: 'Leo tus PDFs contigo y te respondo señalando la página exacta.',
   otPrivacy: 'Todo pasa en tu navegador — tu documento nunca se sube a ningún servidor.',
-  otNameLabel: '¿Cómo te llamo?',
-  otNamePlaceholder: 'Tu nombre',
-  otNameAria: 'Tu nombre',
-  otRobotLabel: 'Y yo me llamo… (mi cara nace de este nombre)',
-  otRobotAria: 'Nombre del robot (define su diseño)',
-  otThemesLabel: 'Tema rápido',
-  otThemesAria: 'Temas prearmados',
+  otNameLabel: 'Tu nombre',
+  otNamePlaceholder: 'Opcional',
+  otNameAria: 'Ingresá tu nombre',
+  otRobotLabel: 'Mi nombre',
+  otRobotAria: 'Ingresá el nombre del robot',
+  otThemesLabel: 'Tema',
+  otThemesAria: 'Elegí un tema de color',
   otEyesLabel: 'Ojos',
-  otEyesAria: 'Ojos del robot',
+  otEyesAria: 'Elegí el estilo de ojos',
   otRandomBtn: '🎲 Sorpréndeme',
-  otStep2Drop: 'Suelta tu PDF aquí',
-  otStep2DropSub: '— lo leo en tu dispositivo.',
-  otStep2Ask: 'Pregúntame lo que quieras',
-  otStep2AskSub: '— con tus palabras.',
-  otStep2Cite: 'Toca [Pág. N]',
-  otStep2CiteSub: '— te muestro la fuente exacta.',
+  otStep5Drop: 'Suelta tu PDF aquí',
+  otStep5DropSub: '— lo leo en tu dispositivo.',
+  otStep5Ask: 'Pregúntame lo que quieras',
+  otStep5AskSub: '— con tus palabras.',
+  otStep5Cite: 'Toca [Pág. N]',
+  otStep5CiteSub: '— te muestro la fuente exacta.',
   otClosing: (u: string, r: string) => `¡Encantado, ${u}! Soy ${r}. Empecemos.`,
   otBack: '← Atrás',
   otNext: 'Siguiente →',

@@ -6,6 +6,7 @@ import { designFromName, sanitizeRobotName, QUICK_THEMES, ROBOT_DESIGN_LIST, typ
 import { useLocale } from '../../lib/locale'
 
 const MAX_USER = 24
+const TOTAL_STEPS = 6
 
 interface OnboardingTourProps {
   open: boolean; onOpenChange: (open: boolean) => void
@@ -30,7 +31,16 @@ export function OnboardingTour({ open, onOpenChange, initialUserName, initialRob
   const userName = userDraft.trim().slice(0, MAX_USER)
 
   const finish = () => { onFinish(userName, robotName, activeConfig); onOpenChange(false); setStep(0); setPickedConfig(null) }
-  const goNext = () => { if (step === 0 && !pickedConfig) setPickedConfig(baseConfig); setStep(step + 1) }
+  const goNext = () => { if (step === 2 && !pickedConfig) setPickedConfig(baseConfig); setStep(step + 1) }
+
+  const titles: Record<number, string> = {
+    0: t.otStep0Title,
+    1: t.otStep1Title,
+    2: t.otStep2Title,
+    3: t.otStep3Title,
+    4: t.otStep4Title,
+    5: t.otStep5Title,
+  }
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -38,36 +48,56 @@ export function OnboardingTour({ open, onOpenChange, initialUserName, initialRob
         <Dialog.Overlay className="onboard-overlay" />
         <Dialog.Content className="onboard-content" aria-describedby="onboard-desc" onOpenAutoFocus={(e) => e.preventDefault()}>
           <Dialog.Title className="onboard-title">
-            {step === 0 && t.otStep0Title}
-            {step === 1 && t.otStep1Title}
-            {step === 2 && t.otStep2Title}
+            {titles[step]}
           </Dialog.Title>
           <p id="onboard-desc" className="sr-only">{t.otSrDesc}</p>
 
+          {/* Step 0: Welcome */}
           {step === 0 && (
             <div className="onboard-body">
               <div className="onboard-mascot" aria-hidden>
-                <Mascota variant="helix" config={activeConfig} mood="feliz" size={120} interactive={false} />
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={140} interactive={false} />
               </div>
               <p>{t.otIntro}</p>
               <p className="onboard-muted">{t.otPrivacy}</p>
+            </div>
+          )}
+
+          {/* Step 1: Your name */}
+          {step === 1 && (
+            <div className="onboard-body">
+              <div className="onboard-mascot" aria-hidden>
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={140} interactive={false} />
+              </div>
               <label className="onboard-field">
                 <span>{t.otNameLabel}</span>
-                <input type="text" value={userDraft} maxLength={MAX_USER} placeholder={t.otNamePlaceholder} onChange={(e) => setUserDraft(e.target.value)} aria-label={t.otNameAria} />
-              </label>
-              <label className="onboard-field">
-                <span>{t.otRobotLabel}</span>
-                <input type="text" value={robotDraft} maxLength={24} placeholder={DEFAULT_ROBOT_NAME} onChange={(e) => { setRobotDraft(e.target.value); setPickedConfig(null) }} aria-label={t.otRobotAria} />
+                <input type="text" value={userDraft} maxLength={MAX_USER} placeholder={t.otNamePlaceholder}
+                  onChange={(e) => setUserDraft(e.target.value)} aria-label={t.otNameAria} autoFocus />
               </label>
             </div>
           )}
 
-          {step === 1 && (
+          {/* Step 2: Robot name */}
+          {step === 2 && (
             <div className="onboard-body">
               <div className="onboard-mascot" aria-hidden>
-                <Mascota variant="helix" config={activeConfig} mood="feliz" size={120} interactive={false} />
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={140} interactive={false} />
               </div>
-              <p className="onboard-section-label">{t.otThemesLabel}</p>
+              <label className="onboard-field">
+                <span>{t.otRobotLabel}</span>
+                <input type="text" value={robotDraft} maxLength={24} placeholder={DEFAULT_ROBOT_NAME}
+                  onChange={(e) => { setRobotDraft(e.target.value); setPickedConfig(null) }}
+                  aria-label={t.otRobotAria} autoFocus />
+              </label>
+            </div>
+          )}
+
+          {/* Step 3: Theme/color */}
+          {step === 3 && (
+            <div className="onboard-body">
+              <div className="onboard-mascot" aria-hidden>
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={140} interactive={false} />
+              </div>
               <div className="onboard-theme-grid" role="radiogroup" aria-label={t.otThemesAria}>
                 {QUICK_THEMES.map((th) => {
                   const active = activeConfig.color === th.config.color && activeConfig.eyes === th.config.eyes && activeConfig.accessory === th.config.accessory
@@ -81,7 +111,18 @@ export function OnboardingTour({ open, onOpenChange, initialUserName, initialRob
                   )
                 })}
               </div>
-              <p className="onboard-section-label">{t.otEyesLabel}</p>
+              <button type="button" className="onboard-random-btn" onClick={() => { const d = ROBOT_DESIGN_LIST[Math.floor(Math.random() * ROBOT_DESIGN_LIST.length)]; setPickedConfig({ color: d.color, eyes: d.eyes, accessory: d.accessory }) }}>
+                {t.otRandomBtn}
+              </button>
+            </div>
+          )}
+
+          {/* Step 4: Eyes */}
+          {step === 4 && (
+            <div className="onboard-body">
+              <div className="onboard-mascot" aria-hidden>
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={140} interactive={false} />
+              </div>
               <div className="onboard-eyes-grid" role="radiogroup" aria-label={t.otEyesAria}>
                 {EYES_IDS.map((id) => (
                   <button key={id} type="button" role="radio" aria-checked={activeConfig.eyes === id} className={`onboard-eye-btn ${activeConfig.eyes === id ? 'active' : ''}`}
@@ -90,28 +131,33 @@ export function OnboardingTour({ open, onOpenChange, initialUserName, initialRob
                   </button>
                 ))}
               </div>
-              <button type="button" className="onboard-random-btn" onClick={() => { const d = ROBOT_DESIGN_LIST[Math.floor(Math.random() * ROBOT_DESIGN_LIST.length)]; setPickedConfig({ color: d.color, eyes: d.eyes, accessory: d.accessory }) }}>
-                {t.otRandomBtn}
-              </button>
             </div>
           )}
 
-          {step === 2 && (
+          {/* Step 5: How it works */}
+          {step === 5 && (
             <div className="onboard-body">
+              <div className="onboard-mascot" aria-hidden>
+                <Mascota variant="helix" config={activeConfig} mood="feliz" size={140} interactive={false} />
+              </div>
               <ol className="onboard-steps">
-                <li><strong>{t.otStep2Drop}</strong>{t.otStep2DropSub}</li>
-                <li><strong>{t.otStep2Ask}</strong>{t.otStep2AskSub}</li>
-                <li><strong>{t.otStep2Cite}</strong>{t.otStep2CiteSub}</li>
+                <li><strong>{t.otStep5Drop}</strong>{t.otStep5DropSub}</li>
+                <li><strong>{t.otStep5Ask}</strong>{t.otStep5AskSub}</li>
+                <li><strong>{t.otStep5Cite}</strong>{t.otStep5CiteSub}</li>
               </ol>
               {userName && <p className="onboard-hello">{t.otClosing(userName, robotName)}</p>}
             </div>
           )}
 
           <div className="onboard-nav">
-            <span className="onboard-dots" aria-hidden>{[0, 1, 2].map((i) => <span key={i} className={`onboard-dot ${i === step ? 'active' : ''}`} />)}</span>
+            <span className="onboard-dots" aria-hidden>
+              {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+                <span key={i} className={`onboard-dot ${i === step ? 'active' : ''} ${i < step ? 'done' : ''}`} />
+              ))}
+            </span>
             <div className="onboard-btns">
               {step > 0 && <button type="button" className="btn btn-secondary small" onClick={() => setStep(step - 1)}>{t.otBack}</button>}
-              {step < 2 ? (
+              {step < TOTAL_STEPS - 1 ? (
                 <button type="button" className="btn btn-primary small" onClick={goNext}>{t.otNext}</button>
               ) : (
                 <button type="button" className="btn btn-primary small" onClick={finish}>{t.otStart}</button>

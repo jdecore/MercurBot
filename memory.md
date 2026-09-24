@@ -133,6 +133,20 @@ src/components/dashboard/PdfProcessingCard.tsx
 
 **Resultado:** modelos siempre activos, sin UX de descarga, preferencias persistentes. Build OK.
 
+### Onboarding rediseñado — 6 pasos + glass style (24/09)
+
+**Objetivo:** UX gradual, una pregunta por paso, estilo transparente como el customizer del sidebar. Tiempo extendido para que Laya descargue en background.
+
+**Antes:** 3 pasos (Welcome+name+robot, Theme+eyes, How it works)
+**Ahora:** 6 pasos (Welcome, Your name, Robot name, Colors, Eyes, How it works)
+
+**Archivos modificados:**
+- `src/components/onboarding/OnboardingTour.tsx` — 6 steps, one question each, glass style matching customizer
+- `src/lib/locale.tsx` — Updated otStep* strings (EN + ES), added otStep3Title/otStep4Title/otStep5Title
+- `src/App.css` — Onboarding glass style: backdrop-filter blur, customizer-matching border-radius/shadow/padding, animated dots with "done" state
+
+**Resultado:** cada paso = 1 pregunta, robot visible siempre, estilo cristal transparente. ~30-60s de onboarding permite que Laya (424MB) descargue en background.
+
 ### Product i18n Migration (Phase 2) — 23/09
 
 **Objetivo:** Migrar todos los strings del producto (UI) al diccionario bilingüe ES/EN.
