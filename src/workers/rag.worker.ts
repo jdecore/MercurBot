@@ -92,6 +92,13 @@ async function getPipeline(): Promise<any> {
     env.allowLocalModels = false
     env.allowRemoteModels = true
 
+    // Configure onnxruntime-web single-threaded via transformers.js backend
+    // to avoid SharedArrayBuffer (COEP blocks SAB in Vite blob-URL workers)
+    if (env.backends?.onnx?.wasm) {
+      env.backends.onnx.wasm.numThreads = 1
+      env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/'
+    }
+
     pipeline = await createPipeline('feature-extraction', MODEL_NAME, {
       progress_callback: (progressInfo: any) => {
         if (progressInfo.status === 'progress') {

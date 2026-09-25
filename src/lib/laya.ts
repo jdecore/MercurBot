@@ -355,7 +355,9 @@ export async function loadLayaSession(): Promise<void> {
   // Dynamic import of onnxruntime-web
   const ort = await import('onnxruntime-web' as string)
 
-  // Configure WASM to load from CDN (not origin)
+  // Configure WASM: single-threaded to avoid SharedArrayBuffer requirement
+  // (COEP blocks SAB in workers compiled by Vite via blob URL)
+  ort.env.wasm.numThreads = 1
   ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/'
 
   const root = await navigator.storage.getDirectory()
