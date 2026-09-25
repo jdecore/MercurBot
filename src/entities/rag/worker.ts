@@ -110,6 +110,24 @@ async function getPipeline(): Promise<any> {
               message: `Descargando motor semántico (${Math.round(progressInfo.progress ?? 0)}%)...`,
             },
           })
+        } else if (progressInfo.status === 'initiate') {
+          self.postMessage({
+            type: 'PROGRESS',
+            payload: {
+              phase: 'model_download',
+              percent: 10,
+              message: `Descargando ${progressInfo.name || 'modelo'}...`,
+            },
+          })
+        } else if (progressInfo.status === 'done') {
+          self.postMessage({
+            type: 'PROGRESS',
+            payload: {
+              phase: 'model_download',
+              percent: 90,
+              message: `Modelo descargado, inicializando...`,
+            },
+          })
         }
       },
     })
@@ -119,6 +137,10 @@ async function getPipeline(): Promise<any> {
   } catch (err) {
     console.warn('[RAG Worker] Falló carga de modelo vectorial. Activando Fallback Léxico.', err)
     fallbackLexicalOnly = true
+    self.postMessage({
+      type: 'PROGRESS',
+      payload: { phase: 'complete', percent: 100, message: 'Modo léxico activo (modelo no disponible).' },
+    })
     self.postMessage({
       type: 'STATUS',
       payload: { mode: 'lexical_only', reason: 'WASM model failed or memory exceeded' },
@@ -406,23 +428,37 @@ self.onmessage = async (e: MessageEvent) => {
       case 'PING':
         self.postMessage({ type: 'STATUS', payload: { status: 'alive', modelReady, fallbackLexicalOnly } })
         break
-      case 'PREWARM':
+      case 'PREWARM': {
+        // Send initial progress so the UI shows something is happening
         self.postMessage({
           type: 'PROGRESS',
           payload: { phase: 'model_download', percent: 5, message: 'Descargando motor semántico...' },
         })
+        // Heartbeat timer: CDN may lack Content-Length so progress_callback
+        // never fires with real percentages. Send fake increments every 2s.
+        let pct = 5
+        const heartbeat = setInterval(() => {
+          pct = Math.min(pct + 3, 90)
+          self.postMessage({
+            type: 'PROGRESS',
+            payload: { phase: 'model_download', percent: pct, message: `Descargando motor semántico (${pct}%)...` },
+          })
+        }, 2000)
         getPipeline().then((pipe) => {
+          clearInterval(heartbeat)
           self.postMessage({
             type: 'PROGRESS',
             payload: { phase: 'complete', percent: 100, message: pipe ? 'Motor semántico listo.' : 'Modo léxico activo.' },
           })
         }).catch(() => {
+          clearInterval(heartbeat)
           self.postMessage({
             type: 'PROGRESS',
             payload: { phase: 'complete', percent: 100, message: 'Modo léxico activo.' },
           })
         })
         break
+      }
       default:
         console.warn(`[RAG Worker] Acción no reconocida: ${action}`)
     }

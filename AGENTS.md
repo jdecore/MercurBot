@@ -57,7 +57,61 @@
 
 ---
 
-## 6. Calidad (antes de marcar done)
+## 6. Knowledge Layer: `.agents/`
+
+Esta carpeta es la **fuente de verdad operativa** del proyecto. Cualquier agente que opere sobre este repo debe consumirla antes de decidir o implementar.
+
+### 6.1 Estructura
+
+```
+.agents/
+├── context/          # Decisiones estables (inmutables)
+│   ├── designed.md   # Decisiones de arquitectura inmutables
+│   ├── stack.md      # Stack elegido y por qué
+│   ├── constraints.md # Restricciones hard del proyecto
+│   └── glossary.md   # Terminología del dominio
+├── skills/           # Skills específicas del proyecto
+│   ├── rag.md        # Cómo funciona el pipeline RAG
+│   ├── voice.md      # VoiceSession hook, barge-in, volume meter
+│   ├── embeddings.md # Modelo embeddings, descarga, OPFS cache
+│   ├── laya.md       # Clasificador ONNX, heuristic fallback
+│   ├── deployment.md # Vercel deploy, CSP, COEP, permissions
+│   └── debug.md      # Debugger oculto, __merucbot.check()
+└── memory/
+    └── memory.md     # Bitácora de estado y aprendizajes
+```
+
+### 6.2 Reglas de uso obligatorias
+
+1. **Al inicio de toda sesión o tarea:** leer `.agents/memory/memory.md`. Es la fuente de verdad del estado actual.
+2. **Antes de implementar una feature:** leer el `skill` correspondiente en `.agents/skills/` si existe.
+3. **Antes de tomar una decisión de arquitectura/stack:** leer `.agents/context/`. Las decisiones ahí son inmutables.
+4. **Al terminar una tarea:** actualizar `.agents/memory/memory.md` con una entrada nueva que incluya:
+   - Qué se hizo
+   - Por qué se hizo
+   - Resultado (éxito/error/parcial)
+   - Aprendizajes o decisiones clave para el futuro
+5. **Si `memory.md` excede ~400 líneas:** resumir entradas antiguas (3–5 líneas por sesión), agregar nueva info.
+6. **Tono:** técnico, conciso, sin relleno. Otros agentes leerán esto para entender el proyecto.
+
+### 6.3 Cuándo leer cada archivo
+
+| Archivo | Cuándo leerlo |
+|---------|---------------|
+| `memory/memory.md` | Siempre al inicio. Estado actual, pendientes, cómo retomar. |
+| `context/designed.md` | Antes de cambios de arquitectura. Decisiones inmutables. |
+| `context/stack.md` | Antes de agregar/quitar dependencias o cambiar frameworks. |
+| `context/constraints.md` | Antes de implementar cualquier feature. Restricciones hard. |
+| `context/glossary.md` | Cuando aparezcan términos de dominio desconocidos. |
+| `skills/*.md` | Cuando vayas a tocar un área específica (RAG, voice, embeddings, laya, deployment, debug). |
+
+### 6.4 Principio rector
+
+> **Si un agente nuevo pregunta por algo que ya está resuelto en `.agents/`, la respuesta está ahí, no en la cabeza de nadie.**
+
+---
+
+## 7. Calidad (antes de marcar done)
 
 ```
 [ ] tsc + vite build OK
@@ -70,7 +124,7 @@
 
 ---
 
-## 6.1 Verificación oculta en producción
+## 7.1 Verificación oculta en producción
 
 Toda feature crítica que afecte modelos, pipelines o integraciones externas debe incluir una vía de verificación **sin UI visible**.
 
@@ -86,7 +140,7 @@ Toda feature crítica que afecte modelos, pipelines o integraciones externas deb
 
 ---
 
-## 6.2 Recomendación: revisión de versiones de dependencias
+## 7.2 Recomendación: revisión de versiones de dependencias
 
 Se debe mantener awareness del estado de versiones del proyecto, pero sin actualizar ciegamente.
 
@@ -100,7 +154,7 @@ Se debe mantener awareness del estado de versiones del proyecto, pero sin actual
 
 ---
 
-## 7. Memoria del Agente (`.agents/memory/memory.md`)
+## 8. Memoria del Agente (`.agents/memory/memory.md`)
 
 `memory.md` es la **bitácora de estado y aprendizajes** del proyecto. Su propósito es que cualquier agente nuevo pueda entender el estado actual, el historial de decisiones, y los errores/éxitos pasados sin tener que reconstruir todo desde cero.
 
@@ -112,7 +166,7 @@ Se debe mantener awareness del estado de versiones del proyecto, pero sin actual
    - Por qué se hizo
    - Resultado (éxito/error/parcial)
    - Aprendizajes o decisiones clave para el futuro
-3. **Si excede ~400 líneas:** resumir entradas antiguas (3-5 líneas por sesión), agregar nueva info
+3. **Si excede ~400 líneas:** resumir entradas antiguas (3–5 líneas por sesión), agregar nueva info
 4. **Tono:** técnico, conciso, sin relleno. Otros agentes leerán esto para entender el proyecto.
 
 ### Estructura recomendada
@@ -136,7 +190,7 @@ Se debe mantener awareness del estado de versiones del proyecto, pero sin actual
 
 ## Decisiones clave (formato tabla)
 | Decisión | Razón | Fecha |
-|----------|-------|-------|
+|----------|-------|------|
 | ... | ... | ... |
 
 ## Pendientes conocidos
@@ -153,27 +207,27 @@ pnpm dev
 
 ---
 
-## 8. Estructura de conocimiento para agentes (`.agents/`)
+## 9. Skills específicas del proyecto (`.agents/skills/`)
 
-```
-.agents/
-├── context/                      # Decisiones estables (inmutables)
-│   ├── designed.md               # Decisiones de arquitectura inmutables
-│   ├── stack.md                  # Stack elegido y por qué
-│   ├── constraints.md            # Restricciones hard del proyecto
-│   └── glossary.md               # Terminología del dominio
-├── skills/                       # Skills específicas del proyecto
-│   ├── rag.md                    # Cómo funciona el pipeline RAG
-│   ├── voice.md                  # VoiceSession hook, barge-in, volume meter
-│   ├── embeddings.md             # Modelo embeddings, descarga, OPFS cache
-│   ├── laya.md                   # Clasificador ONNX, heuristic fallback
-│   ├── deployment.md             # Vercel deploy, CSP, COEP, permissions
-│   └── debug.md                  # Debugger oculto, __merucbot.check()
-└── memory/                       # Bitácora temporal y aprendizajes
-    └── memory.md
-```
+Además de `memory.md`, existen skills reutilizables por dominio. Si tu tarea toca uno de estos temas, lee el skill antes de implementar:
 
-**Uso:**
-- `context/`: decisiones que no se discuten más. Si un agente nuevo pregunta por qué no hay Tailwind, va a `constraints.md`.
-- `skills/`: instrucciones reutilizables por dominio. Si un agente va a tocar RAG, lee `rag.md`.
-- `memory/`: lo que ya existía como `memory.md`, pero separado del contexto estable.
+| Skill | Cuándo usarlo |
+|-------|---------------|
+| `rag.md` | Vas a modificar el pipeline RAG, indexación, o recuperación de fragmentos |
+| `voice.md` | Vas a tocar el hook `VoiceSession`, barge-in, o volume meter |
+| `embeddings.md` | Vas a modificar el modelo de embeddings, descarga, o cache OPFS |
+| `laya.md` | Vas a modificar el clasificador ONNX Laya o el heuristic fallback |
+| `deployment.md` | Vas a modificar el deploy en Vercel, CSP, COEP, o permissions |
+| `debug.md` | Vas a modificar el debugger oculto o los comandos de consola |
+
+Si un skill no existe para tu área, crearlo en `.agents/skills/` siguiendo el formato de los demás.
+
+---
+
+## 10. Cómo retomar (comandos)
+
+```bash
+pnpm build
+pnpm lint
+pnpm dev
+```
