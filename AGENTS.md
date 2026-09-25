@@ -100,14 +100,14 @@ Se debe mantener awareness del estado de versiones del proyecto, pero sin actual
 
 ---
 
-## 7. Memoria del Agente (`memory.md`)
+## 7. Memoria del Agente (`.agents/memory/memory.md`)
 
 `memory.md` es la **bitácora de estado y aprendizajes** del proyecto. Su propósito es que cualquier agente nuevo pueda entender el estado actual, el historial de decisiones, y los errores/éxitos pasados sin tener que reconstruir todo desde cero.
 
 ### Reglas de uso
 
-1. **Al inicio de toda sesión:** leer `memory.md` completo. Es la fuente de verdad del estado del proyecto.
-2. **Al terminar una tarea:** actualizar `memory.md` con una nueva entrada que incluya:
+1. **Al inicio de toda sesión:** leer `.agents/memory/memory.md` completo. Es la fuente de verdad del estado del proyecto.
+2. **Al terminar una tarea:** actualizar `.agents/memory/memory.md` con una nueva entrada que incluya:
    - Qué se hizo
    - Por qué se hizo
    - Resultado (éxito/error/parcial)
@@ -150,3 +150,30 @@ pnpm lint
 pnpm dev
 ```
 ```
+
+---
+
+## 8. Estructura de conocimiento para agentes (`.agents/`)
+
+```
+.agents/
+├── context/                      # Decisiones estables (inmutables)
+│   ├── designed.md               # Decisiones de arquitectura inmutables
+│   ├── stack.md                  # Stack elegido y por qué
+│   ├── constraints.md            # Restricciones hard del proyecto
+│   └── glossary.md               # Terminología del dominio
+├── skills/                       # Skills específicas del proyecto
+│   ├── rag.md                    # Cómo funciona el pipeline RAG
+│   ├── voice.md                  # VoiceSession hook, barge-in, volume meter
+│   ├── embeddings.md             # Modelo embeddings, descarga, OPFS cache
+│   ├── laya.md                   # Clasificador ONNX, heuristic fallback
+│   ├── deployment.md             # Vercel deploy, CSP, COEP, permissions
+│   └── debug.md                  # Debugger oculto, __merucbot.check()
+└── memory/                       # Bitácora temporal y aprendizajes
+    └── memory.md
+```
+
+**Uso:**
+- `context/`: decisiones que no se discuten más. Si un agente nuevo pregunta por qué no hay Tailwind, va a `constraints.md`.
+- `skills/`: instrucciones reutilizables por dominio. Si un agente va a tocar RAG, lee `rag.md`.
+- `memory/`: lo que ya existía como `memory.md`, pero separado del contexto estable.

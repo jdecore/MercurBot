@@ -5,8 +5,8 @@
 ---
 
 ## Estado actual (live)
-- Galaxy Plan completo (Fases 0-8 ✅)
-- Dependency updates + SDK migration completados (24/09)
+- FSD reorganization completada (src/ → app/widgets/features/entities/shared/)
+- `.agents/` knowledge layer creada (context/skills/memory)
 - App funcional: build OK, lint OK, 0 errores TypeScript
 - Sin bloqueos conocidos
 
@@ -56,12 +56,10 @@
   - Integrado en `App.tsx`: prewarm, engine status, RAG index
 - **Uso en Edge:** Abrir DevTools (F12), ir a pestaña Console, escribir `__merucbot.check()` y enter.
 
-### Production hardening: CSP + COEP + debugger ✅ (24/09)
-- **CSP:** agregado `blob:` a `script-src` en `vercel.json` para permitir scripts dinámicos de ONNX Runtime JSEP.
-- **COEP:** cambiado de `require-corp` a `credentialless` para evitar bloqueo de iframes/worker cross-origin sin CORS. Sigue habilitando SharedArrayBuffer.
-- **Permissions-Policy warnings:** en `vercel.json` actual está limpio; los errores reportados son de un deploy anterior cacheado. Se resolverán al redespengar.
-- **Debugger en producción:** `initDebug()` ahora registra `__merucbot` inmediatamente al montar, no solo al toggle. Comandos disponibles en consola sin activación previa.
-- **Worker RAG:** el fallback a léxico ya estaba implementado en `ragClient.ts`; con `credentialless` debería dejar de dispararse por bloqueo de recursos.
+### FSD reorganization ✅ (24/09)
+- **Cambios clave:** Migración de `src/` a estructura FSD (`app/`, `widgets/`, `features/`, `entities/`, `shared/`). Archivos movidos: `App.tsx` → `app/App.tsx`, componentes → `widgets/`, lógica de dominio → `entities/`, utilidades → `shared/lib/`, UI genérica → `shared/ui/`. RAG worker movido a `entities/rag/`. `.agents/` knowledge layer creada con `context/`, `skills/`, `memory/`. `memory.md` movido a `.agents/memory/memory.md`. `AGENTS.md` actualizado.
+- **Resultado:** build OK, lint OK, 0 errores. Imports actualizados en 19 archivos. Vite warning `INEFFECTIVE_DYNAMIC_IMPORT` preexistente en `ragClient.ts`.
+- **Aprendizajes:** `git mv` bloqueado por permisos bash; usar `cp` + `rm` en su lugar. Crear directorios nuevos antes de mover/copiar archivos. Verificar existencia de directorios después de `mv` fallido. Al reiniciar desde `git checkout -- src/`, perder cambios no commiteados en `src/`; commitear antes de reorganizaciones grandes.
 
 ---
 

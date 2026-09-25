@@ -1,6 +1,6 @@
-import { extractPdf, type PdfExtractOptions, type PdfExtractResult } from './extractors/pdf'
+import { extractPdf, type PdfExtractOptions, type PdfExtractResult } from '../entities/pdf/extractors/pdf'
 
-export type { PdfChunk, PdfExtractOptions, PdfExtractProgress, PdfExtractResult, PdfPageText } from './extractors/pdf'
+export type { PdfChunk, PdfExtractOptions, PdfExtractProgress, PdfExtractResult, PdfPageText } from '../entities/pdf/extractors/pdf'
 
 export type UniversalParseResult = {
   rows: null

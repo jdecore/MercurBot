@@ -1,0 +1,283 @@
+/* MERCU — Native CSS + design tokens (AGENTS.md §19) */
+
+/* Typography: Inter (body) + Calistoga (headings) via Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Iconos: Pixelarticons como SVG inline vía src/shared/ui/Icon.tsx
+   (el woff2 con <i> vacíos no renderiza ningún glifo). */
+
+/* ═══════════════════════════════════════════════════════════════════
+   SISTEMA MERCU — MINERAL → MAR → VIDA TROPICAL
+
+   Tema único: el robot está sumergido en el mar (Océano Profundo).
+   NO existe modo claro; `prefers-color-scheme` no altera la paleta.
+
+   3 capas:
+     0. Colores fuente — única capa con hex de marca.
+     1. Derivados mínimos — solo por accesibilidad (ratios medidos).
+     2. Semánticos — lo que consume el CSS de la app.
+
+   Reglas de uso (ver .agents/context/design.md):
+     · naranja #F0711D → relleno, borde, foco, iconos, series de chart.
+       NUNCA texto pequeño (3.47–4.11 sobre el mar).
+     · naranja #FF9D52 → naranja como texto (5.00–5.92 sobre el mar).
+     · biche  #9EE014  → selección, energía, links, indicadores.
+       Seguro como texto en cualquier superficie (5.35+).
+     · rojo   #C92E0E  → solo alerta/destructivo: relleno con tinta
+       blanca (5.41) o borde. Texto de error usa #FFA890.
+     · el 90% de la interfaz es mar (#073B46) + mineral (#E5E6E1).
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Capa 0 — paleta fuente MERCU ── */
+  --mercu-mineral: #E5E6E1;        /* piedra clara: texto y papel del visor */
+  --mercu-ocean: #073B46;          /* mar medio: color de marca y fondo */
+  --mercu-ocean-surface: #0A4753;  /* superficie del mar (gradiente 0%) */
+  --mercu-ocean-deep: #052C35;     /* fondo abisal (gradiente 100%) */
+  --mercu-green: #9EE014;          /* biche: vegetación tropical, fruta verde */
+  --mercu-orange: #F0711D;         /* naranja tropical: acento cálido principal */
+  --mercu-red: #C92E0E;            /* rojo tropical: alerta / destructivo */
+
+  /* ── Capa 1 — derivados mínimos (accesibilidad; ratios medidos) ── */
+  --mercu-orange-ink: #FF9D52;     /* naranja texto sobre mar: 5.00–5.92 ✅ */
+  --mercu-red-ink: #FFA890;        /* rojo texto sobre mar:    5.52–6.53 ✅ */
+  --mercu-ink-on-warm: #062024;    /* tinta sobre naranja 5.71 / biche 10.59 ✅ */
+
+  /* ── Capa 2 — semánticos ── */
+  /* fondos: gradiente monocromático de profundidad definido en `body` */
+  --color-bg: var(--mercu-ocean);
+  --color-surface: #0D4E5B;            /* card: un paso hacia la superficie */
+  --color-surface-2: #125E6B;          /* chip / hover elevado */
+  --color-surface-hover: #14606F;
+  --color-card: #0D4E5B;
+  --color-border: color-mix(in srgb, var(--mercu-mineral) 16%, var(--mercu-ocean));
+  --color-border-strong: color-mix(in srgb, var(--mercu-mineral) 26%, var(--mercu-ocean));
+  --surface-blur: 16px;
+
+  /* texto */
+  --color-text: var(--mercu-mineral);
+  --color-foreground: var(--mercu-mineral);
+  --color-muted: #C0CDCE;              /* secundario: 6.31–7.47 sobre el mar ✅ */
+  --color-muted-foreground: #C0CDCE;
+
+  /* acentos */
+  --color-primary: var(--mercu-orange);
+  --color-primary-hover: #FF8A3D;
+  --color-on-primary: var(--mercu-ink-on-warm);
+  --color-action: var(--mercu-orange);
+  --color-action-hover: #FF8A3D;
+  --color-on-action: var(--mercu-ink-on-warm);
+  --color-accent: var(--mercu-green);
+  --color-accent-hover: #B6EE4A;
+  --color-on-accent: var(--mercu-ink-on-warm);
+  --color-accent-ink: var(--mercu-orange-ink);
+  --color-tropical: var(--mercu-green);
+  --color-tropical-hover: #B6EE4A;
+  --color-on-tropical: var(--mercu-ink-on-warm);
+  --color-ring: var(--mercu-orange);
+
+  /* nombres exigidos por el brief (alias documentales del tema mar) */
+  --color-tropical-green: var(--mercu-green);
+  --color-tropical-orange: var(--mercu-orange);
+  --color-tropical-red: var(--mercu-red);
+  --color-text-on-night: var(--mercu-mineral);
+
+  /* estados semánticos */
+  --color-success: var(--mercu-green);
+  --color-warning: var(--mercu-orange);
+  --color-warning-ink: var(--mercu-orange-ink);
+  --color-danger: var(--mercu-red);
+  --color-danger-ink: var(--mercu-red-ink);
+
+  /* softs derivados */
+  --color-danger-soft: color-mix(in srgb, var(--mercu-red) 14%, transparent);
+  --color-warning-soft: color-mix(in srgb, var(--mercu-orange) 14%, transparent);
+  --color-accent-soft: color-mix(in srgb, var(--mercu-green) 12%, transparent);
+  --color-primary-soft: color-mix(in srgb, var(--mercu-orange) 14%, transparent);
+  --glow-orange: color-mix(in srgb, var(--mercu-orange) 38%, transparent);
+  --glow-green: color-mix(in srgb, var(--mercu-green) 34%, transparent);
+
+  /* spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* typography — Calistoga para headings, Inter para body/UI */
+  --font-display: "Calistoga", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-system, system-ui, -apple-system, "Geist", Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.5rem;
+
+  /* shadows — profundidad marina (sombra hacia el abisal, no negro duro) */
+  --shadow-sm: 0 1px 3px rgba(2, 18, 23, 0.45);
+  --shadow-md: 0 4px 12px rgba(2, 18, 23, 0.5), 0 1px 3px rgba(2, 18, 23, 0.35);
+  --shadow-glow: 0 0 20px var(--glow-orange);
+  --shadow-glow-green: 0 0 18px var(--glow-green);
+
+  /* transitions */
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
+
+  /* robot MERCU — caparazón mineral + visor de agua profunda + bioluminiscencia */
+  --robot-shell: var(--mercu-mineral);
+  --robot-shell-light: #F2F3EF;
+  --robot-shell-shadow: #B7C0BC;
+  --robot-visor: #04262E;
+  --robot-visor-border: #0A4753;
+  --robot-neon: var(--mercu-orange);
+  --robot-neon-bright: #FF8A3D;
+  --robot-neon-glow: color-mix(in srgb, var(--mercu-orange) 70%, transparent);
+  --robot-neon-soft: color-mix(in srgb, var(--mercu-orange) 25%, transparent);
+  --robot-accent: #FF9D52;
+
+  /* gryphon El Grifo chibi cute — paleta cobre (copper) */
+  --gryph-size: var(--robot-size);
+  --gryph-feather: #fff7ed;
+  --gryph-feather-mid: #fde6d0;
+  --gryph-feather-shadow: #e8b4a0;
+  --gryph-mane: #d4926b;
+  --gryph-mane-deep: #a05a2c;
+  --gryph-mane-mid: #cb7a4a;
+  --gryph-body: #f5d6bf;
+  --gryph-body-shadow: #dca88e;
+  --gryph-body-outline: #9c5a2e;
+  --gryph-beak: #e8a04a;
+  --gryph-beak-deep: #b87333;
+  --gryph-beak-light: #fde6c8;
+  --gryph-eye: #b87333;
+  --gryph-eye-bright: #d4926b;
+  --gryph-eye-glow: rgba(184, 115, 51, 0.55);
+  --gryph-cheek: rgba(212, 146, 107, 0.35);
+  --gryph-claw: #3d2b1f;
+  --gryph-nose: #7a3b1a;
+  --slime-glow: radial-gradient(circle, rgba(184,115,51,0.22) 0%, transparent 70%);
+
+  color-scheme: dark;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tema único MERCU: no hay modo claro ni override por `prefers-color-scheme`. */
+
+* { box-sizing: border-box; }
+*::selection {
+  background: color-mix(in srgb, var(--mercu-green) 32%, transparent);
+  color: var(--color-text);
+}
+
+html, body { margin: 0; padding: 0; min-height: 100%; }
+
+/* ── MAR: gradiente monocromático de profundidad ──
+   Un solo hue (el océano): luz entrando por la superficie arriba, abisal abajo.
+   `background-attachment: fixed` para que la profundidad no scrollee.
+   `background-color` queda de fallback para navegadores sin gradientes. */
+body {
+  min-height: 100svh;
+  background-color: var(--mercu-ocean);
+  background-image: linear-gradient(
+    180deg,
+    var(--mercu-ocean-surface) 0%,
+    var(--mercu-ocean) 45%,
+    var(--mercu-ocean-deep) 100%
+  );
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* ── Corriente marina: plancton bioluminiscente + sedimento mineral ──
+   Reemplaza al starfield cósmico. Misma técnica (radial-gradients) pero solo
+   con colores de la paleta MERCU, en alpha ≤0.18 para que nunca compita con
+   el contenido. Deriva lenta hacia arriba, como burbujas en una corriente. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1px 1px at 10% 15%, color-mix(in srgb, var(--mercu-green) 16%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 35%, color-mix(in srgb, var(--mercu-mineral) 10%, transparent) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 8%, color-mix(in srgb, var(--mercu-orange) 14%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 55%, color-mix(in srgb, var(--mercu-mineral) 8%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 20%, color-mix(in srgb, var(--mercu-green) 12%, transparent) 0%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 85% 45%, color-mix(in srgb, var(--mercu-mineral) 12%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 75%, color-mix(in srgb, var(--mercu-green) 18%, transparent) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 35% 65%, color-mix(in srgb, var(--mercu-orange) 12%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 80%, color-mix(in srgb, var(--mercu-mineral) 9%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 10%, color-mix(in srgb, var(--mercu-green) 14%, transparent) 0%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 5% 90%, color-mix(in srgb, var(--mercu-orange) 16%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 48% 40%, color-mix(in srgb, var(--mercu-mineral) 11%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 70%, color-mix(in srgb, var(--mercu-green) 10%, transparent) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 50%, color-mix(in srgb, var(--mercu-orange) 10%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 85%, color-mix(in srgb, var(--mercu-mineral) 10%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 95%, color-mix(in srgb, var(--mercu-green) 8%, transparent) 0%, transparent 100%),
+    radial-gradient(1px 1px at 65% 5%, color-mix(in srgb, var(--mercu-mineral) 13%, transparent) 0%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 50% 90%, color-mix(in srgb, var(--mercu-orange) 8%, transparent) 0%, transparent 100%);
+  animation: mercu-current 14s ease-in-out infinite alternate;
+}
+
+/* Deriva de corriente (reemplaza galaxy-twinkle: sin parpadeo de estrella) */
+@keyframes mercu-current {
+  0% { opacity: 0.75; transform: translate3d(0, 0, 0) scale(1); }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; transform: translate3d(-10px, -14px, 0) scale(1.01); }
+}
+
+/* Congelar la corriente si el usuario prefiere menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+    transform: none;
+    opacity: 0.9;
+  }
+}
+
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { text-decoration: underline; color: var(--color-accent-hover); }
+
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 9999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Global UX polish (UI Pro Max) */
+button, [role="button"], a, summary { cursor: pointer; }
+button:not(:disabled), [role="button"]:not(:disabled) {
+  transition: transform 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+  transform: translateY(1px);
+}
