@@ -16,6 +16,7 @@ export interface DebugState {
     layaReady: boolean
     embeddingsProgress: number
     embeddingsMessage: string
+    layaError: string | null
   }
   engine: {
     mode: 'hybrid' | 'lexical' | null
@@ -38,6 +39,7 @@ const STATE: DebugState = {
     layaReady: false,
     embeddingsProgress: 0,
     embeddingsMessage: '',
+    layaError: null,
   },
   engine: {
     mode: null,
@@ -124,6 +126,7 @@ function registerConsoleCommands(): void {
       laya: s.prewarm.layaReady ? '✅' : '⏳',
       embeddingsProgress: `${s.prewarm.embeddingsProgress}%`,
       message: s.prewarm.embeddingsMessage || '-',
+      layaError: s.prewarm.layaError || 'none',
     })
     console.log('Engine:', {
       mode: s.engine.mode ?? 'unknown',

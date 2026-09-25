@@ -10,6 +10,7 @@ let layaReady = false
 let prewarmStarted = false
 let embeddingsProgress = 0
 let embeddingsMessage = ''
+let layaError: string | null = null
 const listeners = new Set<() => void>()
 
 export function onPrewarmProgress(cb: () => void): () => void {
@@ -25,6 +26,7 @@ export function getPrewarmState() {
     layaReady,
     embeddingsProgress,
     embeddingsMessage,
+    layaError,
   }
 }
 
@@ -38,25 +40,25 @@ export async function prewarmModels(): Promise<void> {
 
   await prewarmEmbeddings()
 
-  const layaReadyPromise = (async () => {
-    try {
-      const cached = await isLayaCached()
-      if (cached) {
-        await loadLayaSession()
-        layaReady = true
-        notify()
-        return
-      }
-      await downloadLayaModel()
+  try {
+    const cached = await isLayaCached()
+    if (cached) {
       await loadLayaSession()
       layaReady = true
+      layaError = null
       notify()
-    } catch (err) {
-      console.warn('[Prewarm] Laya download failed, using heuristic fallback.', err)
+      return
     }
-  })()
-
-  void layaReadyPromise
+    await downloadLayaModel()
+    await loadLayaSession()
+    layaReady = true
+    layaError = null
+    notify()
+  } catch (err) {
+    layaError = err instanceof Error ? err.message : String(err)
+    console.warn('[Prewarm] Laya download failed, using heuristic fallback.', err)
+    notify()
+  }
 }
 
 /**

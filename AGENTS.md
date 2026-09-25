@@ -74,11 +74,11 @@
 
 Toda feature crítica que afecte modelos, pipelines o integraciones externas debe incluir una vía de verificación **sin UI visible**.
 
-- Implementar `src/lib/debug.ts` con:
+- Implementar `src/shared/lib/debug.ts` con:
   - `window.__MERUCBOT_DEBUG__`
   - Toggle oculto: `Ctrl+Shift+D`
   - Comandos de consola: `__merucbot.check()`, `__merucbot.state()`, `__merucbot.toggle()`
-- Integrar el debugger en `App.tsx` para reflejar:
+- Integrar el debugger en `app/App.tsx` para reflejar:
   - Estado de prewarm (embeddings + Laya)
   - Estado del engine (`hybrid` / `lexical`)
   - Estado de indexación RAG
@@ -95,7 +95,7 @@ Se debe mantener awareness del estado de versiones del proyecto, pero sin actual
   - Si rompe el stack prohibido.
   - Si requiere migración de API.
   - Si el cambio es safe patch/minor.
-- Documentar en `memory.md` las decisiones de versionado y aprendizajes.
+- Documentar en `.agents/memory/memory.md` las decisiones de versionado y aprendizajes.
 - Si un paquete queda deprecado (como ocurrió con `@google/generative-ai`), priorizar la migración al reemplazo oficial.
 
 ---

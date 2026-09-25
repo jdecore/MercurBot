@@ -69,6 +69,13 @@ function MainDashboard() {
     return () => window.removeEventListener('copixi:voice-session', handler as EventListener)
   }, [])
 
+  // Mirror prewarm state into debugger (register BEFORE starting prewarm)
+  useEffect(() => {
+    return onPrewarmProgress(() => {
+      updateDebugState({ prewarm: getPrewarmState() })
+    })
+  }, [])
+
   // Pre-warm models (embeddings + Laya) in parallel at app startup
   useEffect(() => {
     void prewarmModels()
@@ -77,13 +84,6 @@ function MainDashboard() {
   // Initialize hidden debugger
   useEffect(() => {
     return initDebug()
-  }, [])
-
-  // Mirror prewarm state into debugger
-  useEffect(() => {
-    return onPrewarmProgress(() => {
-      updateDebugState({ prewarm: getPrewarmState() })
-    })
   }, [])
 
   // Track setTimeout IDs to clear them on unmount (prevents state updates on
