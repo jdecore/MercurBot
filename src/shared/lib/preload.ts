@@ -34,6 +34,10 @@ export function getPrewarmState() {
   }
 }
 
+export function isPrewarmStarted(): boolean {
+  return prewarmStarted
+}
+
 /**
  * Start sequential pre-warm: embeddings first, then Laya.
  * Safe to call multiple times (idempotent).

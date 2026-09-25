@@ -224,11 +224,6 @@ function MainDashboard() {
         })
       }
       setMascotaMood('exito')
-      const readyMsg = userName
-        ? t.readyWithName(userName, pdfResult.filename, pdfResult.totalPages)
-        : t.readyNoName(pdfResult.filename, pdfResult.totalPages)
-      setMascotaSubtitulo(readyMsg)
-      speak(userName ? t.ttsReadyWithName(userName) : t.ttsReadyNoName)
       setPdfProcessing(null)
       abortControllerRef.current = null
     } catch (err) {
