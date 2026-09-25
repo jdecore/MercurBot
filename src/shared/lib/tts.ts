@@ -36,12 +36,12 @@ function notifyState(isSpeaking: boolean) {
 function pickVoice(): SpeechSynthesisVoice | null {
   if (!isSupported()) return null
   const voices = window.speechSynthesis.getVoices()
-  return (
-    voices.find((v) => v.lang.startsWith('es') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural'))) ??
-    voices.find((v) => v.lang.startsWith('es')) ??
-    voices.find((v) => v.lang.startsWith('en')) ??
-    null
-  )
+  const lang = typeof navigator !== 'undefined' ? navigator.language.slice(0, 2).toLowerCase() : 'es'
+  const isEs = lang === 'es'
+
+  const candidates = voices.filter(v => v.lang.startsWith(isEs ? 'es' : 'en'))
+  const preferred = candidates.find(v => /natural|neural|google|premium|advanced/i.test(v.name))
+  return preferred ?? candidates[0] ?? voices[0] ?? null
 }
 
 function processQueue() {
@@ -73,8 +73,9 @@ function processQueue() {
   const utterance = new SpeechSynthesisUtterance(cleanText)
   const voice = pickVoice()
   if (voice) utterance.voice = voice
-  utterance.rate = 1.02
-  utterance.pitch = 1.05
+  const isEs = (voice?.lang ?? '').startsWith('es')
+  utterance.rate = isEs ? 0.95 : 1.02
+  utterance.pitch = isEs ? 1.0 : 1.05
 
   utterance.onend = () => {
     if (myGen !== generation) return // stale callback, ignore

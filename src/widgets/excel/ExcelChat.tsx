@@ -75,11 +75,21 @@ export function matchTypeLabel(matchType?: string, t?: ReturnType<typeof useLoca
   return matchType || null
 }
 
-// La voz lee solo la primera frase: suena humano en vez de recitar el informe.
-function firstSentence(text: string): string {
-  const clean = text.replace(/\s+/g, ' ').trim()
-  const m = clean.match(/^.{20,}?[.!?…](\s|$)/)
-  return (m ? m[0] : clean.slice(0, 180)).trim()
+// Prepara texto limpio para TTS: elimina markdown/código/citas y devuelve
+// hasta ~350 caracteres cortando por palabra con ellipsis.
+function speechText(text: string): string {
+  const cleaned = text
+    .replace(/```[\s\S]*?```/g, 'código omitido.')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[Pág\.?\s*\d+\]/gi, '')
+    .replace(/\[Página\s*\d+\]/gi, '')
+    .replace(/[#*_~>`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (cleaned.length <= 350) return cleaned
+  const slice = cleaned.slice(0, 350)
+  const lastSpace = slice.lastIndexOf(' ')
+  return lastSpace > 280 ? slice.slice(0, lastSpace) + '…' : slice + '…'
 }
 
 // Nombre corto para el placeholder del dock (sin .pdf, máx. 28 chars).
@@ -614,7 +624,7 @@ export function ExcelChat() {
         setMascotaMood('exito')
         stopThinking()
         const cleaned = stripChartBlock(cleanAI(acc))
-        if (cleaned && !getMuted()) speak(firstSentence(cleaned))
+        if (cleaned && !getMuted()) speak(speechText(cleaned))
       } catch (err) {
         if ((err as { name?: string })?.name === 'AbortError') { setStatus('idle'); return }
         setError(err instanceof Error ? err.message : 'Error')
@@ -765,7 +775,7 @@ export function ExcelChat() {
         const hasChart = splitChartBlock(acc).chart
         if (hasChart) soundSuccess()
         else chime()
-        if (!getMuted() && acc) speak(firstSentence(stripChartBlock(cleanAI(acc))))
+        if (!getMuted() && acc) speak(speechText(stripChartBlock(cleanAI(acc))))
       } catch (e) {
         if ((e instanceof DOMException && e.name === 'AbortError') || (e instanceof Error && e.name === 'AbortError')) {
           stopThinking()
@@ -800,7 +810,7 @@ export function ExcelChat() {
         window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
         soundSuccess()
         const cleaned = stripChartBlock(cleanAI(chartData.text))
-        if (cleaned && !getMuted()) speak(firstSentence(cleaned))
+        if (cleaned && !getMuted()) speak(speechText(cleaned))
       } else {
         setError(chartTool?.result?.error || 'Chart generation failed')
         setStatus('done')
@@ -821,7 +831,7 @@ export function ExcelChat() {
       stopThinking()
       window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
       chime()
-      if (!getMuted() && resultText) speak(firstSentence(stripChartBlock(cleanAI(resultText))))
+      if (!getMuted() && resultText) speak(speechText(stripChartBlock(cleanAI(resultText))))
       setAgentDisplay('')
       return
     }
@@ -856,7 +866,7 @@ export function ExcelChat() {
       setMascotaMood('exito')
       stopThinking()
       const cleaned = stripChartBlock(cleanAI(acc))
-      if (cleaned && !getMuted()) speak(firstSentence(cleaned))
+      if (cleaned && !getMuted()) speak(speechText(cleaned))
     } catch (err) {
       if ((err as { name?: string })?.name === 'AbortError') { setStatus('idle'); return }
       setError(err instanceof Error ? err.message : 'Error')
