@@ -75,9 +75,6 @@ export type ProductDict = {
   idlePrompt: (name: string) => string; dropTitle: string; dropHint: string
   showLog: (n: number) => string; hideLog: string; clearChat: string; changeFile: string
   errRequest: string; errConnection: string; retryChat: string
-  startersTitle: string; startersDesc: string; startersUpload: string
-  suggestSummary: string; suggestSummaryQ: string; suggestCite: string; suggestCiteQ: string
-  suggestSearch: string; suggestSearchQ: string; suggestChart: string; suggestChartQ: string
   attachTitle: string; attachAria: string
   dictUnavailable: string; dictInsecure: string; dictStop: string; dictStart: string
   ttsOn: string; ttsOff: string; stopAudio: string; workflowBtn: string; workflowAria: string
@@ -172,8 +169,6 @@ export type ProductDict = {
   chartDiscarded: string; copyResponse: string; downloadMd: string; downloadMdAria: string
   chatLogHide: string; chatLogShow: (n: number) => string
   clearChatAria: string; noDataVerified: (d: number, t: number) => string
-  uploadPdf: string; startersGroup: string
-  suggestResume: string; suggestResumeQ: string
   changeFileAria: string
   inputPlaceholder: (name: string) => string; inputPlaceholderEmpty: string
 }
@@ -293,10 +288,6 @@ const enDict: FullDict = {
   hideLog: 'Hide chat log',
   errRequest: 'Request error:',
   retryChat: 'Retry',
-  startersDesc: 'Upload a PDF and ask in your own words — every answer cites its page.',
-  startersUpload: 'Upload my PDF',
-  suggestSummary: 'Summarize in 3 points',
-  suggestSummaryQ: 'Summarize this document in 3 key points',
   attachTitle: 'Upload PDF document (.pdf)',
   attachAria: 'Upload PDF',
   dictUnavailable: 'Dictation not available in this browser (e.g. Firefox): use Chrome, Edge or Safari, or type the question',
@@ -336,17 +327,6 @@ const enDict: FullDict = {
   clearChatAria: 'Clear conversation',
   changeFile: 'Change file',
   changeFileAria: 'Upload another PDF document',
-  startersTitle: 'Upload a PDF and ask in your own words — each response cites its page.',
-  uploadPdf: 'Upload my PDF',
-  startersGroup: 'Capabilities: suggested questions',
-  suggestResume: 'Summarize in 3 points',
-  suggestResumeQ: 'Summarize this document in 3 points',
-  suggestCite: 'Ask with citations',
-  suggestCiteQ: 'What are the key points? Cite the pages',
-  suggestSearch: 'Search the document',
-  suggestSearchQ: 'What does the document say about ',
-  suggestChart: 'Chart figures',
-  suggestChartQ: 'What comparable figures does the document contain? Include the pages',
   inputPlaceholder: (name: string) => `Ask about ${name}… (e.g. Summarize the 3 key points)`,
   inputPlaceholderEmpty: 'Upload a PDF and let\'s chat…',
   inputAria: 'Type your question',
@@ -683,10 +663,6 @@ const esDict: FullDict = {
   hideLog: 'Ocultar historial de chat',
   errRequest: 'Error en la petición:',
   retryChat: 'Reintentar',
-  startersDesc: 'Sube un PDF y pregunta con tus palabras — cada respuesta cita su página.',
-  startersUpload: 'Subir mi PDF',
-  suggestSummary: 'Resumir en 3 puntos',
-  suggestSummaryQ: 'Resume este documento en 3 puntos',
   attachTitle: 'Subir documento PDF (.pdf)',
   attachAria: 'Subir PDF',
   dictUnavailable: 'Dictado no disponible en este navegador (ej. Firefox): usa Chrome, Edge o Safari, o escribe la pregunta',
@@ -726,17 +702,6 @@ const esDict: FullDict = {
   clearChatAria: 'Limpiar conversación',
   changeFile: 'Cambiar archivo',
   changeFileAria: 'Cargar otro documento PDF',
-  startersTitle: 'Sube un PDF y pregunta con tus palabras — cada respuesta cita su página.',
-  uploadPdf: 'Subir mi PDF',
-  startersGroup: 'Capacidades: preguntas sugeridas',
-  suggestResume: 'Resumir en 3 puntos',
-  suggestResumeQ: 'Resume este documento en 3 puntos',
-  suggestCite: 'Preguntar con citas',
-  suggestCiteQ: '¿Cuáles son los puntos clave? Cita las páginas',
-  suggestSearch: 'Buscar en el documento',
-  suggestSearchQ: '¿Qué dice el documento sobre ',
-  suggestChart: 'Graficar cifras',
-  suggestChartQ: '¿Qué cifras comparables trae el documento? Incluye las páginas',
   inputPlaceholder: (name: string) => `Pregunta sobre ${name}… (ej. Resume los 3 puntos clave)`,
   inputPlaceholderEmpty: 'Sube un PDF y conversamos…',
   inputAria: 'Escribe tu consulta',

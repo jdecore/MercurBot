@@ -90,6 +90,7 @@ function MainDashboard() {
   // unmounted components and memory leaks from lingering closures).
   const cancelTimeoutRef = useRef<number | null>(null)
   const onboardingTimeoutRef = useRef<number | null>(null)
+  const robotMsgTimeoutRef = useRef<number | null>(null)
 
   const toggleRail = useCallback(() => {
     setRailCollapsed((prev) => {
@@ -373,11 +374,29 @@ function MainDashboard() {
     return () => window.removeEventListener('copixi:workflow-status', handler as EventListener)
   }, [])
 
+  // Robot message event: update subtitle and speak, auto-clear after timeout.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent<{ text: string }>).detail?.text
+      if (!text) return
+      if (robotMsgTimeoutRef.current !== null) clearTimeout(robotMsgTimeoutRef.current)
+      setMascotaSubtitulo(text)
+      speak(text)
+      robotMsgTimeoutRef.current = window.setTimeout(() => {
+        robotMsgTimeoutRef.current = null
+        setMascotaSubtitulo('')
+      }, 6000)
+    }
+    window.addEventListener('copixi:robot-message', handler as EventListener)
+    return () => window.removeEventListener('copixi:robot-message', handler as EventListener)
+  }, [])
+
   // Cleanup timeouts on unmount to prevent state updates on unmounted component.
   useEffect(() => {
     return () => {
       if (cancelTimeoutRef.current !== null) clearTimeout(cancelTimeoutRef.current)
       if (onboardingTimeoutRef.current !== null) clearTimeout(onboardingTimeoutRef.current)
+      if (robotMsgTimeoutRef.current !== null) clearTimeout(robotMsgTimeoutRef.current)
     }
   }, [])
 
@@ -593,7 +612,7 @@ function MainDashboard() {
               )}
 
               {/* Interactive Speech Bubble & Excel Chat & MiniCharts */}
-              <ExcelChat onOpenFilePicker={() => inputRef.current?.click()} />
+              <ExcelChat />
 
               {error && (
                 <div role="alert" className="hero-error">

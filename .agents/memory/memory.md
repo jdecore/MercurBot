@@ -1,6 +1,6 @@
 # memory.md — Bitácora del Proyecto
 
-> **Última actualización:** 2026-09-24 | Rama: main
+> **Última actualización:** 2026-09-25 | Rama: main
 
 ---
 
@@ -8,11 +8,31 @@
 - FSD reorganization completada (src/ → app/widgets/features/entities/shared/)
 - `.agents/` knowledge layer creada (context/skills/memory)
 - App funcional: build OK, lint OK, 0 errores TypeScript
+- **Laya routeIntent() implementado:** tokenizer BPE portado de laya-ts, prompt renderer con [MASK] markers, inferencia ONNX, softmax por opción. Chat flow decide rag/direct/chart antes de buscar.
 - Sin bloqueos conocidos
 
 ---
 
 ## Qué se hizo en la última sesión
+
+### Laya routeIntent() — choice routing engine ✅ (25/09)
+- **Problema:** Laya solo clasificaba literal/semantic con tokenizer falso (hash hasheado). El modelo INT8 siempre fallaba la inferencia. Sin router de intenciones real.
+- **Solución:** Reescritura completa de `src/shared/lib/laya.ts`:
+  1. **Tokenizer BPE portado de laya-ts:** `parseTokenizerJson()` parsea `tokenizer.json` real (vocab, merges, special tokens). `bpeEncode()` con GPT-2 byte-level mapping + merge heap O(n log n). `createTokenizer()` exporta `TokenizerLike` con `encode()`.
+  2. **Tokenizer persistido en OPFS:** `downloadLayaModel()` ahora guarda `tokenizer.json` via `downloadToOPFS` (antes se descartaba). `loadLayaSession()` lee de OPFS y crea tokenizer.
+  3. **Prompt renderer portado de laya-ts:** `buildQuestionPrefix()` construye `[CLS] type question: ins [SEP] [MASK] opt1 [MASK] opt2 [SEP]`. `sequenceWithState()` appende state tokens. `renderOptions()` renderiza criteria como texto.
+  4. **Collate + feeds:** `buildFeeds()` crea batch con `input_ids` (int64), `attention_mask` (int64), `marker_pos` (int64), `marker_mask` (bool), `qtype` (int64).
+  5. **`routeIntent(state, questions)`:** Evalúa preguntas typed en un solo forward pass. Para `choice`: softmax sobre logits por opción, devuelve `{choice, confidence, probabilities}`. Para `score`: expected value. Para `noul`: P(yes).
+  6. **Limpieza:** Eliminados `preloadLaya`, `deleteLayaCache`, `getLayaCacheSize`, `LayaStatus`, `hashToken`, `tokenizeSimple`.
+- **Nuevo archivo:** `src/entities/robot/intentSchema.ts` — Schema de routing con `action: {rag|direct|chart}` y `searchMode: {literal|semantic}`.
+- **Chat flow wirado:** `ExcelChat.tsx` llama `routeIntent()` antes del pipeline RAG. Si `action=direct`, salta RAG y va directo a la API.
+- **Debug F5:** `__merucbot.testFlow()` incluye F5 `routeIntent()` con 3 queries de prueba.
+- **Resultado:** build OK, lint OK, 0 errores TypeScript
+- **Aprendizajes:** El INT8 single-file de `tozp/laya-onnx` tiene los mismos inputs que el modelo oficial (input_ids, attention_mask, marker_pos, marker_mask, qtype → logits, act). El prompt renderer de laya-ts es self-contained (~150 líneas) y funciona con cualquier tokenizer que implemente `TokenizerLike`. La key del render es: `[CLS] type question: instructions [SEP] [MASK] option_text ... [SEP] state [SEP]` — los markers apuntan a las posiciones de cada `[MASK]` y los logits en esas posiciones dan el score por opción.
+
+---
+
+## Qué se hizo en sesiones anteriores
 
 ### Dependency updates + SDK migration ✅ (24/09)
 - **Cambios clave:** TypeScript 7.0.2, react/react-dom 19.3.0, @google/genai migration, devDependencies actualizadas
@@ -87,14 +107,19 @@
 | Pixelarticons vs lucide/FA | Stack constraint AGENTS.md | previo |
 | ALLOWED_ORIGINS vía env var | Preparado para cambio de dominio | previo |
 | Debugger oculto DevTools | Verificación sin UI; toggle Ctrl+Shift+D | 24/09 |
+| Laya routeIntent() | Router de intenciones con choice/score/noul via ONNX | 25/09 |
+| Tokenizer BPE en laya.ts | Portado de laya-ts, reemplaza hash hasheado | 25/09 |
+| Intent schema separado | `intentSchema.ts` para routing rag/direct/chart | 25/09 |
 
 ---
 
 ## Pendientes conocidos
-1. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates, debugger, CSP fixes)
+1. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates, debugger, CSP fixes, routeIntent)
 2. **QA visual live:** verificar deploy real
 3. **og:image:** public/og-cover.png 1200×630 pendiente
 4. **E2E completo:** PDF escaneado, mobile, oscuro, gráficas, citas
+5. **Laya F2 — validar inferencia:** El routeIntent() está implementado pero la inferencia ONNX real del modelo INT8 no ha sido validada en producción. El `__merucbot.testFlow({laya:true})` probará esto.
+6. **Laya F3 — noul para guardrails:** Agregar `needs_web: {type:'noul'}` para detectar queries que requieren info fuera del documento.
 
 ---
 

@@ -3,7 +3,7 @@ import { useDashboard } from '../../shared/lib/DashboardContext'
 import { speak, getMuted, setMuted as setTtsMuted, isTtsSupported, cancel as cancelTts, isSpeaking, speakInteraction } from '../../shared/lib/tts'
 import type { MascotaMood } from '../../entities/robot/types'
 import { ragClient } from '../../shared/lib/ragClient'
-import { getChatHistory, saveChatHistory, clearChatHistory, type ChatHistoryMsg } from '../../shared/lib/storage'
+import { getChatHistory, saveChatHistory, type ChatHistoryMsg } from '../../shared/lib/storage'
 import { Icon } from '../../shared/ui/Icon'
 import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../features/rag/ragPipeline'
 import { getDictationSupport } from '../../shared/lib/dictation'
@@ -14,6 +14,8 @@ import { formatPageRange, countSelectionFigures } from '../../shared/lib/chartFu
 import { pop, chime, startThinking, stopThinking, error as soundError, success as soundSuccess } from '../../shared/lib/sounds'
 import type { ChartFullResultDetail } from '../pdf/ChartFullButton'
 import { useLocale } from '../../shared/lib/locale'
+import { routeIntent } from '../../shared/lib/laya'
+import { INTENT_SCHEMA, parseIntentResult } from '../../entities/robot/intentSchema'
 
 // Fase C: gráfica SVG propia en chunk separado (no engorda el bundle inicial).
 const ChartCard = lazy(() => import('../charts/ChartCard'))
@@ -299,7 +301,7 @@ function renderRichText(text: string, t: ReturnType<typeof useLocale>['t']): Rea
   return <>{blocks}</>
 }
 
-export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void }) {
+export function ExcelChat() {
   const { pdfDoc } = useDashboard()
   const { t, locale } = useLocale()
 
@@ -316,6 +318,7 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const lastQueryRef = useRef('')
+  const prevStatusRef = useRef<string | null>(null)
 
   // Live voice session (Phase 6): continuous mic, auto-send 1.2s silence, barge-in, volume meter
   const {
@@ -534,6 +537,59 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: msg } : m)))
       setStatus('done')
       setMascotaMood('neutro')
+      return
+    }
+
+    // Route intent via Laya (if loaded) — decides action + search mode.
+    // Falls back to heuristic if Laya is not available.
+    let intentAction: 'rag' | 'direct' | 'chart' = 'rag'
+    try {
+      const intentResults = await routeIntent(trimmed, INTENT_SCHEMA)
+      const parsed = parseIntentResult(intentResults)
+      intentAction = parsed.action
+    } catch {
+      // routeIntent returns null on failure — default to rag
+    }
+
+    // Si la intención es 'direct', responder sin buscar en el documento.
+    if (intentAction === 'direct') {
+      const citations: { pageNumber: number; snippet: string; matchType: string }[] = []
+      const payloadContext = { hasData: false }
+      const controller = new AbortController()
+      abortRef.current = controller
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ messages: history, context: payloadContext, lang: locale }),
+          signal: controller.signal,
+        })
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
+        setStatus('streaming')
+        setMascotaMood('pensando')
+        startThinking()
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let acc = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          acc += decoder.decode(value, { stream: true })
+          setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, content: acc } : m))
+        }
+        setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, content: acc, citations } : m))
+        setStatus('done')
+        setMascotaMood('exito')
+        stopThinking()
+        const cleaned = stripChartBlock(cleanAI(acc))
+        if (cleaned && !getMuted()) speak(firstSentence(cleaned))
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError') { setStatus('idle'); return }
+        setError(err instanceof Error ? err.message : 'Error')
+        setStatus('done')
+        stopThinking()
+        soundError()
+      }
       return
     }
 
@@ -758,15 +814,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
     if (lastQueryRef.current) void runQuery(lastQueryRef.current)
   }
 
-  const clearChat = () => {
-    setMessages([])
-    setError(null)
-    setStatus('idle')
-    setCopiedId(null)
-    if (docId) clearChatHistory(docId)
-    setMascotaMood('neutro')
-  }
-
   const toggleMute = () => {
     const v = !muted
     setTtsMuted(v)
@@ -803,6 +850,13 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
       noChartText: noChart ? describeNoChart(pages, t) : null,
     }
   }, [lastAiMsg])
+
+  useEffect(() => {
+    if (status === 'done' && prevStatusRef.current !== 'done' && cleanedAi.noChart && cleanedAi.noChartText) {
+      window.dispatchEvent(new CustomEvent('copixi:robot-message', { detail: { text: cleanedAi.noChartText } }))
+    }
+    prevStatusRef.current = status
+  }, [status, cleanedAi])
 
   if (!pdfDoc) return null
 
@@ -896,11 +950,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                       {t.chartDiscarded}
                   </div>
                 )}
-                {cleanedAi.noChart && cleanedAi.noChartText && (
-                  <div className="chart-notice" role="status">
-                    {cleanedAi.noChartText}
-                  </div>
-                )}
                 <div className="ai-actions-row">
                   <ModelPill model={lastAiMsg?.model} />
                   <button type="button" className="ai-action-btn" onClick={() => lastAiMsg && void handleCopy(lastAiMsg.id, lastAiMsg.content)} aria-label={t.copyResponse}>
@@ -922,38 +971,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
         </div>
       </div>
 
-      {messages.length > 0 && (
-        <div className="chat-history-toggle-row">
-          <button
-            type="button"
-            className="btn btn-secondary small"
-            onClick={() => setChatLogOpen((o) => !o)}
-            aria-expanded={chatLogOpen}
-          >
-            <Icon name={chatLogOpen ? 'chevron-up' : 'message'} size={14} />
-            {chatLogOpen ? t.chatLogHide : t.chatLogShow(messages.length)}
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary small"
-            onClick={clearChat}
-            title={t.clearChatAria}
-          >
-            <Icon name="trash" size={14} /> {t.clearChat}
-          </button>
-          {onOpenFilePicker && (
-            <button
-              type="button"
-              className="btn btn-secondary small"
-              onClick={onOpenFilePicker}
-              title="Cargar otro documento PDF"
-            >
-              <Icon name="upload" size={14} /> {t.changeFile}
-            </button>
-          )}
-        </div>
-      )}
-
       {chatLogOpen && (
         <div className="chat-expanded-log card" ref={scrollRef} role="log" aria-live="polite">
           {messages.map((m) => {
@@ -968,7 +985,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
             const msgPages = m.chartPages ?? undefined
             const msgVer = msgSplit?.chart ? verifyChartSpec(msgSplit.chart, (p) => ragClient.getPageTexts(p), msgPages) : null
             const msgRejected = !!msgSplit?.chart && !msgVer?.spec
-            const msgNoChart = m.role === 'assistant' && !msgSplit?.chart && msgPages !== undefined
             return (
               <div key={m.id} className={`excel-msg excel-msg-${m.role === 'user' ? 'user' : 'ai'}`}>
                 <div className="excel-msg-body">
@@ -1025,11 +1041,6 @@ export function ExcelChat({ onOpenFilePicker }: { onOpenFilePicker?: () => void 
                   {msgRejected && (
                     <div className="chart-notice chart-rejected" role="status">
                     {t.chartDiscarded}
-                    </div>
-                  )}
-                  {msgNoChart && (
-                    <div className="chart-notice" role="status">
-                      {describeNoChart(msgPages ?? undefined, t) ?? t.noChartRange('the analyzed scope')}
                     </div>
                   )}
                 </div>

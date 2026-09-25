@@ -62,6 +62,9 @@ export async function prewarmModels(): Promise<void> {
         layaProgress = pct
         layaMessage = pct < 100 ? `Descargando modelo Laya (${pct}%)...` : 'Modelo Laya descargado.'
         notify()
+      } else if (phase === 'tokenizer') {
+        layaMessage = pct < 100 ? `Descargando tokenizer (${pct}%)...` : 'Tokenizer descargado.'
+        notify()
       }
     })
     await loadLayaSession()

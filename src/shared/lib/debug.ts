@@ -338,6 +338,39 @@ function registerTestFlow(): void {
       results.rag = 'NO_INDEX'
     }
 
+    /* ---- F5: routeIntent (Laya choice routing) ----------------------------- */
+    hdr(`F5 — routeIntent (${elapsed()})`)
+    const { routeIntent: ri } = await import('./laya')
+    const { INTENT_SCHEMA } = await import('../../entities/robot/intentSchema')
+    const intentTests = [
+      { q: '¿en qué página está el artículo 3?', expectAction: 'rag', expectSearch: 'literal' },
+      { q: 'hola, ¿cómo estás?', expectAction: 'direct', expectSearch: undefined },
+      { q: 'resume este documento', expectAction: 'rag', expectSearch: 'semantic' },
+    ]
+    let intentOk = true
+    let layaAvailable = false
+    for (const { q, expectAction, expectSearch } of intentTests) {
+      const t = Date.now()
+      const result = await ri(q, INTENT_SCHEMA)
+      const ms = Date.now() - t
+      if (result) {
+        layaAvailable = true
+        const action = result.action?.choice ?? '?'
+        const search = result.searchMode?.choice ?? '?'
+        const pass = action === expectAction && (expectSearch === undefined || search === expectSearch)
+        if (pass) {
+          ok(`"${q.slice(0, 30)}…" → action=${action}, search=${search} (${ms}ms)`)
+        } else {
+          fail(`"${q.slice(0, 30)}…" → action=${action}, search=${search} (esperaba ${expectAction}/${expectSearch ?? '?'})`)
+          intentOk = false
+        }
+      } else {
+        warn(`"${q.slice(0, 30)}…" → Laya no disponible (heuristic fallback)`)
+        info(`  action=${expectAction}, search=${expectSearch ?? '?'} (esperado, sin Laya)`)
+      }
+    }
+    results.routeIntent = layaAvailable ? (intentOk ? 'PASS' : 'PARTIAL') : 'SKIP (sin Laya)'
+
     /* ---- Veredicto final -------------------------------------------------- */
     hdr(`VEREDICTO (${elapsed()})`)
     console.table({
@@ -345,8 +378,9 @@ function registerTestFlow(): void {
       classify: results.classify || '?',
       laya: results.laya || '?',
       rag: results.rag || '?',
+      routeIntent: results.routeIntent || '?',
     })
-    const allPass = Object.values(results).every((v) => v === 'PASS' || v === 'SKIP')
+    const allPass = Object.values(results).every((v) => v === 'PASS' || v === 'SKIP' || v?.toString().startsWith('SKIP'))
     if (allPass) {
       ok('Todos los checks pasaron.')
     } else {

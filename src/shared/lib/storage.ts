@@ -233,10 +233,6 @@ export function saveChatHistory(docId: string, msgs: ChatHistoryMsg[]): void {
     /* quota: keep in-memory only */
   }
 }
-export function clearChatHistory(docId: string): void {
-  localStorage.removeItem(KEY_CHAT_PREFIX + docId)
-}
-
 // History (lightweight event log)
 export function getHistory(): string[] {
   if (typeof localStorage === 'undefined') return []
