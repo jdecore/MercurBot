@@ -35,7 +35,7 @@ export function BlackHoleUpload({ onFile, size = 200 }: BlackHoleUploadProps) {
         speed: 0.002 + Math.random() * 0.003,
         size: 1 + Math.random() * 2,
         opacity: 0.3 + Math.random() * 0.5,
-        hue: 200 + Math.random() * 40,
+        hue: 25 + Math.random() * 20,
       })
     }
     particlesRef.current = particles
@@ -85,11 +85,11 @@ export function BlackHoleUpload({ onFile, size = 200 }: BlackHoleUploadProps) {
       ctx.save()
       ctx.globalAlpha = glowIntensity + Math.sin(time * 0.05) * 0.1
       const ringGrad = ctx.createRadialGradient(center, center, ringRadius - 8, center, center, ringRadius + 8)
-      ringGrad.addColorStop(0, 'rgba(100,150,255,0)')
-      ringGrad.addColorStop(0.3, 'rgba(100,180,255,0.4)')
-      ringGrad.addColorStop(0.5, 'rgba(150,200,255,0.6)')
-      ringGrad.addColorStop(0.7, 'rgba(100,180,255,0.4)')
-      ringGrad.addColorStop(1, 'rgba(100,150,255,0)')
+      ringGrad.addColorStop(0, 'rgba(240,113,29,0)')
+      ringGrad.addColorStop(0.3, 'rgba(240,113,29,0.4)')
+      ringGrad.addColorStop(0.5, 'rgba(255,157,82,0.6)')
+      ringGrad.addColorStop(0.7, 'rgba(240,113,29,0.4)')
+      ringGrad.addColorStop(1, 'rgba(240,113,29,0)')
       ctx.fillStyle = ringGrad
       ctx.beginPath()
       ctx.arc(center, center, ringRadius + 8, 0, Math.PI * 2)
@@ -100,9 +100,9 @@ export function BlackHoleUpload({ onFile, size = 200 }: BlackHoleUploadProps) {
       ctx.save()
       ctx.globalAlpha = glowIntensity * 0.5
       const ring2Grad = ctx.createRadialGradient(center, center, ringRadius * 1.3 - 5, center, center, ringRadius * 1.3 + 5)
-      ring2Grad.addColorStop(0, 'rgba(80,120,200,0)')
-      ring2Grad.addColorStop(0.5, 'rgba(80,140,220,0.3)')
-      ring2Grad.addColorStop(1, 'rgba(80,120,200,0)')
+      ring2Grad.addColorStop(0, 'rgba(158,224,20,0)')
+      ring2Grad.addColorStop(0.5, 'rgba(158,224,20,0.3)')
+      ring2Grad.addColorStop(1, 'rgba(158,224,20,0)')
       ctx.fillStyle = ring2Grad
       ctx.beginPath()
       ctx.arc(center, center, ringRadius * 1.3 + 5, 0, Math.PI * 2)
@@ -127,9 +127,9 @@ export function BlackHoleUpload({ onFile, size = 200 }: BlackHoleUploadProps) {
         ctx.save()
         ctx.globalAlpha = p.opacity * (isHover ? 1.3 : 1)
         const particleGrad = ctx.createRadialGradient(x, y, 0, x, y, p.size * 2)
-        particleGrad.addColorStop(0, `hsla(${p.hue}, 80%, 70%, 1)`)
-        particleGrad.addColorStop(0.5, `hsla(${p.hue}, 70%, 60%, 0.6)`)
-        particleGrad.addColorStop(1, `hsla(${p.hue}, 60%, 50%, 0)`)
+        particleGrad.addColorStop(0, `hsla(${p.hue}, 90%, 55%, 1)`)
+        particleGrad.addColorStop(0.5, `hsla(${p.hue}, 85%, 50%, 0.6)`)
+        particleGrad.addColorStop(1, `hsla(${p.hue}, 80%, 45%, 0)`)
         ctx.fillStyle = particleGrad
         ctx.beginPath()
         ctx.arc(x, y, p.size * 2, 0, Math.PI * 2)
@@ -139,7 +139,7 @@ export function BlackHoleUpload({ onFile, size = 200 }: BlackHoleUploadProps) {
         // Estela de partícula
         ctx.save()
         ctx.globalAlpha = p.opacity * 0.3
-        ctx.strokeStyle = `hsla(${p.hue}, 70%, 60%, 0.4)`
+        ctx.strokeStyle = `hsla(${p.hue}, 85%, 55%, 0.5)`
         ctx.lineWidth = 0.5
         ctx.beginPath()
         const trailLen = 0.3
@@ -165,9 +165,9 @@ export function BlackHoleUpload({ onFile, size = 200 }: BlackHoleUploadProps) {
           const y2 = center + Math.sin(a) * r2
 
           const lineGrad = ctx.createLinearGradient(x1, y1, x2, y2)
-          lineGrad.addColorStop(0, 'rgba(100,180,255,0)')
-          lineGrad.addColorStop(0.5, 'rgba(100,180,255,0.3)')
-          lineGrad.addColorStop(1, 'rgba(100,180,255,0)')
+          lineGrad.addColorStop(0, 'rgba(240,113,29,0)')
+          lineGrad.addColorStop(0.5, 'rgba(255,157,82,0.3)')
+          lineGrad.addColorStop(1, 'rgba(240,113,29,0)')
           ctx.strokeStyle = lineGrad
           ctx.lineWidth = 1
           ctx.beginPath()

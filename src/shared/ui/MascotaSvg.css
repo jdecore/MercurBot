@@ -11,8 +11,8 @@
   --brow-l: 0deg;
   --brow-r: 0deg;
   --glow-opacity: 0;
-  --unit-primary: #10b981;
-  --unit-accent: #34d399;
+  --unit-primary: #9EE014;
+  --unit-accent: #B6EE4A;
   width: var(--robot-size);
   height: var(--robot-size);
   position: relative;
@@ -296,7 +296,7 @@
 .mascota-subtitles {
   position: absolute;
   bottom: -28px;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(7, 59, 70, 0.85);
   backdrop-filter: blur(6px);
   color: #f8fafc;
   padding: 4px 10px;

@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0F172A"/>
-      <stop offset="100%" style="stop-color:#1E293B"/>
+      <stop offset="0%" style="stop-color:#0D4E5B"/>
+      <stop offset="100%" style="stop-color:#052C35"/>
     </linearGradient>
     <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#10B981"/>
-      <stop offset="100%" style="stop-color:#06B6D4"/>
+      <stop offset="0%" style="stop-color:#9EE014"/>
+      <stop offset="100%" style="stop-color:#F0711D"/>
     </linearGradient>
   </defs>
   
@@ -14,24 +14,19 @@
   <rect width="1200" height="630" fill="url(#bg)"/>
   
   <!-- Decorative circles -->
-  <circle cx="100" cy="100" r="200" fill="#10B981" opacity="0.05"/>
-  <circle cx="1100" cy="530" r="250" fill="#06B6D4" opacity="0.05"/>
+  <circle cx="100" cy="100" r="200" fill="#9EE014" opacity="0.05"/>
+  <circle cx="1100" cy="530" r="250" fill="#F0711D" opacity="0.05"/>
   
   <!-- Robot icon -->
   <g transform="translate(550, 180)">
-    <!-- Body -->
-    <rect x="25" y="60" width="100" height="80" rx="12" fill="#334155" stroke="#10B981" stroke-width="2"/>
-    <!-- Head -->
-    <rect x="35" y="10" width="80" height="50" rx="10" fill="#334155" stroke="#10B981" stroke-width="2"/>
-    <!-- Eyes -->
-    <circle cx="55" cy="35" r="8" fill="#10B981"/>
-    <circle cx="105" cy="35" r="8" fill="#06B6D4"/>
-    <!-- Eye shine -->
+    <rect x="25" y="60" width="100" height="80" rx="12" fill="#334155" stroke="#9EE014" stroke-width="2"/>
+    <rect x="35" y="10" width="80" height="50" rx="10" fill="#334155" stroke="#9EE014" stroke-width="2"/>
+    <circle cx="55" cy="35" r="8" fill="#9EE014"/>
+    <circle cx="105" cy="35" r="8" fill="#F0711D"/>
     <circle cx="58" cy="32" r="3" fill="white" opacity="0.8"/>
     <circle cx="108" cy="32" r="3" fill="white" opacity="0.8"/>
-    <!-- Antenna -->
-    <line x1="75" y1="10" x2="75" y2="0" stroke="#10B981" stroke-width="2"/>
-    <circle cx="75" cy="0" r="4" fill="#10B981"/>
+    <line x1="75" y1="10" x2="75" y2="0" stroke="#9EE014" stroke-width="2"/>
+    <circle cx="75" cy="0" r="4" fill="#9EE014"/>
   </g>
   
   <!-- Title -->
@@ -51,17 +46,17 @@
   
   <!-- Feature pills -->
   <g transform="translate(300, 480)">
-    <rect x="0" y="0" width="120" height="32" rx="16" fill="#10B981" opacity="0.15"/>
-    <text x="60" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#10B981">RAG Search</text>
+    <rect x="0" y="0" width="120" height="32" rx="16" fill="#9EE014" opacity="0.15"/>
+    <text x="60" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#9EE014">RAG Search</text>
     
-    <rect x="140" y="0" width="120" height="32" rx="16" fill="#06B6D4" opacity="0.15"/>
-    <text x="200" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#06B6D4">Page Citations</text>
+    <rect x="140" y="0" width="120" height="32" rx="16" fill="#F0711D" opacity="0.15"/>
+    <text x="200" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#F0711D">Page Citations</text>
     
-    <rect x="280" y="0" width="120" height="32" rx="16" fill="#8B5CF6" opacity="0.15"/>
-    <text x="340" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8B5CF6">Charts</text>
+    <rect x="280" y="0" width="120" height="32" rx="16" fill="#9EE014" opacity="0.15"/>
+    <text x="340" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#9EE014">Charts</text>
     
-    <rect x="420" y="0" width="120" height="32" rx="16" fill="#F59E0B" opacity="0.15"/>
-    <text x="480" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#F59E0B">Bilingual</text>
+    <rect x="420" y="0" width="120" height="32" rx="16" fill="#E5E6E1" opacity="0.15"/>
+    <text x="480" y="21" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#E5E6E1">Bilingual</text>
   </g>
   
   <!-- Footer -->

@@ -113,7 +113,7 @@ export function initDebug(): () => void {
 
 function log(...args: any[]): void {
   if (!STATE.enabled) return
-  console.log('%c[MERCUCBOT DEBUG]', 'color:#8b5cf6;font-weight:bold', ...args)
+  console.log('%c[MERCUCBOT DEBUG]', 'color:#9EE014;font-weight:bold', ...args)
 }
 
 function registerConsoleCommands(): void {
@@ -123,7 +123,7 @@ function registerConsoleCommands(): void {
 
   global.__merucbot.check = () => {
     const s = getDebugState()
-    console.group('%c[MERCUCBOT] System check', 'color:#8b5cf6;font-weight:bold')
+    console.group('%c[MERCUCBOT] System check', 'color:#9EE014;font-weight:bold')
     console.log('Enabled:', s.enabled)
     console.log('Prewarm:', {
       embeddings: s.prewarm.embeddingsReady ? '✅' : '⏳',

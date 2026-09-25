@@ -407,15 +407,19 @@ self.onmessage = async (e: MessageEvent) => {
         self.postMessage({ type: 'STATUS', payload: { status: 'alive', modelReady, fallbackLexicalOnly } })
         break
       case 'PREWARM':
+        self.postMessage({
+          type: 'PROGRESS',
+          payload: { phase: 'model_download', percent: 5, message: 'Descargando motor semántico...' },
+        })
         getPipeline().then((pipe) => {
           self.postMessage({
-            type: 'STATUS',
-            payload: { status: 'prewarm_done', modelReady: !!pipe, fallbackLexicalOnly },
+            type: 'PROGRESS',
+            payload: { phase: 'complete', percent: 100, message: pipe ? 'Motor semántico listo.' : 'Modo léxico activo.' },
           })
         }).catch(() => {
           self.postMessage({
-            type: 'STATUS',
-            payload: { status: 'prewarm_done', modelReady: false, fallbackLexicalOnly: true },
+            type: 'PROGRESS',
+            payload: { phase: 'complete', percent: 100, message: 'Modo léxico activo.' },
           })
         })
         break

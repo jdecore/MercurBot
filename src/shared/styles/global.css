@@ -235,7 +235,7 @@ body::before {
   animation: mercu-current 14s ease-in-out infinite alternate;
 }
 
-/* Deriva de corriente (reemplaza galaxy-twinkle: sin parpadeo de estrella) */
+/* Deriva de corriente (sin parpadeo de estrella) */
 @keyframes mercu-current {
   0% { opacity: 0.75; transform: translate3d(0, 0, 0) scale(1); }
   50% { opacity: 1; }
