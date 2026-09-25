@@ -5,7 +5,6 @@ import type { MascotaMood } from '../../entities/robot/types'
 import { ragClient } from '../../shared/lib/ragClient'
 import { getChatHistory, saveChatHistory, type ChatHistoryMsg } from '../../shared/lib/storage'
 import { Icon } from '../../shared/ui/Icon'
-import { runRagPipeline, RAG_TOP_K, type RagPipelineHit, type RagPipelineMode } from '../../features/rag/ragPipeline'
 import { getDictationSupport } from '../../shared/lib/dictation'
 import { useVoiceSession } from '../../shared/lib/voiceSession'
 import { splitChartBlock, stripChartBlock, type ChartSpec } from '../../shared/lib/chartJson'
@@ -14,8 +13,7 @@ import { formatPageRange, countSelectionFigures } from '../../shared/lib/chartFu
 import { pop, chime, startThinking, stopThinking, error as soundError, success as soundSuccess } from '../../shared/lib/sounds'
 import type { ChartFullResultDetail } from '../pdf/ChartFullButton'
 import { useLocale } from '../../shared/lib/locale'
-import { routeIntent } from '../../shared/lib/laya'
-import { INTENT_SCHEMA, parseIntentResult } from '../../entities/robot/intentSchema'
+import { executeAgent, type AgentResult, type AgentContext } from '../../shared/lib/agentRuntime'
 
 // Fase C: gráfica SVG propia en chunk separado (no engorda el bundle inicial).
 const ChartCard = lazy(() => import('../charts/ChartCard'))
@@ -319,6 +317,7 @@ export function ExcelChat() {
   const abortRef = useRef<AbortController | null>(null)
   const lastQueryRef = useRef('')
   const prevStatusRef = useRef<string | null>(null)
+  const [agentDisplay, setAgentDisplay] = useState<string>('')
 
   // Live voice session (Phase 6): continuous mic, auto-send 1.2s silence, barge-in, volume meter
   const {
@@ -516,8 +515,7 @@ export function ExcelChat() {
 
     lastQueryRef.current = trimmed
     setError(null)
-    // Fija el documento de la consulta: si el usuario cambia de PDF a mitad
-    // de búsqueda/streaming, la respuesta ajena se descarta (no se mezcla).
+    setAgentDisplay('')
     const queryDocId = docIdRef.current
 
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', content: trimmed }
@@ -540,20 +538,54 @@ export function ExcelChat() {
       return
     }
 
-    // Route intent via Laya (if loaded) — decides action + search mode.
-    // Falls back to heuristic if Laya is not available.
-    let intentAction: 'rag' | 'direct' | 'chart' = 'rag'
-    try {
-      const intentResults = await routeIntent(trimmed, INTENT_SCHEMA)
-      const parsed = parseIntentResult(intentResults)
-      intentAction = parsed.action
-    } catch {
-      // routeIntent returns null on failure — default to rag
+    const ctx: AgentContext = {
+      pdfDoc: pdfDoc
+        ? {
+            filename: pdfDoc.filename,
+            totalPages: pdfDoc.totalPages,
+            pages: (pdfDoc.pages || []).map((p) => ({ pageNumber: p.pageNumber, text: p.text })),
+          }
+        : undefined,
+      locale,
+      history,
     }
 
-    // Si la intención es 'direct', responder sin buscar en el documento.
-    if (intentAction === 'direct') {
-      const citations: { pageNumber: number; snippet: string; matchType: string }[] = []
+    let agentResult: AgentResult | null = null
+    try {
+      agentResult = await executeAgent(trimmed, ctx)
+    } catch {
+      agentResult = { action: 'rag', steps: [], displayChain: [] }
+    }
+
+    for (const step of agentResult?.steps ?? []) {
+      if (step.display) {
+        setAgentDisplay(step.display)
+        window.dispatchEvent(new CustomEvent('copixi:agent-step', { detail: { display: step.display } }))
+      }
+    }
+
+    if (docIdRef.current !== queryDocId) {
+      setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
+      setStatus('idle')
+      setMascotaMood('neutro')
+      setAgentDisplay('')
+      return
+    }
+
+    if (agentResult?.error && agentResult.action !== 'rag') {
+      setError(agentResult.error)
+      setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: agentResult.error ?? 'Error' } : m)))
+      setStatus('done')
+      setMascotaMood('duda')
+      stopThinking()
+      soundError()
+      setAgentDisplay('')
+      return
+    }
+
+    const action = agentResult?.action ?? 'rag'
+
+    if (action === 'direct') {
       const payloadContext = { hasData: false }
       const controller = new AbortController()
       abortRef.current = controller
@@ -577,7 +609,7 @@ export function ExcelChat() {
           acc += decoder.decode(value, { stream: true })
           setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, content: acc } : m))
         }
-        setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, content: acc, citations } : m))
+        setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, content: acc, citations: [] } : m))
         setStatus('done')
         setMascotaMood('exito')
         stopThinking()
@@ -590,57 +622,215 @@ export function ExcelChat() {
         stopThinking()
         soundError()
       }
+      setAgentDisplay('')
       return
     }
 
-    // Fase 4 — Pipeline de búsqueda: híbrido (Top15 vec + Top15 léxico → RRF → Top3)
-    // o fallback léxico Top3 directo. Ver src/lib/ragPipeline.ts + rag.worker.ts.
-    let ragHits: RagPipelineHit[] = []
-    let searchMode: RagPipelineMode | undefined
-    if (pdfDoc || ragClient.getState().chunkCount > 0) {
-      setMascotaMood('pensando')
+    if (action === 'rag') {
+      const searchMode = (agentResult?.searchMode === 'literal' ? 'lexical_only' : 'hybrid')
+      const ragTool = agentResult?.steps?.find(s => s.tool === 'rag_search')
+      const ragHits = (ragTool?.result?.data as any[]) || []
+      const citations = ragHits.map((h: any) => ({
+        pageNumber: h.pageNumber,
+        snippet: String(h.text ?? '').slice(0, 200),
+        matchType: h.matchType,
+      }))
+      const payloadContext = (pdfDoc || ragHits.length > 0)
+        ? {
+            documentType: 'pdf',
+            filename: pdfDoc?.filename ?? ragHits[0]?.docName ?? t.docFallback,
+            totalPages: pdfDoc?.totalPages ?? Math.max(...ragHits.map((h: any) => h.pageNumber), 1),
+            searchMode,
+            ragHits: ragHits.map((h: any) => ({
+              pageNumber: h.pageNumber,
+              chunkIndex: h.chunkIndex,
+              text: h.text,
+              score: h.score,
+              matchType: h.matchType,
+            })),
+          }
+        : { hasData: false }
+
+      const controller = new AbortController()
+      abortRef.current = controller
+
       try {
-        const result = await runRagPipeline(trimmed, RAG_TOP_K)
-        ragHits = result.hits
-        searchMode = result.mode
-      } catch (ragErr) {
-        console.warn('[ExcelChat] Error en búsqueda RAG local:', ragErr)
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ messages: history, context: payloadContext, lang: locale }),
+          signal: controller.signal,
+        })
+
+        if (!res.ok || !res.body) {
+          let detail = `HTTP ${res.status}`
+          try {
+            const j = (await res.json()) as { error?: string; detail?: string }
+            if (j?.error) detail = `HTTP ${res.status} — ${j.detail ? `${j.error}: ${j.detail}` : j.error}`
+          } catch { /* cuerpo no-JSON (p. ej. 504 del gateway): se conserva HTTP status */ }
+          throw new Error(detail)
+        }
+
+        setStatus('streaming')
+        setMascotaMood('pensando')
+        startThinking()
+        window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'down' } }))
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let acc = ''
+        let streamModel: string | undefined
+
+        while (true) {
+          if (docIdRef.current !== queryDocId) {
+            try { await reader.cancel() } catch { /* ignore */ }
+            break
+          }
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          let sep: number
+          while ((sep = buffer.indexOf('\n\n')) !== -1) {
+            const raw = buffer.slice(0, sep)
+            buffer = buffer.slice(sep + 2)
+            const line = raw.trim()
+            if (!line.startsWith('data:')) continue
+            const payload = line.slice(5).trim()
+            if (!payload) continue
+            try {
+              const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string; model?: string }
+              if (evt.type === 'start' && typeof evt.model === 'string' && evt.model) {
+                streamModel = evt.model
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantMsg.id ? { ...m, model: streamModel } : m))
+                )
+              } else if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
+                acc += evt.delta
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsg.id
+                      ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode, model: streamModel ?? m.model }
+                      : m
+                  )
+                )
+              } else if (evt.type === 'error') {
+                throw new Error(evt.message || t.errServer)
+              }
+            } catch (e) {
+              if (e instanceof Error && (e as any).type === 'error') throw e
+              /* ignore non-delta / parse noise */
+            }
+          }
+        }
+
+        if (docIdRef.current !== queryDocId) {
+          setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
+          setStatus('idle')
+          setMascotaMood('neutro')
+          setAgentDisplay('')
+          return
+        }
+
+        const tail = buffer.trim()
+        if (tail.startsWith('data:')) {
+          const payload = tail.slice(5).trim()
+          if (payload) {
+            try {
+              const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string; model?: string }
+              if (evt.type === 'start' && typeof evt.model === 'string' && evt.model) {
+                streamModel = evt.model
+              } else if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
+                acc += evt.delta
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsg.id
+                      ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode, model: streamModel ?? m.model }
+                      : m
+                  )
+                )
+              } else if (evt.type === 'error') {
+                throw new Error(evt.message || t.errServer)
+              }
+            } catch (e) {
+              if (e instanceof Error && (e as any).type === 'error') throw e
+            }
+          }
+        }
+
+        setStatus('done')
+        setMascotaMood('exito')
+        stopThinking()
+        window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
+        const hasChart = splitChartBlock(acc).chart
+        if (hasChart) soundSuccess()
+        else chime()
+        if (!getMuted() && acc) speak(firstSentence(stripChartBlock(cleanAI(acc))))
+      } catch (e) {
+        if ((e instanceof DOMException && e.name === 'AbortError') || (e instanceof Error && e.name === 'AbortError')) {
+          stopThinking()
+          setStatus('idle')
+          setMascotaMood('neutro')
+          setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
+          setAgentDisplay('')
+          return
+        }
+        const msg = e instanceof Error ? e.message : 'Error desconocido'
+        setError(msg)
+        setMascotaMood('enojado')
+        setStatus('error')
+        stopThinking()
+        soundError()
+        setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
+      } finally {
+        abortRef.current = null
+        setAgentDisplay('')
       }
-    }
-
-    const citations = ragHits.map((h) => ({
-      pageNumber: h.pageNumber,
-      snippet: String(h.text ?? '').slice(0, 200),
-      matchType: h.matchType,
-    }))
-
-    // El documento cambió durante la búsqueda → descarta sin ruido.
-    if (docIdRef.current !== queryDocId) {
-      setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
-      setStatus('idle')
-      setMascotaMood('neutro')
       return
     }
 
-    const payloadContext = (pdfDoc || ragHits.length > 0)
-      ? {
-          documentType: 'pdf',
-          filename: pdfDoc?.filename ?? ragHits[0]?.docName ?? t.docFallback,
-          totalPages: pdfDoc?.totalPages ?? Math.max(...ragHits.map((h) => h.pageNumber), 1),
-          searchMode,
-          ragHits: ragHits.map((h) => ({
-            pageNumber: h.pageNumber,
-            chunkIndex: h.chunkIndex,
-            text: h.text,
-            score: h.score,
-            matchType: h.matchType,
-          })),
-        }
-      : { hasData: false }
+    if (action === 'chart') {
+      const chartTool = agentResult?.steps?.find(s => s.tool === 'chart_full')
+      const chartData = chartTool?.result?.data as { text?: string; chart?: ChartSpec; analyzedPages?: number[]; model?: string } | undefined
+      if (chartData?.text) {
+        setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: chartData.text!, chartPages: chartData.analyzedPages, model: chartData.model } : m)))
+        setStatus('done')
+        setMascotaMood('exito')
+        stopThinking()
+        window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
+        soundSuccess()
+        const cleaned = stripChartBlock(cleanAI(chartData.text))
+        if (cleaned && !getMuted()) speak(firstSentence(cleaned))
+      } else {
+        setError(chartTool?.result?.error || 'Chart generation failed')
+        setStatus('done')
+        setMascotaMood('duda')
+        stopThinking()
+        soundError()
+      }
+      setAgentDisplay('')
+      return
+    }
 
+    if (action === 'web_search' || action === 'mcp') {
+      const tool = agentResult?.steps?.[0]
+      const resultText = tool?.result?.data ? String(tool.result.data) : tool?.result?.error || 'No result'
+      setMessages((prev) => prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: resultText } : m)))
+      setStatus('done')
+      setMascotaMood('exito')
+      stopThinking()
+      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
+      chime()
+      if (!getMuted() && resultText) speak(firstSentence(stripChartBlock(cleanAI(resultText))))
+      setAgentDisplay('')
+      return
+    }
+
+    // Fallback for unknown actions: treat as rag
+    const citations: { pageNumber: number; snippet: string; matchType: string }[] = []
+    const payloadContext = { hasData: false }
     const controller = new AbortController()
     abortRef.current = controller
-
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -648,137 +838,33 @@ export function ExcelChat() {
         body: JSON.stringify({ messages: history, context: payloadContext, lang: locale }),
         signal: controller.signal,
       })
-
-      if (!res.ok || !res.body) {
-        let detail = `HTTP ${res.status}`
-        try {
-          const j = (await res.json()) as { error?: string; detail?: string }
-          if (j?.error) detail = `HTTP ${res.status} — ${j.detail ? `${j.error}: ${j.detail}` : j.error}`
-        } catch { /* cuerpo no-JSON (p. ej. 504 del gateway): se conserva HTTP status */ }
-        throw new Error(detail)
-      }
-
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
       setStatus('streaming')
       setMascotaMood('pensando')
       startThinking()
-      // Robot eyes look down at the response being generated
-      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'down' } }))
-
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
-      let buffer = ''
       let acc = ''
-      // El backend anuncia el proveedor+modelo en el evento `start`
-      // (píldora UI). Se guarda en el mensaje al llegar cada delta.
-      let streamModel: string | undefined
-
       while (true) {
-        // Si el documento cambió a mitad del streaming, corta y descarta.
-        if (docIdRef.current !== queryDocId) {
-          try { await reader.cancel() } catch { /* ignore */ }
-          break
-        }
         const { done, value } = await reader.read()
         if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        let sep: number
-        while ((sep = buffer.indexOf('\n\n')) !== -1) {
-          const raw = buffer.slice(0, sep)
-          buffer = buffer.slice(sep + 2)
-          const line = raw.trim()
-          if (!line.startsWith('data:')) continue
-          const payload = line.slice(5).trim()
-          if (!payload) continue
-          try {
-            const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string; model?: string }
-            if (evt.type === 'start' && typeof evt.model === 'string' && evt.model) {
-              streamModel = evt.model
-              setMessages((prev) =>
-                prev.map((m) => (m.id === assistantMsg.id ? { ...m, model: streamModel } : m))
-              )
-            } else if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
-              acc += evt.delta
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsg.id
-                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode, model: streamModel ?? m.model }
-                    : m
-                )
-              )
-            } else if (evt.type === 'error') {
-              throw new Error(evt.message || t.errServer)
-            }
-          } catch (e) {
-            if (e instanceof Error && (e as any).type === 'error') throw e
-            /* ignore non-delta / parse noise */
-          }
-        }
+        acc += decoder.decode(value, { stream: true })
+        setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, content: acc } : m))
       }
-
-      if (docIdRef.current !== queryDocId) {
-        setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
-        setStatus('idle')
-        setMascotaMood('neutro')
-        return
-      }
-
-      // Flush remanente: si el stream terminó con un evento sin \n\n de cierre,
-      // el bucle anterior lo dejó en buffer y no se procesó.
-      const tail = buffer.trim()
-      if (tail.startsWith('data:')) {
-        const payload = tail.slice(5).trim()
-        if (payload) {
-          try {
-            const evt = JSON.parse(payload) as { type: string; delta?: string; message?: string; model?: string }
-            if (evt.type === 'start' && typeof evt.model === 'string' && evt.model) {
-              streamModel = evt.model
-            } else if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
-              acc += evt.delta
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsg.id
-                    ? { ...m, content: acc, citations: citations.length ? citations : undefined, searchMode, model: streamModel ?? m.model }
-                    : m
-                )
-              )
-            } else if (evt.type === 'error') {
-              throw new Error(evt.message || t.errServer)
-            }
-          } catch (e) {
-            if (e instanceof Error && (e as any).type === 'error') throw e
-          }
-        }
-      }
-
+      setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, content: acc, citations } : m))
       setStatus('done')
       setMascotaMood('exito')
       stopThinking()
-      // Robot eyes return to center after response
-      window.dispatchEvent(new CustomEvent('copixi:eye-target', { detail: { direction: 'center' } }))
-      const hasChart = splitChartBlock(acc).chart
-      if (hasChart) soundSuccess()
-      else chime()
-      if (!getMuted() && acc) speak(firstSentence(stripChartBlock(cleanAI(acc))))
-    } catch (e) {
-      // Detener es una acción del usuario, no un error: limpia sin alarmar.
-      if ((e instanceof DOMException && e.name === 'AbortError') || (e instanceof Error && e.name === 'AbortError')) {
-        stopThinking()
-        setStatus('idle')
-        setMascotaMood('neutro')
-        setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
-        return
-      }
-      const msg = e instanceof Error ? e.message : 'Error desconocido'
-      setError(msg)
-      setMascotaMood('enojado')
-      setStatus('error')
+      const cleaned = stripChartBlock(cleanAI(acc))
+      if (cleaned && !getMuted()) speak(firstSentence(cleaned))
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') { setStatus('idle'); return }
+      setError(err instanceof Error ? err.message : 'Error')
+      setStatus('done')
       stopThinking()
       soundError()
-      // Drop the empty assistant placeholder so the UI stays clean
-      setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id))
-    } finally {
-      abortRef.current = null
     }
+    setAgentDisplay('')
   }
 
   const submit = (e: React.FormEvent) => {
@@ -872,7 +958,7 @@ export function ExcelChat() {
                 <span className="skeleton-dot" />
                 <span className="skeleton-dot" />
                 <span className="skeleton-dot" />
-                <span>Leyendo…</span>
+                <span>{agentDisplay || 'Leyendo…'}</span>
               </div>
             ) : error ? (
               <div className="speech-bubble-error-box" role="alert">

@@ -340,16 +340,18 @@ function registerTestFlow(): void {
 
     /* ---- F5: routeIntent (Laya choice routing) ----------------------------- */
     hdr(`F5 — routeIntent (${elapsed()})`)
-    const { routeIntent: ri } = await import('./laya')
+    const { routeIntent: ri, isLayaReady: ilr } = await import('./laya')
     const { INTENT_SCHEMA } = await import('../../entities/robot/intentSchema')
+    info(`isLayaReady: ${ilr()}`)
     const intentTests = [
-      { q: '¿en qué página está el artículo 3?', expectAction: 'rag', expectSearch: 'literal' },
-      { q: 'hola, ¿cómo estás?', expectAction: 'direct', expectSearch: undefined },
-      { q: 'resume este documento', expectAction: 'rag', expectSearch: 'semantic' },
+      { q: '¿en qué página está el artículo 3?', expectAction: 'rag', expectSearch: 'literal', expectPageRef: true },
+      { q: 'hola, ¿cómo estás?', expectAction: 'direct', expectSearch: undefined, expectPageRef: false },
+      { q: 'resume este documento', expectAction: 'rag', expectSearch: 'semantic', expectPageRef: false },
+      { q: '¿cuál es la capital de Francia?', expectAction: 'direct', expectSearch: undefined, expectPageRef: false, expectWeb: true },
     ]
     let intentOk = true
     let layaAvailable = false
-    for (const { q, expectAction, expectSearch } of intentTests) {
+    for (const { q, expectAction, expectSearch, expectPageRef, expectWeb } of intentTests) {
       const t = Date.now()
       const result = await ri(q, INTENT_SCHEMA)
       const ms = Date.now() - t
@@ -357,16 +359,23 @@ function registerTestFlow(): void {
         layaAvailable = true
         const action = result.action?.choice ?? '?'
         const search = result.searchMode?.choice ?? '?'
-        const pass = action === expectAction && (expectSearch === undefined || search === expectSearch)
+        const actionConf = result.action?.confidence ?? 0
+        const searchConf = result.searchMode?.confidence ?? 0
+        const pageRef = (result.isPageRef?.noul ?? 0) >= 0.5
+        const needsWeb = (result.needsWeb?.noul ?? 0) >= 0.5
+        const pass = action === expectAction
+          && (expectSearch === undefined || search === expectSearch)
+          && (expectPageRef === undefined || pageRef === expectPageRef)
+          && (expectWeb === undefined || needsWeb === expectWeb)
         if (pass) {
-          ok(`"${q.slice(0, 30)}…" → action=${action}, search=${search} (${ms}ms)`)
+          ok(`"${q.slice(0, 30)}…" → action=${action}(${actionConf.toFixed(2)}), search=${search}(${searchConf.toFixed(2)}), pageRef=${pageRef}, web=${needsWeb} [${ms}ms]`)
         } else {
-          fail(`"${q.slice(0, 30)}…" → action=${action}, search=${search} (esperaba ${expectAction}/${expectSearch ?? '?'})`)
+          fail(`"${q.slice(0, 30)}…" → action=${action}(${actionConf.toFixed(2)}), search=${search}(${searchConf.toFixed(2)}), pageRef=${pageRef}, web=${needsWeb} (esperaba ${expectAction}/${expectSearch ?? '?'}/${expectPageRef ?? '?'}/${expectWeb ?? '?'}) [${ms}ms]`)
           intentOk = false
         }
       } else {
-        warn(`"${q.slice(0, 30)}…" → Laya no disponible (heuristic fallback)`)
-        info(`  action=${expectAction}, search=${expectSearch ?? '?'} (esperado, sin Laya)`)
+        warn(`"${q.slice(0, 30)}…" → Laya no disponible o baja confianza [${ms}ms]`)
+        info(`  esperaba: action=${expectAction}, search=${expectSearch ?? '?'}, pageRef=${expectPageRef ?? '?'}, web=${expectWeb ?? '?'}`)
       }
     }
     results.routeIntent = layaAvailable ? (intentOk ? 'PASS' : 'PARTIAL') : 'SKIP (sin Laya)'

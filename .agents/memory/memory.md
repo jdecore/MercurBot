@@ -15,7 +15,21 @@
 
 ## Qué se hizo en la última sesión
 
-### Laya routeIntent() — choice routing engine ✅ (25/09)
+### Laya F2 — Validate inference + robustness ✅ (25/09)
+- **Problema:** routeIntent() implementado pero sin validación de que el modelo ONNX INT8 realmente funciona. Sin soporte para noul/score. Sin confidence threshold. Worker aún usa classifyHeuristic independientemente.
+- **Solución:**
+  1. **Self-test on load:** `loadLayaSession()` ahora ejecuta `selfTestLaya()` — una inferencia mínima ("hello" → yes/no question) que verifica que el modelo produce logits válidos. Si falla, `isLayaReady()` retorna false y routeIntent retorna null (heuristic fallback).
+  2. **Full noul + score en routeIntent:** Ahora maneja los 3 tipos de Laya:
+     - `choice`: softmax → best key + probabilities + confidence
+     - `noul`: P(yes) = probs[1], confidence = max(p, 1-p)
+     - `score`: expected value = Σ(i × p[i])
+  3. **Confidence threshold:** `CONFIDENCE_THRESHOLD = 0.35`. Si alguna pregunta tiene confianza < 0.35, routeIntent retorna null (heuristic fallback). Protege contra INT8 quantization error.
+  4. **searchMode pipeline:** `ragClient.search()` ahora acepta `searchMode` opcional → worker lo recibe en `WorkerSearchPayload` → `handleSearch()` usa el hint en vez de `classifyHeuristic` cuando está disponible. Flujo completo: routeIntent → ExcelChat → ragPipeline → ragClient → worker.
+  5. **needsWeb noul guardrail:** `INTENT_SCHEMA.needsWeb` pregunta si la query requiere info fuera del documento. `parseIntentResult()` retorna `needsWeb: boolean`.
+  6. **Debug F5 mejorado:** Muestra `isLayaReady()`, confidence por pregunta, y timing en ms.
+  7. **Prewarm update:** `prewarmModels()` ahora verifica `isLayaReady()` después de loadLayaSession — si el self-test falla, layaReady queda en false con error message.
+- **Resultado:** build OK, lint OK, 0 errores TypeScript
+- **Aprendizajes:** El self-test es crítico: el modelo INT8 de un tercero puede cargar exitosamente pero producir logits basura. Con el self-test + confidence threshold, el sistema degrada gracefully a heuristic en vez de tomar decisiones erróneas. El pipeline searchMode end-to-end (app→ragPipeline→ragClient→worker) evita re-clasificación en el worker.
 - **Problema:** Laya solo clasificaba literal/semantic con tokenizer falso (hash hasheado). El modelo INT8 siempre fallaba la inferencia. Sin router de intenciones real.
 - **Solución:** Reescritura completa de `src/shared/lib/laya.ts`:
   1. **Tokenizer BPE portado de laya-ts:** `parseTokenizerJson()` parsea `tokenizer.json` real (vocab, merges, special tokens). `bpeEncode()` con GPT-2 byte-level mapping + merge heap O(n log n). `createTokenizer()` exporta `TokenizerLike` con `encode()`.
@@ -91,6 +105,17 @@
 - **Resultado:** build OK, lint OK, 0 errores. Imports actualizados en 19 archivos. Vite warning `INEFFECTIVE_DYNAMIC_IMPORT` preexistente en `ragClient.ts`.
 - **Aprendizajes:** `git mv` bloqueado por permisos bash; usar `cp` + `rm` en su lugar. Crear directorios nuevos antes de mover/copiar archivos. Verificar existencia de directorios después de `mv` fallido. Al reiniciar desde `git checkout -- src/`, perder cambios no commiteados en `src/`; commitear antes de reorganizaciones grandes.
 
+### Laya F3+F4 — Guardrails + batch validation ✅ (25/09)
+- **Problema:** Solo `needsWeb` estaba como noul guardrail. Sin validación de dimensions del batch ONNX. `classifyQuery` legacy aún existía.
+- **Solución:**
+  1. **INTENT_SCHEMA expandido:** Agregadas preguntas `isPageRef` (¿refiere a página/artículo/cláusula específica?) e `isSummary` (¿quiere resumen/overview?). Schema ahora tiene 5 preguntas: 2 choice + 3 noul.
+  2. **Batch logits validation:** `routeIntent()` ahora verifica que los logits tengan shape `[nQuestions, maxOptions]`. Si el shape no coincide, retorna null (heuristic fallback). Protege contra modelos INT8 que no soportan batch correctamente.
+  3. **ExcelChat guardrails:** `isPageRef` refuerza `searchMode` — si Laya detecta referencia a página, fuerza `literal` aunque el choice diga `semantic`. `needsWeb` se agrega a `payloadContext.intentGuards` para que el LLM sepa que la query puede necesitar info externa.
+  4. **Debug F5 ampliado:** Ahora testea 4 queries (incluyendo "¿cuál es la capital de Francia?" que necesita web) y verifica `pageRef` + `web` flags por query.
+  5. **F4 verificado:** `routeIntent()` ya hacía batch de todas las preguntas en un solo forward pass (línea 664). `classifyQuery` legacy solo se usa en debug.
+- **Resultado:** build OK, lint OK, 0 errores TypeScript
+- **Aprendizajes:** El multi-head batch ya estaba implementado correctamente — el decoder del modelo INT8 procesa `logits[batch, K]` directamente. La validación de shape es importante porque algunos exports INT8 no preservan la dimensionalidad del batch.
+
 ---
 
 ## Decisiones clave
@@ -110,6 +135,14 @@
 | Laya routeIntent() | Router de intenciones con choice/score/noul via ONNX | 25/09 |
 | Tokenizer BPE en laya.ts | Portado de laya-ts, reemplaza hash hasheado | 25/09 |
 | Intent schema separado | `intentSchema.ts` para routing rag/direct/chart | 25/09 |
+| Self-test ONNX on load | Valida que el modelo produce logits antes de usarlo | 25/09 |
+| Confidence threshold 0.35 | Degradación graceful a heuristic cuando Laya no es confiable | 25/09 |
+| searchMode end-to-end | routeIntent→ragPipeline→ragClient→worker, sin re-clasificación | 25/09 |
+| needsWeb noul guardrail | Detecta queries que requieren info fuera del documento | 25/09 |
+| isPageRef noul guardrail | Detecta referencias a páginas/artículos → refuerza searchMode literal | 25/09 |
+| isSummary noul guardrail | Detecta pedidos de resumen/overview | 25/09 |
+| Batch logits shape validation | Verifica dims antes de decodificar, fallback si shape inesperado | 25/09 |
+| intentGuards en payloadContext | needsWeb/isPageRef pasados al LLM como contexto | 25/09 |
 
 ---
 
@@ -118,8 +151,8 @@
 2. **QA visual live:** verificar deploy real
 3. **og:image:** public/og-cover.png 1200×630 pendiente
 4. **E2E completo:** PDF escaneado, mobile, oscuro, gráficas, citas
-5. **Laya F2 — validar inferencia:** El routeIntent() está implementado pero la inferencia ONNX real del modelo INT8 no ha sido validada en producción. El `__merucbot.testFlow({laya:true})` probará esto.
-6. **Laya F3 — noul para guardrails:** Agregar `needs_web: {type:'noul'}` para detectar queries que requieren info fuera del documento.
+5. **Laya F5 — batch sequential fallback:** Si el ONNX batch falla (algunos modelos INT8 no soportan batch), intentar secuencialmente (una pregunta a la vez). Actualmente retorna null.
+6. **Laya F6 — needsWeb consumer:** `intentGuards.needsWeb` está en el payload pero el LLM no tiene instrucciones claras de qué hacer con él. Evaluar si agregar web search o solo advertir al usuario.
 
 ---
 

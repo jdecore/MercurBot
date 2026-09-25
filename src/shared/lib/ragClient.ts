@@ -190,7 +190,7 @@ class RagClient {
     }
   }
 
-  public async search(query: string, topK = 3, timeoutMs = 8000): Promise<RagSearchResultItem[]> {
+  public async search(query: string, topK = 3, timeoutMs = 8000, searchMode?: 'literal' | 'semantic'): Promise<RagSearchResultItem[]> {
     if (!query.trim() || this.state.chunkCount === 0) return []
 
     // If worker is running, attempt search with Watchdog timeout
@@ -220,7 +220,7 @@ class RagClient {
 
         this.worker!.postMessage({
           action: 'SEARCH',
-          payload: { query, topK },
+          payload: { query, topK, searchMode },
         })
       })
     }

@@ -22,6 +22,7 @@ import { LocaleProvider, useLocale } from '../shared/lib/locale'
 import { BlackHoleUpload } from '../features/pdf-upload/BlackHoleUpload'
 import { prewarmModels, getPrewarmState, onPrewarmProgress } from '../shared/lib/preload'
 import { initDebug, updateDebugState } from '../shared/lib/debug'
+import { registerDefaultTools } from '../shared/lib/tools'
 
 function MainDashboard() {
   const {
@@ -84,6 +85,11 @@ function MainDashboard() {
   // Initialize hidden debugger
   useEffect(() => {
     return initDebug()
+  }, [])
+
+  // Register agent tool registry on app startup
+  useEffect(() => {
+    registerDefaultTools()
   }, [])
 
   // Track setTimeout IDs to clear them on unmount (prevents state updates on
@@ -389,6 +395,24 @@ function MainDashboard() {
     }
     window.addEventListener('copixi:robot-message', handler as EventListener)
     return () => window.removeEventListener('copixi:robot-message', handler as EventListener)
+  }, [])
+
+  // Agent step events: update robot subtitle with current tool/step display.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ display?: string; text?: string }>).detail
+      const text = detail?.text || detail?.display
+      if (!text) return
+      if (robotMsgTimeoutRef.current !== null) clearTimeout(robotMsgTimeoutRef.current)
+      setMascotaSubtitulo(text)
+      speak(text)
+      robotMsgTimeoutRef.current = window.setTimeout(() => {
+        robotMsgTimeoutRef.current = null
+        setMascotaSubtitulo('')
+      }, 6000)
+    }
+    window.addEventListener('copixi:agent-step', handler as EventListener)
+    return () => window.removeEventListener('copixi:agent-step', handler as EventListener)
   }, [])
 
   // Cleanup timeouts on unmount to prevent state updates on unmounted component.

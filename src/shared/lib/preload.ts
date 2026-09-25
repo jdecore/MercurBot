@@ -3,7 +3,7 @@
  * Embeddings (23MB) + Laya (424MB) run in background.
  * Heuristic classifier works instantly while Laya downloads.
  */
-import { isLayaCached, downloadLayaModel, loadLayaSession } from './laya'
+import { isLayaCached, downloadLayaModel, loadLayaSession, isLayaReady } from './laya'
 
 let embeddingsReady = false
 let layaReady = false
@@ -52,10 +52,10 @@ export async function prewarmModels(): Promise<void> {
     const cached = await isLayaCached()
     if (cached) {
       await loadLayaSession()
-      layaReady = true
-      layaError = null
+      layaReady = isLayaReady()
+      layaError = layaReady ? null : 'Self-test failed'
       notify()
-      return
+      if (!layaReady) return
     }
     await downloadLayaModel((phase, pct) => {
       if (phase === 'model') {
@@ -68,8 +68,8 @@ export async function prewarmModels(): Promise<void> {
       }
     })
     await loadLayaSession()
-    layaReady = true
-    layaError = null
+    layaReady = isLayaReady()
+    layaError = layaReady ? null : 'Self-test failed'
     notify()
   } catch (err) {
     layaError = err instanceof Error ? err.message : String(err)

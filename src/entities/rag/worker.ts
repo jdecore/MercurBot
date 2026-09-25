@@ -11,6 +11,7 @@ export interface WorkerIndexPayload {
 export interface WorkerSearchPayload {
   query: string
   topK?: number
+  searchMode?: 'literal' | 'semantic'
 }
 
 export interface RagSearchResultItem {
@@ -321,14 +322,17 @@ async function handleIndexDocument({ docId, docName, chunks }: WorkerIndexPayloa
 }
 
 // Hybrid Search with RRF (Reciprocal Rank Fusion) + Laya gatekeeper
-async function handleSearch({ query, topK = 3 }: WorkerSearchPayload) {
+async function handleSearch({ query, topK = 3, searchMode }: WorkerSearchPayload) {
   if (!miniSearch || chunkStore.size === 0) {
     self.postMessage({ type: 'SEARCH_RESULTS', payload: { query, results: [] } })
     return
   }
 
-  // Phase 7: Classify query as literal vs semantic
-  const queryClass: QueryClass = classifyHeuristic(query)
+  // Use searchMode hint from app-level routing (routeIntent) when available.
+  // Falls back to classifyHeuristic for backward compatibility.
+  const queryClass: QueryClass = searchMode === 'literal' ? 'literal'
+    : searchMode === 'semantic' ? 'semantic'
+    : classifyHeuristic(query)
   const classification = { class: queryClass, confidence: queryClass === 'literal' ? 0.8 : 0.6 }
 
   // 1. Lexical Search (always runs)

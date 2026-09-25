@@ -631,6 +631,45 @@ export default async function handler(req: any, res?: any): Promise<Response | v
     }
   }
 
+  if (mode === 'web_search') {
+    try {
+      const query = String(body.query || '').trim()
+      if (!query) return respond.json(400, { error: 'web_search requires query string' })
+      const searchQuery = query.length > 180 ? query.slice(0, 180) : query
+      const prompt = lang === 'en'
+        ? `Search the web for: "${searchQuery}". Summarize the most relevant result in 2-3 sentences. If you cannot browse, say so explicitly.`
+        : `Busca en la web: "${searchQuery}". Resume el resultado más relevante en 2-3 oraciones. Si no puedes navegar, dilo explícitamente.`
+      const out = await generate(prompt, buildSystemPrompt(lang))
+      const text = out.text.trim()
+      if (!text) return respond.json(200, { error: 'Empty web_search response' })
+      return respond.json(200, { text, model: out.model })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'
+      return respond.json(502, { error: 'AI provider error', detail: safe })
+    }
+  }
+
+  if (mode === 'mcp') {
+    try {
+      const toolName = String(body.tool || '').trim()
+      const toolParams = body.params || {}
+      if (!toolName) return respond.json(400, { error: 'mcp requires tool name' })
+      const paramsStr = JSON.stringify(toolParams)
+      const prompt = lang === 'en'
+        ? `Call MCP tool "${toolName}" with params ${paramsStr}. Return a concise result.`
+        : `Ejecuta la herramienta MCP "${toolName}" con params ${paramsStr}. Devuelve un resultado conciso.`
+      const out = await generate(prompt, buildSystemPrompt(lang))
+      const text = out.text.trim()
+      if (!text) return respond.json(200, { error: 'Empty mcp response' })
+      return respond.json(200, { result: text, display: text, model: out.model })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const safe = process.env.NODE_ENV !== 'production' ? message.slice(0, 500) : 'AI provider error.'
+      return respond.json(502, { error: 'AI provider error', detail: safe })
+    }
+  }
+
   // Chat mode
   const messages = Array.isArray(body.messages) ? (body.messages as any[]) : null
   if (!messages || messages.length === 0) {

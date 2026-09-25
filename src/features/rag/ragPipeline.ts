@@ -61,14 +61,16 @@ function normalizeHit(h: RagSearchResultItem): RagPipelineHit {
 /**
  * Ejecuta el pipeline Fase 4 para una consulta.
  *
- * - Si hay chunks indexados: delega en `ragClient.search(query, topK)`.
+ * - Si hay chunks indexados: delega en `ragClient.search(query, topK, timeoutMs, searchMode)`.
  *   El worker resuelve híbrido (15+15→RRF→Top3) cuando el modelo vectorial
  *   está listo, o léxico Top3 directo cuando está en `lexical_only`.
  *   El watchdog interno del cliente conmuta a MiniSearch local si el worker
  *   tarda demasiado (fallback).
+ *   El searchMode hint (opcional) viene de routeIntent() y evita re-clasificar
+ *   en el worker.
  * - Sin chunks: retorna lista vacía (el chat cae a contexto tabular/general).
  */
-export async function runRagPipeline(query: string, topK: number = RAG_TOP_K): Promise<RagPipelineResult> {
+export async function runRagPipeline(query: string, topK: number = RAG_TOP_K, searchMode?: 'literal' | 'semantic'): Promise<RagPipelineResult> {
   const q = query.trim()
   if (!q || ragClient.getState().chunkCount === 0) {
     return { hits: [], mode: 'lexical_only', usedFallback: true }
@@ -76,7 +78,7 @@ export async function runRagPipeline(query: string, topK: number = RAG_TOP_K): P
   const stateBefore = ragClient.getState()
   let raw: RagSearchResultItem[] = []
   try {
-    raw = await ragClient.search(q, topK)
+    raw = await ragClient.search(q, topK, 8000, searchMode)
   } catch (err) {
     console.warn('[ragPipeline] search falló, sin fragmentos:', err)
     return { hits: [], mode: 'lexical_only', usedFallback: true }

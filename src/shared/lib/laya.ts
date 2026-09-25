@@ -372,8 +372,12 @@ let layaSession: any = null
 let ortLib: any = null
 let layaTokenizer: TokenizerLike | null = null
 let layaConfig: { max_len?: number; head_max_len?: number } = {}
+let layaSelfTestPassed = false
 
 const QTYPES: Record<string, number> = { choice: 0, score: 1, noul: 2 }
+
+/** Minimum confidence to trust Laya over heuristic. Below this, routeIntent falls back. */
+const CONFIDENCE_THRESHOLD = 0.35
 
 export function softmax(z: number[]): number[] {
   const m = Math.max(...z)
@@ -475,6 +479,33 @@ export async function downloadLayaModel(
 
 // ─── Load & Inference ──────────────────────────────────────────────────────
 
+/**
+ * Self-test: run a minimal inference to verify the ONNX session works.
+ * Returns true if the model produces valid logits, false otherwise.
+ */
+async function selfTestLaya(): Promise<boolean> {
+  if (!layaSession || !layaTokenizer) return false
+  try {
+    const testResult = await routeIntent('hello', {
+      _test: {
+        type: 'choice',
+        instructions: 'Is this a test?',
+        criteria: { yes: 'yes', no: 'no' },
+      },
+    })
+    if (testResult?._test?.choice && testResult._test.confidence !== undefined) {
+      layaSelfTestPassed = true
+      console.log('[Laya] Self-test passed:', testResult._test)
+      return true
+    }
+    console.warn('[Laya] Self-test returned empty results')
+    return false
+  } catch (err) {
+    console.warn('[Laya] Self-test failed:', err)
+    return false
+  }
+}
+
 export async function loadLayaSession(): Promise<void> {
   if (layaSession) return
 
@@ -512,6 +543,14 @@ export async function loadLayaSession(): Promise<void> {
   layaSession = await ort.InferenceSession.create(buffer, {
     executionProviders: ['wasm'],
   })
+
+  // Self-test: verify the model produces valid output
+  await selfTestLaya()
+}
+
+/** Whether Laya is loaded and passed its self-test. */
+export function isLayaReady(): boolean {
+  return layaSession !== null && layaTokenizer !== null && layaSelfTestPassed
 }
 
 function toI64(ort: any, arr: number[] | number[][], dims: number[]): any {
@@ -562,16 +601,26 @@ function buildFeeds(
 /**
  * Evaluate typed questions against a state in a single forward pass.
  *
+ * Supports choice, noul, and score question types.
+ * Returns null if Laya is not loaded, or if confidence is below threshold
+ * (caller should use heuristic fallback).
+ *
  * @param state - The text or object to evaluate (e.g., user message)
  * @param questions - Record of question ID → {type, instructions, criteria}
- * @returns Answers with choice/probabilities/confidence per question, or null on failure
+ * @returns Answers with choice/noul/score + confidence per question, or null on failure/low confidence
  */
 export async function routeIntent(
   state: unknown,
   questions: Record<string, { type: string; instructions: string; criteria?: unknown }>,
-): Promise<Record<string, { choice?: string; confidence?: number; probabilities?: Record<string, number> }> | null> {
-  if (!layaSession || !layaTokenizer) {
-    return null // Not loaded — caller should use heuristic fallback
+): Promise<Record<string, {
+  choice?: string
+  noul?: number
+  score?: number
+  confidence?: number
+  probabilities?: Record<string, number>
+}> | null> {
+  if (!layaSession || !layaTokenizer || !layaSelfTestPassed) {
+    return null // Not loaded or self-test failed — caller should use heuristic fallback
   }
 
   const ids = Object.keys(questions)
@@ -610,18 +659,33 @@ export async function routeIntent(
       qtype: items.map((it) => it.qtype),
     }
 
-    // Run ONNX
+    // Run ONNX — single forward pass for all questions
     const feeds = buildFeeds(batch)
     const results = await layaSession.run(feeds)
 
-    // Extract logits
+    // Extract logits — verify batch dimensions match
     const logitsTensor = results['logits'] || results[Object.keys(results)[0]]
     if (!logitsTensor) return null
     const logitsData = logitsTensor.data as Float32Array | BigInt64Array
     const logitsDims = logitsTensor.dims as number[]
 
+    // Validate: logits shape should be [nQuestions, maxOptions]
+    if (logitsDims.length !== 2 || logitsDims[0] !== ids.length) {
+      console.warn(`[Laya] Unexpected logits shape: [${logitsDims}], expected [${ids.length}, K]. Falling back.`)
+      return null
+    }
+
     // Decode answers
-    const answers: Record<string, { choice?: string; confidence?: number; probabilities?: Record<string, number> }> = {}
+    const answers: Record<string, {
+      choice?: string
+      noul?: number
+      score?: number
+      confidence?: number
+      probabilities?: Record<string, number>
+    }> = {}
+
+    let anyLowConfidence = false
+
     for (let r = 0; r < ids.length; r++) {
       const k = items[r].markers.length
       const base = r * logitsDims[1]
@@ -632,8 +696,9 @@ export async function routeIntent(
 
       const probs = softmax(rawLogits)
       const conf = confidenceFromProbs(probs)
+      const qtype = questions[ids[r]].type
 
-      if (questions[ids[r]].type === 'choice') {
+      if (qtype === 'choice') {
         const crit = questions[ids[r]].criteria as Record<string, unknown>
         const keys = Object.keys(crit ?? {})
         let best = 0
@@ -643,7 +708,33 @@ export async function routeIntent(
           confidence: conf,
           probabilities: Object.fromEntries(keys.map((kk, i) => [kk, Math.round(probs[i] * 1e4) / 1e4])),
         }
+      } else if (qtype === 'noul') {
+        // noul: P(yes) is probs[1] (true option)
+        const pYes = probs[1] ?? 0
+        answers[ids[r]] = {
+          noul: Math.round(pYes * 1e4) / 1e4,
+          confidence: Math.max(pYes, 1 - pYes),
+          probabilities: { false: Math.round((1 - pYes) * 1e4) / 1e4, true: Math.round(pYes * 1e4) / 1e4 },
+        }
+      } else if (qtype === 'score') {
+        // score: expected value = sum(i * p[i])
+        const expected = probs.reduce((a, v, i) => a + i * v, 0)
+        answers[ids[r]] = {
+          score: Math.round(expected * 1e4) / 1e4,
+          confidence: conf,
+          probabilities: Object.fromEntries(probs.map((p, i) => [String(i), Math.round(p * 1e4) / 1e4])),
+        }
       }
+
+      if (conf < CONFIDENCE_THRESHOLD) anyLowConfidence = true
+    }
+
+    // If any question has very low confidence, the model is unsure — return null
+    // so the caller falls back to heuristic. This guards against bad INT8
+    // quantization producing random logits.
+    if (anyLowConfidence) {
+      console.warn('[Laya] Low confidence detected, falling back to heuristic')
+      return null
     }
 
     return answers
@@ -658,7 +749,7 @@ export async function routeIntent(
  * Kept for backward compatibility with debug.ts testFlow.
  */
 export async function classifyQuery(query: string): Promise<{ class: QueryClass; confidence: number; method: 'laya' | 'heuristic' }> {
-  if (layaSession && layaTokenizer) {
+  if (layaSession && layaTokenizer && layaSelfTestPassed) {
     try {
       const result = await routeIntent(query, {
         qtype: {
