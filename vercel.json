@@ -27,15 +27,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "geolocation=(), microphone=(self), camera=(), payment=(), usb=(), gyroscope=(), accelerometer=(), magnetometer=(), autoplay=(), fullscreen=(self)"
-        },
-        {
-          "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin"
-        },
-        {
-          "key": "Cross-Origin-Embedder-Policy",
-          "value": "credentialless"
+          "value": "geolocation=(), microphone=(self), camera=(), payment=(), usb=(), gyroscope=(), accelerometer=(), magnetometer=(), autoplay=(), fullscreen=(self), run-ad-auction=(), join-ad-interest-group=(), private-aggregation=(), attribution-reporting=()"
         },
         {
           "key": "Content-Security-Policy",

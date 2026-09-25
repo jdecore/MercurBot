@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.24.0",
+    "@google/generative-ai": "^0.24.1",
     "@huggingface/transformers": "^4.3.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
@@ -34,7 +35,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.85.0",
-    "typescript": "~7.0.2",
-    "vite": "^8.2.0"
+    "typescript": "~6.0.3",
+    "vite": "^8.3.0"
   }
 }
