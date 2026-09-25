@@ -446,10 +446,31 @@ export async function isLayaCached(): Promise<boolean> {
     if (!navigator.storage?.getDirectory) return false
     const root = await navigator.storage.getDirectory()
     const dir = await root.getDirectoryHandle(CACHE_KEY)
-    const fileHandle = await dir.getFileHandle('model_int8.onnx')
-    const file = await fileHandle.getFile()
-    return file.size > 100_000_000
+    const hasTok = await opfsFileExists(dir, 'tokenizer.json')
+    const hasModel = await opfsFileExists(dir, 'model_int8.onnx')
+    if (!hasTok || !hasModel) return false
+    // Verify model is reasonably sized (>200MB for INT8 single-file)
+    const modelHandle = await dir.getFileHandle('model_int8.onnx')
+    const modelFile = await modelHandle.getFile()
+    return modelFile.size > 200_000_000
   } catch { return false }
+}
+
+async function opfsFileExists(dir: FileSystemDirectoryHandle, name: string): Promise<boolean> {
+  try {
+    const h = await dir.getFileHandle(name)
+    const f = await h.getFile()
+    return f.size > 0
+  } catch { return false }
+}
+
+async function clearLayaCache(): Promise<void> {
+  try {
+    if (!navigator.storage?.getDirectory) return
+    const root = await navigator.storage.getDirectory()
+    await root.removeEntry(CACHE_KEY, { recursive: true })
+    console.log('[Laya] Cleared corrupted OPFS cache')
+  } catch { /* ignore */ }
 }
 
 export async function downloadLayaModel(
@@ -515,7 +536,20 @@ export async function loadLayaSession(): Promise<void> {
   ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/'
 
   const root = await navigator.storage.getDirectory()
-  const dir = await root.getDirectoryHandle(CACHE_KEY)
+  let dir: FileSystemDirectoryHandle
+  try {
+    dir = await root.getDirectoryHandle(CACHE_KEY)
+  } catch {
+    throw new Error('Laya cache directory not found — model was never downloaded')
+  }
+
+  // Validate files exist before reading
+  const hasTok = await opfsFileExists(dir, 'tokenizer.json')
+  const hasModel = await opfsFileExists(dir, 'model_int8.onnx')
+  if (!hasTok || !hasModel) {
+    await clearLayaCache()
+    throw new Error(`Laya cache incomplete (tokenizer: ${hasTok}, model: ${hasModel}) — clearing cache, will re-download`)
+  }
 
   // Load tokenizer
   const tokHandle = await dir.getFileHandle('tokenizer.json')

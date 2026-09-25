@@ -51,11 +51,18 @@ export async function prewarmModels(): Promise<void> {
   try {
     const cached = await isLayaCached()
     if (cached) {
-      await loadLayaSession()
-      layaReady = isLayaReady()
-      layaError = layaReady ? null : 'Self-test failed'
-      notify()
-      if (!layaReady) return
+      try {
+        await loadLayaSession()
+        layaReady = isLayaReady()
+        layaError = layaReady ? null : 'Self-test failed'
+        notify()
+        if (layaReady) return
+      } catch (loadErr) {
+        // Cache exists but files are corrupted/incomplete — re-download
+        console.warn('[Prewarm] Laya cache corrupted, re-downloading:', loadErr)
+        layaMessage = 'Cache corrupto, re-descargando modelo...'
+        notify()
+      }
     }
     await downloadLayaModel((phase, pct) => {
       if (phase === 'model') {
