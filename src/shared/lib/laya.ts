@@ -507,6 +507,7 @@ export async function downloadLayaModel(
 async function selfTestLaya(): Promise<boolean> {
   if (!layaSession || !layaTokenizer) return false
   try {
+    console.log('[Laya] Running self-test...')
     const testResult = await routeIntent('hello', {
       _test: {
         type: 'choice',
@@ -514,12 +515,13 @@ async function selfTestLaya(): Promise<boolean> {
         criteria: { yes: 'yes', no: 'no' },
       },
     })
+    console.log('[Laya] Self-test result:', JSON.stringify(testResult))
     if (testResult?._test?.choice && testResult._test.confidence !== undefined) {
       layaSelfTestPassed = true
       console.log('[Laya] Self-test passed:', testResult._test)
       return true
     }
-    console.warn('[Laya] Self-test returned empty results')
+    console.warn('[Laya] Self-test returned empty results — model loaded but inference failed')
     return false
   } catch (err) {
     console.warn('[Laya] Self-test failed:', err)
@@ -577,6 +579,8 @@ export async function loadLayaSession(): Promise<void> {
   layaSession = await ort.InferenceSession.create(buffer, {
     executionProviders: ['wasm'],
   })
+  console.log('[Laya] ONNX session created. Output names:', layaSession.outputNames)
+  console.log('[Laya] ONNX session created. Input names:', layaSession.inputNames)
 
   // Self-test: verify the model produces valid output
   await selfTestLaya()
@@ -699,9 +703,14 @@ export async function routeIntent(
 
     // Extract logits — verify batch dimensions match
     const logitsTensor = results['logits'] || results[Object.keys(results)[0]]
-    if (!logitsTensor) return null
+    if (!logitsTensor) {
+      console.warn('[Laya] No logits tensor in ONNX output. Keys:', Object.keys(results))
+      return null
+    }
     const logitsData = logitsTensor.data as Float32Array | BigInt64Array
     const logitsDims = logitsTensor.dims as number[]
+
+    console.log(`[Laya] Logits shape: [${logitsDims}], nQuestions: ${ids.length}, first 10 values:`, Array.from(logitsData as any).slice(0, 10))
 
     // Validate: logits shape should be [nQuestions, maxOptions]
     if (logitsDims.length !== 2 || logitsDims[0] !== ids.length) {
@@ -762,6 +771,8 @@ export async function routeIntent(
 
       if (conf < CONFIDENCE_THRESHOLD) anyLowConfidence = true
     }
+
+    console.log(`[Laya] Decoded answers:`, JSON.stringify(answers))
 
     // If any question has very low confidence, the model is unsure — return null
     // so the caller falls back to heuristic. This guards against bad INT8
