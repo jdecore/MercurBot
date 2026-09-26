@@ -19,11 +19,40 @@
     finalmente quedan alcanzables (antes `action='rag'` siempre porque `routeIntent()` siempre falló).
   - Harness archivado en **`.agents/bakeoff/`** (dataset 120, rules, reportes, verify-port).
 - Riesgo pendiente de cachés: `clearLegacyLayaCache()` borra `copixi_laya` OPFS al prewarm.
+- Consola prod: Permissions-Policy OK (features fuera de `vercel.json` desde `81db017`; si el usuario aún las ve → sesión/deploy viejo). Warn `content-length` de transformers.js arreglado con wrapper en `env.fetch` del worker (commit/pendiente de deploy).
 - **Bloqueos conocidos: ninguno** (npm registry caído — usar symlink de `node_modules` si se necesita pnpm add).
 
 ---
 
 ## Qué se hizo en la última sesión
+
+### Fix consola: warn `content-length` en prewarm de embeddings ✅ (26/09)
+- **Qué:** `src/entities/rag/worker.ts` envuelve `env.fetch` una sola vez (flag `fetchWrapped`)
+  justo tras importar `@huggingface/transformers`: si la respuesta 200 no trae `content-length`,
+  se buferiza con `arrayBuffer()` y se devuelve `new Response(buffer, …)` con el CL exacto.
+  Respuestas no-ok o que ya traen CL pasan intactas (streaming preservado).
+- **Por qué:** el CDN de HF sirve `tokenizer.json`/`config.json`/`tokenizer_config.json` con
+  `Content-Encoding: br` y **sin `content-length`** en el navegador → `readResponse()`
+  (transformers.js 4.3, `utils/hub/utils.js:145`) avisa "Unable to determine content-length…" y
+  expande el buffer chunk a chunk. El fallback `expectedSize` (metadata vía Range request) no
+  siempre llega → el warn se veía en consola de prod durante `prewarm()`.
+- **Resultado:** e2e contra servidor local que imita HF (JSON sin CL + ignora Range; ONNX con CL):
+  baseline **3 warns** → con wrapper **0 warns**; embeddings idénticos (`dims [1,5,384]`, mismos
+  valores en ambos runs); solo los 3 JSON se buferizan (ONNX 23MB en streaming). `pnpm build` OK ·
+  `pnpm lint` 0 errors / 19 warnings preexistentes. Permissions-Policy también verificado en prod
+  (header limpio; los features `run-ad-auction` etc. salieron en `81db017` — si el usuario los
+  sigue viendo es sesión/deploy viejo, no hay nada que cambiar en el repo).
+- **Aprendizajes / decisiones:**
+  1. El propio `storeCachedResource` de transformers hace este mismo truco al cachear
+     (`new Response(buffer, headers con content-length)`) — el wrapper replica el patrón de la lib.
+  2. Preflight CORS de HF para `Range` funciona (OPTIONS → `access-control-allow-origin` reflejado
+     + `allow-headers: range`), así que la causa exacta del fallo de metadata en prod no es
+     reproducible sin browser; el wrapper la esquiva determinísticamente (nunca se llama metadata
+     si el CL existe).
+  3. En este entorno **node no tiene salida a Internet** (ETIMEDOUT en `fetch`, curl sí funciona) —
+     tests de red con node → servidor local en 127.0.0.1 (mismo patrón que el npm registry caído).
+  4. En node el dtype default de transformers es f32 (`onnx/model.onnx`, fata `ModelFileNotFoundError`
+     si no existe); en prod/web carga quantized — el test debe pasar `dtype: 'q8'`.
 
 ### Fase 3 — Reglas en producción + ONNX eliminado ✅ (26/09)
 - **Qué (3a, offline):** `rules.mjs` (nuevo) — `classifyActionRules()`/`rulesIntent()` por regex

@@ -17,3 +17,8 @@ Modelo de embeddings en WASM para búsqueda vectorial en el browser.
 - Modelo no cacheado: descarga en primer load (~2-3s)
 - Memoria insuficiente: reducir batch size a 4
 - Fallback a léxico: se activa automáticamente si WASM falla
+- Warn `Unable to determine content-length from response headers...` en consola: HF/CDN sirve
+  `tokenizer.json`/configs con `Content-Encoding: br` sin `content-length` en el navegador.
+  `worker.ts` envuelve `env.fetch` (flag `fetchWrapped`): respuestas 200 sin CL se buferizan y se
+  devuelven con el CL exacto → `readResponse()` nunca avisa. El ONNX (que sí trae CL) pasa en
+  streaming sin tocar. Ver entrada 26/09 en memory.md.

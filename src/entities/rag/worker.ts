@@ -37,6 +37,7 @@ let vectorStore = new Map<string, Float32Array>()
 let pipeline: any = null
 let modelReady = false
 let fallbackLexicalOnly = false
+let fetchWrapped = false
 
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2'
 const BATCH_SIZE = 8 // Small batch to prevent iOS Safari worker OOM (<128MB)
@@ -92,6 +93,25 @@ async function getPipeline(): Promise<any> {
     const { pipeline: createPipeline, env } = await import('@huggingface/transformers')
     env.allowLocalModels = false
     env.allowRemoteModels = true
+
+    if (!fetchWrapped) {
+      fetchWrapped = true
+      const baseFetch = globalThis.fetch.bind(globalThis)
+      env.fetch = async (input: string | URL, init?: any) => {
+        const response = await baseFetch(input, init)
+        if (!response.ok || response.headers.has('content-length') || !response.body) {
+          return response
+        }
+        const buffer = await response.arrayBuffer()
+        const headers = new Headers(response.headers)
+        headers.set('content-length', String(buffer.byteLength))
+        return new Response(buffer, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        })
+      }
+    }
 
     // Configure onnxruntime-web single-threaded via transformers.js backend
     // to avoid SharedArrayBuffer (COEP blocks SAB in Vite blob-URL workers)
