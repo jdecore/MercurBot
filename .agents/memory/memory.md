@@ -8,12 +8,64 @@
 - FSD reorganization completada (src/ → app/widgets/features/entities/shared/)
 - `.agents/` knowledge layer creada (context/skills/memory)
 - App funcional: build OK, lint OK, 0 errores TypeScript
-- **Laya routeIntent() implementado:** tokenizer BPE portado de laya-ts, prompt renderer con [MASK] markers, inferencia ONNX, softmax por opción. Chat flow decide rag/direct/chart antes de buscar.
-- Sin bloqueos conocidos
+- **Laya routeIntent() implementado pero INOPERANTE en runtime** — ver "Fase 0 Laya" abajo. La inferencia ONNX nunca ha corrido; `routeIntent()` siempre devuelve `null` y todo cae al heuristic.
+- **Bloqueo conocido:** decisión de arquitectura Laya pendiente (ver "Fase 0" + "Pendientes").
 
 ---
 
 ## Qué se hizo en la última sesión
+
+### Laya Fase 0 — Verificación offline de los exports ONNX ⛔ (25/09)
+- **Qué:** verificación sin tocar código de producción, en `/tmp/opencode/laya-verify/`. Se descargaron y compararon ambos exports, se inspeccionó el protobuf ONNX, y se corrió inferencia real usando el tokenizer + prompt renderer reales del proyecto (copia de `laya.ts` con `export` añadidos, verificado por diff de que solo cambiaron los keywords).
+- **Por qué:** el plan proponía migrar de `tozp/laya-onnx` a `Mattepiu/laya-onnx` con 4 hipótesis. Era obligatorio verificarlas offline antes de reescribir `laya.ts`.
+- **Resultado:** **2 de 4 hipótesis confirmadas, 1 refutada, 1 irrelevante.** El modelo `tozp` actual está fundamentalmente roto. `Mattepiu` funciona pero no sirve para el schema actual. **No se escribió código de producción.**
+- **Aprendizajes (críticos, no repetir el análisis):**
+
+**Firmas de entrada (leídas del protobuf, no de metadatos):**
+
+| input | tozp (424.348.081 B) | Mattepiu int8 (581.105.897 B) |
+|---|---|---|
+| `input_ids` | `['batch_size','seq_len']` ✅ | `['batch_size','sequence_length']` ✅ |
+| `attention_mask` | `['batch_size','seq_len']` ✅ | `['batch_size','sequence_length']` ✅ |
+| `marker_pos` | `['batch_size','num_markers']` ✅ | **`['batch_size', 2]` estático** ❌ |
+| `marker_mask` | `['batch_size','num_markers']` ✅ | **`['batch_size', 2]` estático** ❌ |
+| `qtype` | `['batch_size']` rank-1 ✅ | `['batch_size']` rank-1 ✅ |
+| salida 1 | `logits ['batch_size','Wherelogits_dim_1']` | `logits ['batch_size', 2]` |
+| salida 2 | `act` (softmax aplicado por el cliente) | `linear_123` (**sin softmax**, hay que aplicarlo) |
+| nodos | 5479 | 2216 |
+
+Trade-off **opuesto** al que suponía el plan: tozp permite K>2 en la firma pero está muerto; Mattepiu funciona pero está clavado en K=2.
+
+**H1 — `qtype` [n,1] rompe: CONFIRMADO, bug real.** Con rank-2: `Invalid rank for input: qtype Got: 2 Expected: 1`. La referencia (`rl_common.collate_items`) usa `torch.tensor([it["qtype"] for it in items])` → rank-1. `laya.ts:635` está mal. PERO es bug secundario: con tozp la inferencia moría antes por otro motivo.
+
+**H2 — falta calibración de temperatura: CONFIRMADO pero irrelevante.** `rl_agent_config.json` real: `temperature=[1.6369,1.2514,1.9834]`, `temperature_by_options={choice:2:1.9064, choice:3-5:1.7602, choice:6-10:1.0000, choice:11+:0.1006, score:3-5:1.2514, noul:2:1.9834}`. Implementada y medida: como T>1, **aplanar** los logits → *baja* la confianza (0.346→0.116 en un caso). No rescata el umbral 0.35; lo empeora. `temp_bucket` usa `"2" if k<=2 else "3-5" if k<=5 else "6-10" if k<=10 else "11+"`.
+
+**H3 — K=6 funciona porque los Reshape son computados: REFUTADA.** Los Reshape sí son computados (`ReduceSum(marker_mask)→Clip` calcula n_options en runtime; `Where(~marker_mask, -1e4, gathered)` arma logits). PERO la *firma* de entrada hornea `2`, así que ORT rechaza antes de ejecutar el grafo: `Got invalid dimensions for input: marker_pos ... index: 1 Got: 6 Expected: 2`. K=3/6/10 fallan igual. El self-test de 6 opciones del plan fallaría siempre. **La pregunta `action` (6 opciones) es imposible con este export.**
+
+**H4 — `routeIntent→null` anula el heuristic: CONFIRMADO.** `parseIntentResult(null)` fuerza `action:'rag'` y `searchMode:'semantic'` (`intentSchema.ts:79,83`).
+
+**H5 (nuevo, no estaba en el plan) — `tozp` está roto de dos formas:**
+1. Un Reshape tiene `seq_len` **hardcodeado a 512** (`{45,1,1024}` → `{512,16,64}`). Solo corre si `input_ids` mide exactamente 512. Con secuencia natural (45–53 tokens) revienta con `input_shape_size == requested_shape_size was false`.
+2. Aun forzando 512 la salida está **muerta**: P(true)=0.404 para "disk disk is 100% full" (debería 0.957), 0.393 para el caso benigno, 0.503 para "strong no". Todo ~0.5, confianza 0.00–0.06. La cuantización int8 destruyó el head.
+3. Latencia 11.5–12 s **por pregunta**.
+→ **El "plan de reversión: mantener tozp" NO es viable.** La migración a Mattepiu es obligatoria, no opcional.
+
+**H6 (nuevo) — `Mattepiu` funciona, pero no para nuestro schema:**
+- Reproduce su propio ejemplo del README: P(true)=0.9570 (disk full) / 0.0016 (benigno) / 0.9961 (strong yes) / 0.0000 (strong no). Invariante al orden de opciones. Logits con spread real (5–19). **El modelo no está roto.**
+- `isSummary` funciona: 0.899 (summary) / 0.007 (literal).
+- `isPageRef` **nunca dispara**: "What is the total amount on page 7?" → P(true)=0.022 con cualquier phrasing (probado: genérico, corto, muy corto, con crit custom).
+- `searchMode` ~25% de acierto (1/4) y sesgado a `semantic`.
+- Es **extremadamente sensible al phrasing**: la instrucción larga y descriptiva de la app funciona para `isSummary` (0.899) y la versión corta la destruye (0.029).
+- Usar `crit` custom en noul **empeora**: sanity del README cae de 0.957 → 0.523. Mantener las opciones genéricas.
+- **Causa raíz de fondo: mismatch de tarea.** Laya evalúa un **STATE** (documento/email/ticket) contra **preguntas-aclaración**. Nosotros le pasamos la **query del usuario** como state. "Qué acción debe tomar el robot" sí está en su benchmark de routing (99.1%), pero necesita K>2.
+
+**H7 (nuevo, bug de código) — `CONFIDENCE_THRESHOLD=0.35` es inalcanzable para `choice`.** `routeIntent` usa `confidenceFromProbs` (entropía normalizada, la fórmula de la referencia) para `choice`, pero `max(p,1-p)` para `noul`. Para K=2, `conf>0.35` exige **p_max ≥ 0.835**. Es un listón arbitrario para 2 opciones; con los logits observados (p=0.30–0.70) `searchMode` siempre dispara el fallback. **Bug independiente del modelo.**
+
+**H8 (nuevo) — latencia real (WASM, onnxruntime-web 1.30):** carga de sesión 6.7–17.8 s. 1 pregunta/1 hilo 1.0 s. 4 preguntas/1 hilo **6.0 s**. 4 preguntas/4 hilos **1.9 s**. `laya.ts:537` fija `numThreads = 1` → 6 s por query en el peor caso. Los 38 ms del README son en GPU fp16, no wasm.
+
+**Otras:** `tokenizer.json` de Mattepiu y tozp son **byte-idénticos** (sha256 `6c8aaa9a…`). Nuestro `renderOptions` ignora `crit` en noul (la referencia lo usa) — pero se decidió mantener genérico porque el custom empeora. Prompt renderer y `confidence_from_probs` de nuestro port **coinciden exactamente** con `rl_common.build_sequence` / `confidence_from_probs` (verificado token a token).
+
+---
 
 ### Laya F2 — Validate inference + robustness ✅ (25/09)
 - **Problema:** routeIntent() implementado pero sin validación de que el modelo ONNX INT8 realmente funciona. Sin soporte para noul/score. Sin confidence threshold. Worker aún usa classifyHeuristic independientemente.
@@ -143,16 +195,37 @@
 | isSummary noul guardrail | Detecta pedidos de resumen/overview | 25/09 |
 | Batch logits shape validation | Verifica dims antes de decodificar, fallback si shape inesperado | 25/09 |
 | intentGuards en payloadContext | needsWeb/isPageRef pasados al LLM como contexto | 25/09 |
+| Migrar a `Mattepiu/laya-onnx` int8 | `tozp` está roto: seq_len hardcodeada a 512 + head int8 muerto | 25/09 |
+| NO usar `crit` custom en noul | Medido: sanity del README cae 0.957 → 0.523 | 25/09 |
+| NO parcheear el ONNX para K>2 | El grafo es dinámico pero la firma no; parcheo de 581MB inviable en cliente | 25/09 |
 
 ---
 
 ## Pendientes conocidos
-1. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates, debugger, CSP fixes, routeIntent)
-2. **QA visual live:** verificar deploy real
-3. **og:image:** public/og-cover.png 1200×630 pendiente
-4. **E2E completo:** PDF escaneado, mobile, oscuro, gráficas, citas
-5. **Laya F5 — batch sequential fallback:** Si el ONNX batch falla (algunos modelos INT8 no soportan batch), intentar secuencialmente (una pregunta a la vez). Actualmente retorna null.
-6. **Laya F6 — needsWeb consumer:** `intentGuards.needsWeb` está en el payload pero el LLM no tiene instrucciones claras de qué hacer con él. Evaluar si agregar web search o solo advertir al usuario.
+1. **DECISIÓN PENDIENTE — arquitectura Laya.** La migración a Mattepiu está desbloqueada pero no
+   resuelve el schema. Ver "Escenarios" en la Fase 0. Requiere decisión del usuario antes de escribir código.
+2. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates, debugger, CSP fixes, routeIntent)
+3. **QA visual live:** verificar deploy real
+4. **og:image:** public/og-cover.png 1200×630 pendiente
+5. **E2E completo:** PDF escaneado, mobile, oscuro, gráficas, citas
+6. **Laya F5 — batch sequential fallback:** irrelevante. El problema nunca fue el batch: con qtype rank-1
+   el batch de N preguntas funciona (`logits dims=[N,2]` verificado con N=5).
+7. **Laya F6 — needsWeb consumer:** `intentGuards.needsWeb` está en el payload pero el LLM no tiene
+   instrucciones claras de qué hacer con él. Evaluar si agregar web search o solo advertir al usuario.
+
+### Escenarios tras la Fase 0 (elegir uno)
+- **A — Laya mínimo viable:** migrar a Mattepiu + fix `qtype` rank-1 + schema **solo binario**
+  (eliminar `action` de 6 opciones o descomponerlo) + unificar la métrica de confianza a `max(p,1-p)`
+  con umbral sensato (0.6–0.7) + `numThreads` > 1. Ganancia real esperada: `isSummary`/`needsWeb`.
+  `isPageRef` y `searchMode` no funcionan → dejarlos al heuristic.
+- **B — Abandonar Laya:** borrar el router ONNX, quedarse con `classifyHeuristic` (instantáneo, gratis)
+  y usar el presupuesto de 581MB de descarga para otra cosa. 0 riesgo, 0 ganancia.
+- **C — Cambiar el enfoque:** pasar el **documento** (o un chunk) como `state` en vez de la query, que es
+  el formato para el que Laya se entrenó. Requiere reentrenar o Acceptar que el modelo solo generalice.
+- **D — Bajar un export mejor:** buscar un export ONNX oficial de `convaiinnovations/laya` con `num_markers`
+  simbólico y seq_len dinámica. No existe hoy (el repo tiene `laya.onnx`+`.data` fp32 1.68GB y
+  `fp16_onlygpu_unverified/`). Es la única vía para K>6 sin parcheo.
+
 
 ---
 

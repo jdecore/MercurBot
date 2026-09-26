@@ -25,15 +25,15 @@
        Seguro como texto en cualquier superficie (5.35+).
      · rojo   #C92E0E  → solo alerta/destructivo: relleno con tinta
        blanca (5.41) o borde. Texto de error usa #FFA890.
-     · el 90% de la interfaz es mar (#073B46) + mineral (#E5E6E1).
+      · el 90% de la interfaz es mar (#0f172a) + mineral (#E5E6E1).
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── Capa 0 — paleta fuente MERCU ── */
   --mercu-mineral: #E5E6E1;        /* piedra clara: texto y papel del visor */
-  --mercu-ocean: #073B46;          /* mar medio: color de marca y fondo */
-  --mercu-ocean-surface: #0A4753;  /* superficie del mar (gradiente 0%) */
-  --mercu-ocean-deep: #052C35;     /* fondo abisal (gradiente 100%) */
+  --mercu-ocean: #0f172a;          /* mar medio: color de marca y fondo */
+  --mercu-ocean-surface: #131c31;  /* superficie del mar (gradiente 0%) */
+  --mercu-ocean-deep: #0b1120;     /* fondo abisal (gradiente 100%) */
   --mercu-green: #9EE014;          /* biche: vegetación tropical, fruta verde */
   --mercu-orange: #F0711D;         /* naranja tropical: acento cálido principal */
   --mercu-red: #C92E0E;            /* rojo tropical: alerta / destructivo */
@@ -45,13 +45,13 @@
 
   /* ── Capa 2 — semánticos ── */
   /* fondos: gradiente monocromático de profundidad definido en `body` */
-  --color-bg: var(--mercu-ocean);
-  --color-surface: #0D4E5B;            /* card: un paso hacia la superficie */
-  --color-surface-2: #125E6B;          /* chip / hover elevado */
-  --color-surface-hover: #14606F;
-  --color-card: #0D4E5B;
-  --color-border: color-mix(in srgb, var(--mercu-mineral) 16%, var(--mercu-ocean));
-  --color-border-strong: color-mix(in srgb, var(--mercu-mineral) 26%, var(--mercu-ocean));
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;            /* card: un paso hacia la superficie */
+  --color-surface-2: #253347;          /* chip / hover elevado */
+  --color-surface-hover: #2d3a4e;
+  --color-card: #1e293b;
+  --color-border: color-mix(in srgb, var(--mercu-mineral) 20%, var(--mercu-ocean));
+  --color-border-strong: color-mix(in srgb, var(--mercu-mineral) 32%, var(--mercu-ocean));
   --surface-blur: 16px;
 
   /* texto */
