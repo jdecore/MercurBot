@@ -1,6 +1,6 @@
 # memory.md — Bitácora del Proyecto
 
-> **Última actualización:** 2026-09-25 | Rama: main
+> **Última actualización:** 2026-09-26 | Rama: main
 
 ---
 
@@ -9,11 +9,138 @@
 - `.agents/` knowledge layer creada (context/skills/memory)
 - App funcional: build OK, lint OK, 0 errores TypeScript
 - **Laya routeIntent() implementado pero INOPERANTE en runtime** — ver "Fase 0 Laya" abajo. La inferencia ONNX nunca ha corrido; `routeIntent()` siempre devuelve `null` y todo cae al heuristic.
-- **Bloqueo conocido:** decisión de arquitectura Laya pendiente (ver "Fase 0" + "Pendientes").
+- **Nuevo candidato validado en Fase 0: `killkli/open-jev-laya-multilingual-onnx`** (26 OK / 0 FAIL / 1 WARN). Sustituye a tozp/Mattepiu: K dinámico ≥2, seq dinámica hasta 1024, multilingüe (mmBERT-base), ES+EN sanity OK. Ver "Fase 0 killkli" abajo.
+- **Fase 1 (bake-off) COMPLETA ✅ — 8 OK / 0 FAIL:** adaptador flat (`layaML.mjs`) con las 5 correcciones críticas, baseline heuristic, dataset 120 (60 ES/60 EN). Ver "Fase 1" abajo.
+- **Fase 2 (bake-off) COMPLETA ✅ — benchmark 120 × 6 sistemas:** el modelo NO supera al baseline
+  en action (35% vs 58%), searchMode (74.3% vs 82.9%) ni route-exact (16.7% vs 30.8%); solo gana
+  `isSummary`. **Decisión tomada (26/09): Opción A — NO MIGRAR.** Ver "Fase 2" abajo.
+- **Decisión A implementada:** veredicto documentado en `.agents/skills/laya.md`
+  ("Veredicto del bake-off") + constancia en el header de `src/shared/lib/laya.ts`.
+  `classifyHeuristic` queda como único clasificador activo.
+- **Test-only hasta ahora: cero cambios funcionales en `src/`.**
+- **Bloqueos conocidos: ninguno.**
 
 ---
 
 ## Qué se hizo en la última sesión
+
+### Fase 2 bake-off — Benchmark 120 × 6 sistemas ✅ (26/09) — RECOMENDACIÓN: NO migrar
+- **Qué:** `benchmark.mjs` (4 configs × 120, checkpoint en `results_fase2.json`) + `metrics.mjs`
+  (→ `report_fase2.txt`). 4 configs = {flat, hier} × {state=query, state=doc+query}, más 2 baselines
+  (`heuristic` = classifyHeuristic+defaults, `defaults` = lo que corre hoy en `agentRuntime`).
+  Métricas: exact-match + macro-F1 por campo/idioma, searchMode sobre subset rag (n=70),
+  route-exact, confusión de action, latencia, y calibración híbrida (umbral + fallback).
+- **Resultados (overall; acc/macro-F1):**
+  | sistema | action | searchMode | needsWeb | isPageRef | isSummary | route | ms |
+  |---|---|---|---|---|---|---|---|
+  | BASE heuristic | 58.3/12.3 | **82.9/81.6** | 90.0/47.4 | 86.7/46.4 | 90.0/47.4 | **30.8%** | 0 |
+  | BASE defaults (hoy) | 58.3/12.3 | 54.3/35.2 | 90.0/47.4 | 86.7/46.4 | 90.0/47.4 | 21.7% | 0 |
+  | flat·query | 35.0/32.9 | 74.3/74.3 | 87.5/46.7 | 86.7/46.4 | **91.7/78.4** | 16.7% | 2161 |
+  | flat·doc+query | 40.0/31.6 | 65.7/65.7 | 63.3/42.7 | 56.7/47.6 | 68.3/54.6 | 15.0% | 6301 |
+  | hier·query | 27.5/25.7 | 74.3/74.3 | 87.5/46.7 | 86.7/46.4 | 91.7/78.4 | 5.0% | 3004 |
+  | hier·doc+query | 15.8/11.8 | 65.7/65.7 | 63.3/42.7 | 56.7/47.6 | 68.3/54.6 | 2.5% | 8157 |
+- **Confusión flat·query (filas=gold):** rag 70 → **18 rag / 47 direct**; direct 10→10 ✓;
+  chart 12→11 ✓; web 12→8 direct (1 web); mcp 8→2; agent 8→7 direct. O sea: el modelo acierta
+  lo obvio (direct, chart) y revienta en lo que requiere "buscar en el documento".
+- **Calibración (action+3 guards combinados, fallback al baseline):** baseline=62.5%;
+  flat·query mejor 64.6% @ `confMargin≥0.9` (cobertura 22.9%); hier·query 65.4% @ `confEntropy≥0.5`
+  (cobertura 22.1%). searchMode: el modelo nunca supera al heuristic (mejor empate 82.9% con t≥0.4).
+- **Latencia:** flat·query 2.2s/query; doc+query **3× más lenta** (state≈350tok); hier·query 3.0s
+  (cadena secuencial); hier·doc 8.2s.
+- **Hallazgos / decisiones:**
+  1. **`state=doc+query` empeora todo** (salvo action 40% vs 35% con F1 peor) y cuesta 3× → descartado.
+  2. **El árbol jerárquico K=2 es peor que flat** en action (27.5 vs 35.0): los errores se acumulan
+     en cadena (rag→web/mcp/agent al azar). Descartado.
+  3. **El modelo no supera al baseline en ningún campo salvo `isSummary`** (F1 78.4 vs 47.4, +1.7 acc)
+     ni en searchMode (74.3 vs 82.9); route-exact es la mitad (16.7 vs 30.8).
+  4. **Causa raíz: OOD.** Laya está entrenado con *states de conversación* (historial de turnos),
+     no con queries sueltas de un PDF assistant; con query suelta clasifica `direct` (47/70 rag).
+     `agentRuntime` no tiene state rico que pasarle → migrar exige cambiar el contrato de datos.
+  5. La confianza **sí** está informativa (accuracy sube con el umbral), pero el techo del hybrid
+     (+2.9 pts sobre baseline a cobertura 22%) no justifica 647MB + 2.2s/query.
+- **RECOMENDACIÓN al usuario: NO migrar a killkli-Laya** con el schema actual (escenario B
+  actualizado): mantener `classifyHeuristic` + defaults. Artefactos por si se retoma:
+  `/tmp/opencode/intent-bakeoff/{benchmark.mjs,metrics.mjs,hier.mjs,results_fase2.json,report_fase2.txt}`.
+  **Excepción potencial:** solo `isSummary` (único campo con ganancia clara) — evaluar si compensa
+  cargar el modelo por una pregunta binaria que se puede resolver con regex.
+- **Decisión del usuario (26/09): OPCIÓN A — NO MIGRAR ✅ implementada:**
+  1. `.agents/skills/laya.md` → nueva sección "Veredicto del bake-off (Fase 0→2)" con modelo,
+     técnica (*typed questions*), tabla de resultados, causas y cómo reabrir el tema.
+  2. `src/shared/lib/laya.ts` → constancia en el header (solo comentario, 0 cambios funcionales)
+     de que la ruta ONNX está descartada y que `classifyHeuristic` es el código activo.
+  3. `memory.md` → decisión marcada como resuelta. Opciones B/C registradas como descartadas.
+
+### Fase 0 killkli — Laya multilingüe ONNX verificado ✅ (25/09)
+- **Qué:** descarga e inferencia real de `killkli/open-jev-laya-multilingual-onnx` (fp16 647MB) en
+  `/tmp/opencode/intent-bakeoff/verify.mjs`, contra `~/model-tests/killkli-laya/`. Sin tocar `src/`.
+- **Por qué:** el usuario descartó tozp/Mattepiu/`GLiNER2.5-multi-v1` (extracción) y pidió una
+  alternativa ONNX directa multilingüe; único candidato del Jev Decision Index con ONNX publicado,
+  multilingüe y typed-decisions.
+- **Resultado: 26 OK / 0 FAIL / 1 WARN.** Verificado:
+  - **Firma:** `input_ids[batch,seq]`, `marker_pos[batch,options]`, `marker_mask bool`,
+    `qtype [batch]` rank-1, `logits[batch,options]`, `act_probs[batch,2]`. **K=2/3/6 OK,
+    seq=16/53/512/1024 OK, batch=2 OK.** El K=2 estático de Mattepiu y el seq=512 de tozp **no existen aquí**.
+  - **fp16 en WASM sin NaN** (0 fallos en 5 corridas con state de 754 tokens); trunca bien a 1024.
+  - **Sanity ES/EN:** noul greeting 0.877/0.897, query factual 0.000/0.000; `action` K=6:
+    greeting→direct 0.941/0.971, chart→chart 1.000; `searchMode` literal 0.940 / semantic 0.930.
+  - **Carga de sesión 8–10s, rss ~2.8GB, ~0.3–1.1s/pregunta** (seq corta), ~5s con 754 tokens.
+- **Aprendizajes (críticos):**
+  1. **El tokenizer BPE de `laya.ts` NO sirve para este checkpoint.** Es `metaspace` con
+     `normalizer Replace(' ','▁')` + `prepend_scheme: always`, y `bpeEncode()` usa `GPT2_SPLIT`
+     (byte-level) ignorando `kind`/`replaces` → ids corruptos (`hola buenos dias` → 51247… en vez
+     de 150030…). **Solución verificada:** aplicar `replaces`, prepend `'▁'`, split `/(?=▁)/`,
+     BPE por pieza → **4/4 idéntico a transformers.js**. En Fase 1 se usa
+     `@huggingface/transformers` (ya es dependencia) o se parchea `bpeEncode` con el branch metaspace.
+  2. **`laya_config.json` de killkli: `temperature=[1,1,1]` y `temperature_by_options={}`**
+     → probabilidades **sin calibrar**. El umbral de confianza hay que derivarlo del dataset (Fase 2),
+     no heredar el 0.35 actual.
+  3. **Tokenizer aliases:** `cls=<bos>` (id 2), `sep=<eos>` (id 1), `mask=<mask>` (id 4) —
+     `tok.cls_token_id` es `undefined`; usar `bos_token_id` como CLS.
+  4. **Mismatch STATE/QUERY persiste** (WARN 1): `"¿Qué dice el artículo 7…?"` con query suelta →
+     `direct 0.447` vs `rag 0.417`. Enviando `DOCUMENTO:…\nPREGUNTA:…` como state → `rag 0.663`.
+     Laya sigue evaluar un STATE; probar ambos formatos en el bake-off (Fase 2).
+  5. **`npm` inaccesible en este entorno (ETIMEDOUT a registry.npmjs.org)** → symlink de
+     `node_modules` desde `copixi/` para el harness (`onnxruntime-web` 1.30 + `@huggingface/transformers` 4.3).
+  6. fp16 sobre WASM funciona (no hace falta fp32 1.29GB); descarga 647MB en <1 min.
+- **Artefactos:** `/tmp/opencode/intent-bakeoff/{verify.mjs,lib.mjs,probe_action.mjs,tok_*.mjs}`,
+  modelo en `~/model-tests/killkli-laya/` + `~/model-tests/hf/killkli--…/` (symlinks p/ transformers.js).
+
+### Fase 1 bake-off — Adaptador flat + baseline + dataset ✅ (26/09)
+- **Qué:** corrección de los errores críticos que bloqueaban Fase 1 e implementación de los
+  adaptadores del bake-off. Test-only: **0 cambios en `src/`** (los fixes migran a `src/` solo si
+  Fase 2 decide por killkli).
+- **Errores críticos corregidos (en el harness, `layaML.mjs`):**
+  1. **E1 tokenizer metaspace** — `bpeEncode()` de `laya.ts` usa `GPT2_SPLIT` byte-level e ignora
+     `kind='metaspace'`/`replaces` → ids corruptos. Fix: `replaces` + prepend `'▁'` + split `'▁'` +
+     BPE por pieza. **Verificado: 14/14 strings idénticos a transformers.js** (`verifyTokenizer()`).
+  2. **E2 `qtype` rank-2** — `buildFeeds()` de `laya.ts` emite `dims [n,1]`; el modelo lanza
+     `ERROR_CODE 2: Invalid rank for input: qtype` → **`routeIntent()` con killkli SIEMPRE fallaría**.
+     Fix: `dims [n]`. (Causa raíz documentada; parche en `src/` pendiente de decisión Fase 2.)
+  3. **E3 CLS/SEP** — `tok.cls_token_id === undefined` en transformers.js → fallback `bos(2)`/`eos(1)`.
+  4. **E4 confianza** — se exportan `confEntropy` (1-H/ln k, rl_common) y `confMargin` (max(p), lo que
+     laya.ts usa en noul); **sin umbral**: `temperature=[1,1,1]` sin calibrar → calibración en Fase 2.
+  5. **E5 marker_pos ≥ len congela el runtime** (TopK con índice inválido → hang indefinido,
+     descubierto empíricamente) → guard que lanza si algún marker queda fuera de rango.
+- **Implementación Fase 1** (archivos en `/tmp/opencode/intent-bakeoff/`):
+  `layaML.mjs` (adapter: tokenizer/prompt/session/askBatch/classifyFlat), `heuristic.mjs`
+  (baseline = `classifyHeuristic` exacto + defaults de `agentRuntime`, exporta `baselineCurrent`),
+  `schema.mjs` (espejo de `INTENT_SCHEMA`), `dataset.mjs` (120 queries: 60 ES/60 EN, 8 categorías
+  idénticas por idioma, con `sanityDataset()`), `smoke.mjs` (gate de Fase 1).
+- **Resultado: 8 OK / 0 FAIL.** Datos clave:
+  - Carga sesión 12–21s; latencia 5 preguntas: **batch 6.2s vs parallel 3.0s** (parallel por
+    `Promise.all`; ORT-WASM **serializa** filas del batch y no gana con `numThreads=4` — medido 1t=964ms vs 4t=1000ms).
+    Latencia media por query con `mode=parallel`: **~3.3s** (min 2.9 / max 3.7). Gate funcional <5s.
+  - Baseline `classifyHeuristic` sobre las 70 queries con `action=rag`: **82.9% exact-match en
+    searchMode** (ES 82.9%, EN 82.9%). Action baseline = siempre `rag` (los 5 fields con
+    defaults solo detectan `rag`).
+  - **Calidad preliminar (no gate, métrica formal en Fase 2):** con `state=query` suelta, `action`
+    sobreestima `direct` en queries `rag` (4/12 muestras DIFF, conf 0.26–0.41 — baja confianza
+    coincide con los fallos). Reproduce el mismatch STATE/QUERY de Fase 0 → **Fase 2 debe probar
+    formatos de state** (`query` vs `DOCUMENTO:…\nPREGUNTA:…`).
+- **Aprendizajes:**
+  1. `renderOptions` noul = `['false: no, the statement does not hold', 'true: yes, the statement holds']` (fiel a rl_common); no usar `crit` custom (medido en sesión previa: empeora).
+  2. El head de `action` (6 criterios largos) llena `head_max_len=256` → L≈170 aunque el state sea corto: la latencia la domina el head, no la query.
+  3. Cambiar `HEAD_MAX_LEN` o tope de tokens/opción (48) altera el prompt vs entrenamiento → no tocar sin justificar en Fase 2.
 
 ### Laya Fase 0 — Verificación offline de los exports ONNX ⛔ (25/09)
 - **Qué:** verificación sin tocar código de producción, en `/tmp/opencode/laya-verify/`. Se descargaron y compararon ambos exports, se inspeccionó el protobuf ONNX, y se corrió inferencia real usando el tokenizer + prompt renderer reales del proyecto (copia de `laya.ts` con `export` añadidos, verificado por diff de que solo cambiaron los keywords).
@@ -198,19 +325,31 @@ Trade-off **opuesto** al que suponía el plan: tozp permite K>2 en la firma pero
 | Migrar a `Mattepiu/laya-onnx` int8 | `tozp` está roto: seq_len hardcodeada a 512 + head int8 muerto | 25/09 |
 | NO usar `crit` custom en noul | Medido: sanity del README cae 0.957 → 0.523 | 25/09 |
 | NO parcheear el ONNX para K>2 | El grafo es dinámico pero la firma no; parcheo de 581MB inviable en cliente | 25/09 |
+| Candidato ONNX: `killkli/open-jev-laya-multilingual-onnx` | Único con ONNX publicado + multilingüe + K dinámico; verificado Fase 0 | 25/09 |
+| Bake-off offline ES+EN antes de tocar `src/` | Usuario pidió test-only; comparar jerárquico K=2 vs flat | 25/09 |
+| Descartar `GLiNER2.5-multi-v1` ONNX de terceros | Path de extracción (boundary), `classify_text` no documentado | 25/09 |
+| Descartar MoJev/Decision-Kai como ONNX-in-browser | MoJev export es `modality:text` con runtime custom; Kai solo CoreML | 25/09 |
 
 ---
 
 ## Pendientes conocidos
-1. **DECISIÓN PENDIENTE — arquitectura Laya.** La migración a Mattepiu está desbloqueada pero no
-   resuelve el schema. Ver "Escenarios" en la Fase 0. Requiere decisión del usuario antes de escribir código.
-2. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates, debugger, CSP fixes, routeIntent)
-3. **QA visual live:** verificar deploy real
-4. **og:image:** public/og-cover.png 1200×630 pendiente
-5. **E2E completo:** PDF escaneado, mobile, oscuro, gráficas, citas
-6. **Laya F5 — batch sequential fallback:** irrelevante. El problema nunca fue el batch: con qtype rank-1
-   el batch de N preguntas funciona (`logits dims=[N,2]` verificado con N=5).
-7. **Laya F6 — needsWeb consumer:** `intentGuards.needsWeb` está en el payload pero el LLM no tiene
+1. ~~**DECISIÓN PENDIENTE — arquitectura de routing (Fase 2).**~~ **RESUELTA (26/09): Opción A —
+   NO MIGRAR.** Implementada: veredicto en `.agents/skills/laya.md` ("Veredicto del bake-off") +
+   constancia en el header de `src/shared/lib/laya.ts`. Números completos en "Fase 2" y en
+   `/tmp/opencode/intent-bakeoff/report_fase2.txt`.
+   Opciones descartadas registradas: B) migrar solo para `isSummary`; C) iterar con state rico
+   (reabrir solo si cambia el contrato de datos de `agentRuntime`).
+2. **Si algún día se reabre:** portar a `src/` los fixes E1 (metaspace), E2 (`qtype` dims `[n]`),
+   E3 (CLS=bos), E5 (marker guard) — documentados en `.agents/skills/laya.md`. Hoy no aplican:
+   la ruta ONNX sigue descartada.
+3. **Commits:** ~16 archivos sin commitear (i18n migration, branding, dependency updates, debugger, CSP fixes, routeIntent)
+4. **QA visual live:** verificar deploy real
+5. **og:image:** public/og-cover.png 1200×630 pendiente
+6. **E2E completo:** PDF escaneado, mobile, oscuro, gráficas, citas
+7. **Laya F5 — batch sequential fallback:** irrelevante. El problema nunca fue el batch: con qtype
+   rank-1 el batch de N preguntas funciona (`logits dims=[N,2]` OK) — **pero `buildFeeds()` de
+   `laya.ts` emite `[n,1]` (rank-2) → falla con killkli; es el fix E2**.
+8. **Laya F6 — needsWeb consumer:** `intentGuards.needsWeb` está en el payload pero el LLM no tiene
    instrucciones claras de qué hacer con él. Evaluar si agregar web search o solo advertir al usuario.
 
 ### Escenarios tras la Fase 0 (elegir uno)
@@ -225,6 +364,11 @@ Trade-off **opuesto** al que suponía el plan: tozp permite K>2 en la firma pero
 - **D — Bajar un export mejor:** buscar un export ONNX oficial de `convaiinnovations/laya` con `num_markers`
   simbólico y seq_len dinámica. No existe hoy (el repo tiene `laya.onnx`+`.data` fp32 1.68GB y
   `fp16_onlygpu_unverified/`). Es la única vía para K>6 sin parcheo.
+- **E — killkli Laya multilingüe (VALIDADO en Fase 0, candidato activo):** firma dinámica (K≥2, seq≤1024),
+  ES/EN OK, fp16 WASM OK. Pendiente: bake-off contra heuristic + metaspace fix del tokenizer.
+  Queda pendiente de elegir entre jerárquico (binario) y flat (K=6) según resultados.
+  **→ RESULTADO Fase 2: evaluado y NO supera al baseline en nada relevante** (solo `isSummary`);
+  ver "Fase 2". Escenario E cae en la práctica → efectivamente vigente el escenario B.
 
 
 ---
@@ -234,6 +378,13 @@ Trade-off **opuesto** al que suponía el plan: tozp permite K>2 en la firma pero
 pnpm build
 pnpm lint
 pnpm dev
+
+# Bake-off (harness en /tmp; requiere modelos en ~/model-tests/killkli-laya/)
+cd /tmp/opencode/intent-bakeoff
+node verify.mjs     # Fase 0: contrato ONNX (26 OK)
+node smoke.mjs      # Fase 1: adaptadores + dataset (8 OK)
+node benchmark.mjs flat-q   # Fase 2: configs (flat-q|flat-doc|hier-q|hier-doc) — reanudable
+node metrics.mjs    # Fase 2: reporte → report_fase2.txt
 ```
 
 ---

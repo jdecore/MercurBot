@@ -4,13 +4,66 @@
 Clasificador ONNX para decidir acción (rag/direct/chart) y modo de búsqueda (literal/semantic)
 antes de lanzar el pipeline RAG.
 
-> **Estado: la inferencia ONNX nunca ha corrido con éxito en producción.** Ver `.agents/memory/memory.md`
-> → "Laya Fase 0" para la bitácora completa de la verificación. Este skill describe el contrato
-> verificado del modelo, no un funcionamiento probado.
+> **ESTADO FINAL (26/09): DECIDIDO — NO MIGRAR.** El bake-off completo (Fase 0→2) contra
+> `classifyHeuristic` concluyó que ningún candidato Laya supera al baseline en los campos que
+> importan. `routeIntent()` queda **descartado** como camino de routing: en producción manda el
+> heuristic + defaults (`agentRuntime` → `parseIntentResult(null)`). Números y contexto abajo
+> ("Veredicto del bake-off") y en `.agents/memory/memory.md` → "Fase 2".
 
 ## Archivos clave
 - `src/shared/lib/laya.ts` — modelo ONNX + tokenizer BPE + prompt renderer + heuristic fallback
+  (**el ONNX está inoperante y descartado; el código útil que vive aquí es `classifyHeuristic`**)
 - `src/entities/robot/intentSchema.ts` — schema de preguntas (action, searchMode, needsWeb, isPageRef, isSummary)
+
+---
+
+## Veredicto del bake-off (Fase 0→2, 25–26/09): NO MIGRAR
+
+### Qué se evaluó
+- **Modelo candidato:** `killkli/open-jev-laya-multilingual-onnx` — export ONNX **fp16 (647 MB)** de
+  Laya con encoder **`jhu-clsp/mmBERT-base`** (multilingüe ES/EN, BPE 256k *metaspace*), firma
+  dinámica real: seq ≤1024, K ≥2, `qtype` rank-1. Verificado con 26/27 checks (Fase 0).
+- **Técnica:** *typed questions* — la tarea se escribe como pregunta en natural language con
+  etiquetas-descripción en el prompt (`[CLS] choice question: … [SEP] [MASK] opción: desc … [SEP] state`),
+  un logit por marcador `[MASK]` → softmax → K dinámico. Tipos: `choice` (K opciones), `noul`
+  (afirmación true/false), `score`. Confianza = entropía normalizada `1−H/ln K`, **sin calibrar**
+  (`temperature=1.0`). Se ejecuta en navegador con ONNX Runtime Web (WASM, 4 hilos).
+- **Método:** dataset supervisado **120 queries (60 ES/60 EN)** etiquetadas × 6 sistemas
+  (flat, jerárquico K=2, × 2 formatos de `state` + 2 baselines), exact-match/macro-F1 por campo e
+  idioma, matriz de confusión, calibración con umbral+fallback. Test-only: **`src/` no se tocó**.
+
+### Resultado (overall, acc / macro-F1)
+| sistema | action | searchMode | isSummary | route-exact | latencia |
+|---|---|---|---|---|---|
+| BASE heuristic (classifyHeuristic+defaults) | **58.3/12.3** | **82.9/81.6** | 90.0/47.4 | **30.8%** | 0 |
+| flat · state=query | 35.0/32.9 | 74.3/74.3 | **91.7/78.4** | 16.7% | 2.2 s |
+| flat · state=doc+query | 40.0/31.6 | 65.7/65.7 | 68.3/54.6 | 15.0% | 6.3 s |
+| jerárquico · query | 27.5/25.7 | 74.3/74.3 | 91.7/78.4 | 5.0% | 3.0 s |
+| jerárquico · doc+query | 15.8/11.8 | 65.7/65.7 | 68.3/54.6 | 2.5% | 8.2 s |
+
+### Por qué
+1. **OOD (causa raíz):** Laya se entrenó con *states de conversación* (turnos de diálogo), no con
+   queries sueltas de un asistente de PDF. Confusión flat·query: de 70 gold `rag` → **18 rag / 47 direct**.
+   `agentRuntime` no tiene state rico que pasarle; cambiarlo tocaría el contrato de datos.
+2. El modelo **pierde** en action, searchMode y route-exact; gana solo en `isSummary` (F1 78.4 vs 47.4).
+3. **Híbrido con umbral:** techo 65.4% (action+guards) vs baseline 62.5%… **pero a solo 22% de
+   cobertura** — no justifica 647 MB + 2.2 s/query.
+4. `state=doc+query` empeora guardrails y cuesta 3×; el **árbol jerárquico K=2 es peor que flat**
+   (errores acumulados en cadena). Ambos descartados.
+
+### Si algún día se retoma
+- Única excepción con ganancia clara: **`isSummary`** (evaluar si un regex compensa antes que cargar el modelo).
+- Requiere: state rico (historial de turnos), re-tuneo de criterios, y los fixes del adaptador:
+  **E1** tokenizer metaspace (el `bpeEncode` de `laya.ts` produce ids corruptos para BPE metaspace),
+  **E2** `qtype` dims `[n]` (hoy `[n,1]` → `routeIntent` siempre lanza),
+  **E3** CLS=`bos_token_id`, **E5** `marker_pos` fuera de rango congela el runtime.
+- Artefactos (harness, fuera del repo): `/tmp/opencode/intent-bakeoff/` —
+  `verify.mjs` (contrato ONNX), `smoke.mjs` (adaptador), `benchmark.mjs` + `metrics.mjs` →
+  `report_fase2.txt`, `results_fase2.json`, `hier.mjs`, `dataset.mjs`, `layaML.mjs`.
+  Modelo en `~/model-tests/killkli-laya/`.
+
+---
+
 
 ## Contrato verificado del modelo (Fase 0, 25/09)
 
@@ -43,15 +96,18 @@ Comparación de los dos exports disponibles, leída del protobuf ONNX:
 5. `ort.env.wasm.numThreads = 1` → 6 s por llamada de 4 preguntas. Con 4 hilos: 1.9 s.
 6. `parseIntentResult(null)` fuerza `action:'rag'` y `searchMode:'semantic'`, anulando el heuristic.
 
-## Laya es English-only y evalúa un STATE, no una QUERY
-Las preguntas tipo `noul` formadas como "afirmación vs estado". Pasar la query del usuario como
-`state` es un **mismatch de tarea** y es la causa de que `isPageRef` nunca dispare y `searchMode`
-acierte ~25%. `isSummary` sí funciona con el phrasing largo y descriptivo actual.
+## Evalúa un STATE, no una QUERY (confirmado a escala en Fase 2)
+Las preguntas tipo `noul` están formadas como "afirmación vs estado". Pasar la query del usuario
+como `state` es un **mismatch de tarea**: en el bake-off de 120, `state=query` produjo 47/70 `rag`
+clasificados como `direct`. `state=doc+query` lo empeoró (guardrails y latencia). El modelo original
+(`tozp`) además es **English-only**; `killkli` es multilingüe (ES/EN ok), pero el mismatch de state
+persiste — por eso el veredicto es NO MIGRAR.
 
-## Cómo probarlo
+## Cómo probarlo (histórico — hoy descartado)
 1. `pnpm dev` → DevTools → `__merucbot.testFlow({ laya: true })` (F3 descarga, F5 routeIntent).
 2. En la consola, revisar que `routeIntent` NO devuelve `null` y que los logits no están en ~[0.5, 0.5].
-3. Si devuelve `null` → fallback heuristic; el bug sigue presente.
+3. Si devuelve `null` → fallback heuristic; el bug sigue presente (E2: `qtype` rank-2, siempre lanza).
+4. **Preferido:** vía offline sin navegador, ver "Test offline" y el harness del bake-off abajo.
 
 ## Test offline (sin navegador)
 En `/tmp/opencode/laya-verify/` con `onnxruntime-web` (build node: `dist/ort.node.min.js`),

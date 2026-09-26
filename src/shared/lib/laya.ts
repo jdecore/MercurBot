@@ -8,6 +8,14 @@
  * The heuristic runs first; if Laya is downloaded and loaded, it overrides.
  *
  * Ported from laya-ts (https://github.com/NandhaKishorM/laya/tree/main/laya-ts).
+ *
+ * ── ESTADO (26/09): la ruta ONNX (routeIntent/ensureLayaLoaded) está DESCARTADA ──
+ * Bake-off Fase 0→2 contra classifyHeuristic (120 queries ES/EN): ningún candidato Laya
+ * supera al baseline (action 35% vs 58%, searchMode 74.3% vs 82.9%, route 16.7% vs 30.8%);
+ * causa raíz: el modelo evalúa states de conversación, no queries sueltas (OOD).
+ * Además routeIntent fallaría siempre con el candidato killkli (`qtype` dims [n,1], rank-2).
+ * El código activo de este módulo es `classifyHeuristic`. Veredicto y números:
+ * `.agents/skills/laya.md` → "Veredicto del bake-off".
  */
 
 export type QueryClass = 'literal' | 'semantic'
