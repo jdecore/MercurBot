@@ -1,0 +1,105 @@
+════════ FASE 2 — BAKE-OFF RESULTADOS ════════
+dataset: 120 (60 ES/60 EN) · searchMode se puntúa sobre action=rag (n=70)
+
+── Exact-match / macro-F1 (overall) ──
+config                 action      searchMode  needsWeb    isPageRef   isSummary   route     ms
+BASE heuristic         58.3%/12.3% 82.9%/81.6% 90.0%/47.4% 86.7%/46.4% 90.0%/47.4% 30.8%     -
+BASE defaults (hoy)    58.3%/12.3% 54.3%/35.2% 90.0%/47.4% 86.7%/46.4% 90.0%/47.4% 21.7%     -
+flat · state=query     35.0%/32.9% 74.3%/74.3% 87.5%/46.7% 86.7%/46.4% 91.7%/78.4% 16.7%     2161
+flat · state=doc+query 40.0%/31.6% 65.7%/65.7% 63.3%/42.7% 56.7%/47.6% 68.3%/54.6% 15.0%     6301
+hier · state=query     27.5%/25.7% 74.3%/74.3% 87.5%/46.7% 86.7%/46.4% 91.7%/78.4% 5.0%      3004
+hier · state=doc+query 15.8%/11.8% 65.7%/65.7% 63.3%/42.7% 56.7%/47.6% 68.3%/54.6% 2.5%      8157
+
+── ES ──
+config                 action      searchMode  needsWeb    isPageRef   isSummary   route     ms
+BASE heuristic         58.3%/12.3% 82.9%/81.6% 90.0%/47.4% 86.7%/46.4% 90.0%/47.4% 30.0%     -
+BASE defaults (hoy)    58.3%/12.3% 54.3%/35.2% 90.0%/47.4% 86.7%/46.4% 90.0%/47.4% 21.7%     -
+flat · state=query     38.3%/36.3% 80.0%/80.0% 85.0%/45.9% 86.7%/46.4% 91.7%/75.0% 21.7%     1962
+flat · state=doc+query 41.7%/28.6% 60.0%/58.3% 63.3%/42.7% 60.0%/48.9% 68.3%/54.6% 16.7%     6872
+hier · state=query     28.3%/25.4% 80.0%/80.0% 85.0%/45.9% 86.7%/46.4% 91.7%/75.0% 8.3%      3028
+hier · state=doc+query 15.0%/10.7% 60.0%/58.3% 63.3%/42.7% 60.0%/48.9% 68.3%/54.6% 0.0%      8817
+
+── EN ──
+config                 action      searchMode  needsWeb    isPageRef   isSummary   route     ms
+BASE heuristic         58.3%/12.3% 82.9%/81.6% 90.0%/47.4% 86.7%/46.4% 90.0%/47.4% 31.7%     -
+BASE defaults (hoy)    58.3%/12.3% 54.3%/35.2% 90.0%/47.4% 86.7%/46.4% 90.0%/47.4% 21.7%     -
+flat · state=query     31.7%/30.0% 68.6%/68.5% 90.0%/47.4% 86.7%/46.4% 91.7%/81.0% 11.7%     2360
+flat · state=doc+query 38.3%/33.3% 71.4%/69.4% 63.3%/42.7% 53.3%/46.1% 68.3%/54.6% 13.3%     5730
+hier · state=query     26.7%/26.4% 68.6%/68.5% 90.0%/47.4% 86.7%/46.4% 91.7%/81.0% 1.7%      2980
+hier · state=doc+query 16.7%/13.7% 71.4%/69.4% 63.3%/42.7% 53.3%/46.1% 68.3%/54.6% 5.0%      7497
+
+── action: F1 por clase (overall) ──
+BASE heuristic         agent=0 chart=0 direct=0 mcp=0 rag=0.737 web_search=0
+flat · state=query     agent=0 chart=0.957 direct=0.233 mcp=0.267 rag=0.396 web_search=0.125
+flat · state=doc+query agent=0.182 chart=0.588 direct=0.326 mcp=0 rag=0.536 web_search=0.267
+hier · state=query     agent=0.4 chart=0 direct=0.439 mcp=0.2 rag=0.205 web_search=0.3
+hier · state=doc+query agent=0.148 chart=0.128 direct=0.328 mcp=0 rag=0.107 web_search=0
+
+── action: matriz de confusión (filas=gold, cols=pred) ──
+BASE heuristic
+            rag direct  chart web_se    mcp  agent
+rag          70      0      0      0      0      0
+direct       10      0      0      0      0      0
+chart        12      0      0      0      0      0
+web_search     12      0      0      0      0      0
+mcp           8      0      0      0      0      0
+agent         8      0      0      0      0      0
+flat · state=query
+            rag direct  chart web_se    mcp  agent
+rag          18     47      0      1      4      0
+direct        0     10      0      0      0      0
+chart         0      1     11      0      0      0
+web_search      2      8      0      1      1      0
+mcp           0      3      0      2      2      1
+agent         1      7      0      0      0      0
+flat · state=doc+query
+            rag direct  chart web_se    mcp  agent
+rag          30     15      0      0      1     24
+direct        0      7      0      0      0      3
+chart         6      0      5      1      0      0
+web_search      4      5      0      2      0      1
+mcp           1      3      0      0      0      4
+agent         1      3      0      0      0      4
+hier · state=query
+            rag direct  chart web_se    mcp  agent
+rag           8     18      3     17     10     14
+direct        0      9      0      0      0      1
+chart         0      1      0      1      8      2
+web_search      0      3      0      6      1      2
+mcp           0      0      0      4      3      1
+agent         0      0      1      0      0      7
+hier · state=doc+query
+            rag direct  chart web_se    mcp  agent
+rag           4     20     28      6      2     10
+direct        0     10      0      0      0      0
+chart         0      6      3      0      0      3
+web_search      1      9      1      0      0      1
+mcp           0      4      0      1      0      3
+agent         0      2      3      1      0      2
+
+── Calibración: hybrid = modelo si conf ≥ t, si no baseline (searchMode=heuristic, resto defaults) ──
+BASE-heuristic         mejor hybrid: metric=ce t=0 → acc(action+guards)=62.5% (coverage=0.0%) · sin fallback (t=0)=62.5%
+    ce: t0:62.5% t0.1:62.5% t0.2:62.5% t0.3:62.5% t0.4:62.5% t0.5:62.5% t0.6:62.5% t0.7:62.5% t0.8:62.5% t0.9:62.5%
+    cm: t0:62.5% t0.1:62.5% t0.2:62.5% t0.3:62.5% t0.4:62.5% t0.5:62.5% t0.6:62.5% t0.7:62.5% t0.8:62.5% t0.9:62.5%
+flat · state=query     mejor hybrid: metric=cm t=0.9 → acc(action+guards)=64.6% (coverage=22.9%) · sin fallback (t=0)=50.8%
+    ce: t0:50.8% t0.1:50.4% t0.2:50.8% t0.3:54.2% t0.4:54.6% t0.5:58.8% t0.6:61.3% t0.7:63.7% t0.8:64.2% t0.9:64.2%
+    cm: t0:50.8% t0.1:50.8% t0.2:50.8% t0.3:50.8% t0.4:51.7% t0.5:53.3% t0.6:56.3% t0.7:58.3% t0.8:61.3% t0.9:64.6%
+flat · state=doc+query mejor hybrid: metric=ce t=0.9 → acc(action+guards)=63.3% (coverage=10.0%) · sin fallback (t=0)=38.8%
+    ce: t0:38.8% t0.1:46.3% t0.2:47.5% t0.3:47.5% t0.4:49.2% t0.5:52.9% t0.6:58.3% t0.7:59.2% t0.8:61.3% t0.9:63.3%
+    cm: t0:38.8% t0.1:38.8% t0.2:38.8% t0.3:38.8% t0.4:39.2% t0.5:39.6% t0.6:46.3% t0.7:53.8% t0.8:55.0% t0.9:58.3%
+hier · state=query     mejor hybrid: metric=ce t=0.5 → acc(action+guards)=65.4% (coverage=22.1%) · sin fallback (t=0)=47.1%
+    ce: t0:47.1% t0.1:56.3% t0.2:60.0% t0.3:61.7% t0.4:62.5% t0.5:65.4% t0.6:65.4% t0.7:65.0% t0.8:64.2% t0.9:63.7%
+    cm: t0:47.1% t0.1:47.1% t0.2:47.1% t0.3:47.1% t0.4:47.1% t0.5:47.1% t0.6:54.6% t0.7:57.1% t0.8:61.7% t0.9:65.0%
+hier · state=doc+query mejor hybrid: metric=ce t=0.9 → acc(action+guards)=63.3% (coverage=11.7%) · sin fallback (t=0)=26.7%
+    ce: t0:26.7% t0.1:38.8% t0.2:42.9% t0.3:45.4% t0.4:47.9% t0.5:50.8% t0.6:53.3% t0.7:58.3% t0.8:61.3% t0.9:63.3%
+    cm: t0:26.7% t0.1:26.7% t0.2:26.7% t0.3:26.7% t0.4:26.7% t0.5:26.7% t0.6:33.8% t0.7:39.6% t0.8:44.2% t0.9:52.1%
+
+── Calibración searchMode (subset rag, fallback=classifyHeuristic) ──
+flat · state=query     mejor ce t=0.4: 82.9% | baseline heuristic=82.9%
+    ce: t0.0:74.3% t0.1:78.6% t0.2:77.1% t0.3:81.4% t0.4:82.9% t0.5:82.9% t0.6:82.9% t0.7:81.4% t0.8:82.9% t0.9:82.9%
+flat · state=doc+query mejor ce t=0.7999999999999999: 82.9% | baseline heuristic=82.9%
+    ce: t0.0:65.7% t0.1:71.4% t0.2:77.1% t0.3:78.6% t0.4:80.0% t0.5:80.0% t0.6:80.0% t0.7:80.0% t0.8:82.9% t0.9:82.9%
+hier · state=query     mejor ce t=0.4: 82.9% | baseline heuristic=82.9%
+    ce: t0.0:74.3% t0.1:78.6% t0.2:77.1% t0.3:81.4% t0.4:82.9% t0.5:82.9% t0.6:82.9% t0.7:81.4% t0.8:82.9% t0.9:82.9%
+hier · state=doc+query mejor ce t=0.7999999999999999: 82.9% | baseline heuristic=82.9%
+    ce: t0.0:65.7% t0.1:71.4% t0.2:77.1% t0.3:78.6% t0.4:80.0% t0.5:80.0% t0.6:80.0% t0.7:80.0% t0.8:82.9% t0.9:82.9%

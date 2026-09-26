@@ -1,16 +1,16 @@
 /**
- * Agent Runtime — Laya-driven orchestration for MercurBot.
+ * Agent Runtime — intent-driven orchestration for MercurBot.
  *
  * Responsibilities:
- *  - Call Laya routeIntent() to classify the user query.
+ *  - Classify the user query with classifyIntent() (rule-based, instant).
  *  - Execute the chosen action/tool pipeline via the tool registry.
  *  - Return a structured result for the UI to render.
  *
- * The LLM is only used for text generation; Laya decides actions.
+ * The LLM is only used for text generation; the rule-based intent decides actions.
  */
 
-import { routeIntent } from './laya'
-import { INTENT_SCHEMA, parseIntentResult } from '../../entities/robot/intentSchema'
+import { classifyIntent } from './laya'
+import type { IntentResult } from '../../entities/robot/intentSchema'
 import { selectChartFullPages } from './chartFull'
 import { getTool, type ToolResult } from './tools'
 
@@ -63,10 +63,9 @@ export async function executeAgent(query: string, ctx: AgentContext = {}): Promi
   const steps: AgentStep[] = []
   const displayChain: string[] = []
 
-  let intent
+  let intent: IntentResult
   try {
-    const raw = await routeIntent(query, INTENT_SCHEMA)
-    intent = parseIntentResult(raw)
+    intent = classifyIntent(query)
   } catch {
     intent = { action: 'rag', searchMode: 'semantic', actionConfidence: 0, searchModeConfidence: 0, needsWeb: false, needsWebConfidence: 0, isPageRef: false, isPageRefConfidence: 0, isSummary: false, isSummaryConfidence: 0 }
   }
@@ -138,10 +137,9 @@ export async function executeAgent(query: string, ctx: AgentContext = {}): Promi
       const agentDisplayChain: string[] = []
 
       for (let i = 0; i < maxSteps; i++) {
-        let stepIntent
+        let stepIntent: IntentResult
         try {
-          const raw = await routeIntent(currentQuery, INTENT_SCHEMA)
-          stepIntent = parseIntentResult(raw)
+          stepIntent = classifyIntent(currentQuery)
         } catch {
           stepIntent = { action: 'rag' as const, searchMode: 'semantic' as const, actionConfidence: 0, searchModeConfidence: 0, needsWeb: false, needsWebConfidence: 0, isPageRef: false, isPageRefConfidence: 0, isSummary: false, isSummaryConfidence: 0 }
         }

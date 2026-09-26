@@ -7,7 +7,7 @@ Pipeline de búsqueda híbrida (léxico + vectorial) con fallback automático.
 - `src/features/rag/ragPipeline.ts` — orquestación del pipeline
 - `src/entities/rag/worker.ts` — worker Web con MiniSearch + Transformers
 - `src/shared/lib/ragClient.ts` — cliente singleton que envuelve el worker
-- `src/shared/lib/preload.ts` — prewarm de embeddings + Laya
+- `src/shared/lib/preload.ts` — prewarm de embeddings (la ruta Laya ONNX se eliminó en Fase 3)
 
 ## Cómo probarlo
 1. Cargar un PDF en la app

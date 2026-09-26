@@ -1,18 +1,14 @@
 /**
- * Pre-warm: parallel model downloads at app startup.
- * Embeddings (23MB) + Laya (424MB) run in background.
- * Heuristic classifier works instantly while Laya downloads.
+ * Pre-warm: embeddings model download at app startup.
+ * Intent classification is rule-based (laya.ts) — no model download needed.
+ * Also performs one-time cleanup of the legacy Laya ONNX OPFS cache (~424MB).
  */
-import { isLayaCached, downloadLayaModel, loadLayaSession, isLayaReady } from './laya'
+import { clearLegacyLayaCache } from './laya'
 
 let embeddingsReady = false
-let layaReady = false
 let prewarmStarted = false
 let embeddingsProgress = 0
 let embeddingsMessage = ''
-let layaError: string | null = null
-let layaProgress = 0
-let layaMessage = ''
 const listeners = new Set<() => void>()
 
 export function onPrewarmProgress(cb: () => void): () => void {
@@ -25,12 +21,8 @@ function notify() { for (const cb of listeners) cb() }
 export function getPrewarmState() {
   return {
     embeddingsReady,
-    layaReady,
     embeddingsProgress,
     embeddingsMessage,
-    layaError,
-    layaProgress,
-    layaMessage,
   }
 }
 
@@ -39,50 +31,17 @@ export function isPrewarmStarted(): boolean {
 }
 
 /**
- * Start sequential pre-warm: embeddings first, then Laya.
+ * Start pre-warm: embeddings model + legacy cache cleanup.
  * Safe to call multiple times (idempotent).
  */
 export async function prewarmModels(): Promise<void> {
   if (prewarmStarted) return
   prewarmStarted = true
 
-  await prewarmEmbeddings()
+  // Remove the discarded Laya ONNX model from older versions (best-effort).
+  void clearLegacyLayaCache()
 
-  try {
-    const cached = await isLayaCached()
-    if (cached) {
-      try {
-        await loadLayaSession()
-        layaReady = isLayaReady()
-        layaError = layaReady ? null : 'Self-test failed'
-        notify()
-        if (layaReady) return
-      } catch (loadErr) {
-        // Cache exists but files are corrupted/incomplete — re-download
-        console.warn('[Prewarm] Laya cache corrupted, re-downloading:', loadErr)
-        layaMessage = 'Cache corrupto, re-descargando modelo...'
-        notify()
-      }
-    }
-    await downloadLayaModel((phase, pct) => {
-      if (phase === 'model') {
-        layaProgress = pct
-        layaMessage = pct < 100 ? `Descargando modelo Laya (${pct}%)...` : 'Modelo Laya descargado.'
-        notify()
-      } else if (phase === 'tokenizer') {
-        layaMessage = pct < 100 ? `Descargando tokenizer (${pct}%)...` : 'Tokenizer descargado.'
-        notify()
-      }
-    })
-    await loadLayaSession()
-    layaReady = isLayaReady()
-    layaError = layaReady ? null : 'Self-test failed'
-    notify()
-  } catch (err) {
-    layaError = err instanceof Error ? err.message : String(err)
-    console.warn('[Prewarm] Laya download failed, using heuristic fallback.', err)
-    notify()
-  }
+  await prewarmEmbeddings()
 }
 
 /**

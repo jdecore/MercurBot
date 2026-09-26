@@ -13,12 +13,8 @@ export interface DebugState {
   enabled: boolean
   prewarm: {
     embeddingsReady: boolean
-    layaReady: boolean
     embeddingsProgress: number
     embeddingsMessage: string
-    layaError: string | null
-    layaProgress: number
-    layaMessage: string
   }
   engine: {
     mode: 'hybrid' | 'lexical' | null
@@ -38,12 +34,8 @@ const STATE: DebugState = {
   enabled: false,
   prewarm: {
     embeddingsReady: false,
-    layaReady: false,
     embeddingsProgress: 0,
     embeddingsMessage: '',
-    layaError: null,
-    layaProgress: 0,
-    layaMessage: '',
   },
   engine: {
     mode: null,
@@ -127,12 +119,8 @@ function registerConsoleCommands(): void {
     console.log('Enabled:', s.enabled)
     console.log('Prewarm:', {
       embeddings: s.prewarm.embeddingsReady ? '✅' : '⏳',
-      laya: s.prewarm.layaReady ? '✅' : '⏳',
       embeddingsProgress: `${s.prewarm.embeddingsProgress}%`,
       message: s.prewarm.embeddingsMessage || '-',
-      layaError: s.prewarm.layaError || 'none',
-      layaProgress: `${s.prewarm.layaProgress}%`,
-      layaMessage: s.prewarm.layaMessage || '-',
     })
     console.log('Engine:', {
       mode: s.engine.mode ?? 'unknown',
@@ -165,18 +153,17 @@ function registerConsoleCommands(): void {
 
 /* -------------------------------------------------------------------------- */
 /*  __merucbot.testFlow() — console-only integration test                     */
-/*  Verifies: prewarm (embeddings) → classifyQuery (Laya/heuristic) → RAG     */
+/*  Verifies: prewarm (embeddings) → classifyQuery/classifyIntent (rules) → RAG */
 /*  Usage:  __merucbot.toggle()  then  __merucbot.testFlow()                  */
-/*  Options:  __merucbot.testFlow({ laya: true, timeout: 120 })               */
-/*  - laya:    download the 424MB Laya model (default: false)                  */
+/*  Options:  __merucbot.testFlow({ timeout: 120 })                           */
 /*  - timeout: max seconds to wait for embeddings (default: 120)               */
 /* -------------------------------------------------------------------------- */
 
 function registerTestFlow(): void {
   const global = typeof window !== 'undefined' ? (window as any) : globalThis
 
-  global.__merucbot.testFlow = async (opts?: { laya?: boolean; timeout?: number }) => {
-    const { laya: testLaya = false, timeout = 120 } = opts ?? {}
+  global.__merucbot.testFlow = async (opts?: { timeout?: number }) => {
+    const { timeout = 120 } = opts ?? {}
     const t0 = Date.now()
     const elapsed = () => `${((Date.now() - t0) / 1000).toFixed(1)}s`
 
@@ -195,7 +182,6 @@ function registerTestFlow(): void {
     const before = getPrewarmState()
     info(`prewarmStarted: ${isPrewarmStarted()}`)
     info(`embeddings: ${before.embeddingsReady ? '✅ ready' : '⏳ not ready'} (${before.embeddingsProgress}%)`)
-    info(`laya: ${before.layaReady ? '✅ ready' : '⏳ not ready'} layaError: ${before.layaError || 'none'}`)
 
     /* ---- F1: embeddings prewarm ------------------------------------------- */
     hdr(`F1 — Embeddings prewarm (${elapsed()})`)
@@ -240,12 +226,11 @@ function registerTestFlow(): void {
         results.embeddings = 'PASS'
       } else {
         fail(`Embeddings NO listo tras ${timeout}s (progress: ${final.embeddingsProgress}%)`)
-        if (final.layaError) fail(`Error: ${final.layaError}`)
         results.embeddings = 'FAIL'
       }
     }
 
-    /* ---- F2: classifyQuery (heuristic, instant) --------------------------- */
+    /* ---- F2: classifyQuery (searchMode rules, instant) --------------------- */
     hdr(`F2 — classifyQuery (${elapsed()})`)
     const { classifyQuery } = await import('./laya')
     const testQueries = [
@@ -255,7 +240,7 @@ function registerTestFlow(): void {
     let classifyOk = true
     for (const { q, expect: exp } of testQueries) {
       const t = Date.now()
-      const result = await classifyQuery(q)
+      const result = classifyQuery(q)
       const ms = Date.now() - t
       const pass = result.class === exp
       if (pass) {
@@ -267,44 +252,8 @@ function registerTestFlow(): void {
     }
     results.classify = classifyOk ? 'PASS' : 'FAIL'
 
-    /* ---- F3: Laya (optional, 424MB download) ------------------------------ */
-    if (testLaya) {
-      hdr(`F3 — Laya ONNX download (${elapsed()})`)
-      const { isLayaCached, downloadLayaModel, loadLayaSession } = await import('./laya')
-      const cached = await isLayaCached()
-      info(`cached: ${cached}`)
-      try {
-        const t = Date.now()
-        if (!cached) {
-          info('Descargando ~424MB — esto tarda minutos...')
-          await downloadLayaModel((phase, pct) => {
-            if (phase === 'model' && pct % 10 === 0) info(`  download: ${pct}%`)
-          })
-        }
-        await loadLayaSession()
-        ok(`Laya listo en ${((Date.now() - t) / 1000).toFixed(1)}s`)
-
-        // Verify it's actually working
-        const r = await classifyQuery('artículo 3')
-        if (r.method === 'laya') {
-          ok(`classifyQuery usa Laya (class: ${r.class}, conf: ${r.confidence.toFixed(3)})`)
-          results.laya = 'PASS'
-        } else {
-          warn('classifyQuery cayó a heuristic — Laya cargó pero falló la inferencia')
-          results.laya = 'PARTIAL'
-        }
-      } catch (err) {
-        fail(`Laya falló: ${err instanceof Error ? err.message : err}`)
-        results.laya = 'FAIL'
-      }
-    } else {
-      hdr(`F3 — Laya (${elapsed()})`)
-      info('Saltado (usa __merucbot.testFlow({laya:true}) para probar)')
-      results.laya = 'SKIP'
-    }
-
-    /* ---- F4: RAG state (if indexed) --------------------------------------- */
-    hdr(`F4 — RAG state (${elapsed()})`)
+    /* ---- F3: RAG state (if indexed) --------------------------------------- */
+    hdr(`F3 — RAG state (${elapsed()})`)
     const ragState = ragClient.getState()
     if (ragState.isIndexing) {
       info(`Indexando... (${ragState.chunkCount} chunks, mode: ${ragState.mode})`)
@@ -338,56 +287,42 @@ function registerTestFlow(): void {
       results.rag = 'NO_INDEX'
     }
 
-    /* ---- F5: routeIntent (Laya choice routing) ----------------------------- */
-    hdr(`F5 — routeIntent (${elapsed()})`)
-    const { routeIntent: ri, isLayaReady: ilr } = await import('./laya')
-    const { INTENT_SCHEMA } = await import('../../entities/robot/intentSchema')
-    info(`isLayaReady: ${ilr()}`)
+    /* ---- F4: classifyIntent (rule-based intent routing) -------------------- */
+    hdr(`F4 — classifyIntent (${elapsed()})`)
+    const { classifyIntent } = await import('./laya')
     const intentTests = [
       { q: '¿en qué página está el artículo 3?', expectAction: 'rag', expectSearch: 'literal', expectPageRef: true },
-      { q: 'hola, ¿cómo estás?', expectAction: 'direct', expectSearch: undefined, expectPageRef: false },
-      { q: 'resume este documento', expectAction: 'rag', expectSearch: 'semantic', expectPageRef: false },
-      { q: '¿cuál es la capital de Francia?', expectAction: 'direct', expectSearch: undefined, expectPageRef: false, expectWeb: true },
+      { q: 'hola, ¿cómo estás?', expectAction: 'direct', expectPageRef: false },
+      { q: 'resume este documento', expectAction: 'rag', expectSearch: 'semantic', expectSummary: true },
+      { q: 'haz un gráfico de las ventas', expectAction: 'chart' },
+      { q: '¿qué noticias hay hoy?', expectAction: 'web_search', expectWeb: true },
     ]
     let intentOk = true
-    let layaAvailable = false
-    for (const { q, expectAction, expectSearch, expectPageRef, expectWeb } of intentTests) {
+    for (const { q, expectAction, expectSearch, expectPageRef, expectSummary, expectWeb } of intentTests) {
       const t = Date.now()
-      const result = await ri(q, INTENT_SCHEMA)
+      const r = classifyIntent(q)
       const ms = Date.now() - t
-      if (result) {
-        layaAvailable = true
-        const action = result.action?.choice ?? '?'
-        const search = result.searchMode?.choice ?? '?'
-        const actionConf = result.action?.confidence ?? 0
-        const searchConf = result.searchMode?.confidence ?? 0
-        const pageRef = (result.isPageRef?.noul ?? 0) >= 0.5
-        const needsWeb = (result.needsWeb?.noul ?? 0) >= 0.5
-        const pass = action === expectAction
-          && (expectSearch === undefined || search === expectSearch)
-          && (expectPageRef === undefined || pageRef === expectPageRef)
-          && (expectWeb === undefined || needsWeb === expectWeb)
-        if (pass) {
-          ok(`"${q.slice(0, 30)}…" → action=${action}(${actionConf.toFixed(2)}), search=${search}(${searchConf.toFixed(2)}), pageRef=${pageRef}, web=${needsWeb} [${ms}ms]`)
-        } else {
-          fail(`"${q.slice(0, 30)}…" → action=${action}(${actionConf.toFixed(2)}), search=${search}(${searchConf.toFixed(2)}), pageRef=${pageRef}, web=${needsWeb} (esperaba ${expectAction}/${expectSearch ?? '?'}/${expectPageRef ?? '?'}/${expectWeb ?? '?'}) [${ms}ms]`)
-          intentOk = false
-        }
+      const pass = r.action === expectAction
+        && (expectSearch === undefined || r.searchMode === expectSearch)
+        && (expectPageRef === undefined || r.isPageRef === expectPageRef)
+        && (expectSummary === undefined || r.isSummary === expectSummary)
+        && (expectWeb === undefined || r.needsWeb === expectWeb)
+      if (pass) {
+        ok(`"${q.slice(0, 30)}…" → action=${r.action}(${r.actionConfidence.toFixed(2)}), search=${r.searchMode}(${r.searchModeConfidence.toFixed(2)}), pageRef=${r.isPageRef}, summary=${r.isSummary}, web=${r.needsWeb} [${ms}ms]`)
       } else {
-        warn(`"${q.slice(0, 30)}…" → Laya no disponible o baja confianza [${ms}ms]`)
-        info(`  esperaba: action=${expectAction}, search=${expectSearch ?? '?'}, pageRef=${expectPageRef ?? '?'}, web=${expectWeb ?? '?'}`)
+        fail(`"${q.slice(0, 30)}…" → action=${r.action}, search=${r.searchMode}, pageRef=${r.isPageRef}, summary=${r.isSummary}, web=${r.needsWeb} (esperaba ${expectAction}/${expectSearch ?? '?'}/${expectPageRef ?? '?'}/${expectSummary ?? '?'}/${expectWeb ?? '?'}) [${ms}ms]`)
+        intentOk = false
       }
     }
-    results.routeIntent = layaAvailable ? (intentOk ? 'PASS' : 'PARTIAL') : 'SKIP (sin Laya)'
+    results.intent = intentOk ? 'PASS' : 'FAIL'
 
     /* ---- Veredicto final -------------------------------------------------- */
     hdr(`VEREDICTO (${elapsed()})`)
     console.table({
       embeddings: results.embeddings || (before.embeddingsReady ? 'PASS (ya listo)' : '?'),
       classify: results.classify || '?',
-      laya: results.laya || '?',
       rag: results.rag || '?',
-      routeIntent: results.routeIntent || '?',
+      intent: results.intent || '?',
     })
     const allPass = Object.values(results).every((v) => v === 'PASS' || v === 'SKIP' || v?.toString().startsWith('SKIP'))
     if (allPass) {

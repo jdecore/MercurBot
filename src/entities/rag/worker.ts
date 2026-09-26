@@ -328,7 +328,7 @@ async function handleSearch({ query, topK = 3, searchMode }: WorkerSearchPayload
     return
   }
 
-  // Use searchMode hint from app-level routing (routeIntent) when available.
+  // Use searchMode hint from app-level routing (classifyIntent) when available.
   // Falls back to classifyHeuristic for backward compatibility.
   const queryClass: QueryClass = searchMode === 'literal' ? 'literal'
     : searchMode === 'semantic' ? 'semantic'

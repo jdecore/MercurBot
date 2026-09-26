@@ -74,9 +74,10 @@ Esta carpeta es la **fuente de verdad operativa** del proyecto. Cualquier agente
 │   ├── rag.md        # Cómo funciona el pipeline RAG
 │   ├── voice.md      # VoiceSession hook, barge-in, volume meter
 │   ├── embeddings.md # Modelo embeddings, descarga, OPFS cache
-│   ├── laya.md       # Clasificador ONNX, heuristic fallback
+│   ├── laya.md       # Clasificador de intents por reglas (ex-Laya ONNX, descartada)
 │   ├── deployment.md # Vercel deploy, CSP, COEP, permissions
 │   └── debug.md      # Debugger oculto, __merucbot.check()
+├── bakeoff/          # Harness offline del bake-off de intents (dataset 120, reportes, verify-port)
 └── memory/
     └── memory.md     # Bitácora de estado y aprendizajes
 ```

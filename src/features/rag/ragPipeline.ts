@@ -66,7 +66,7 @@ function normalizeHit(h: RagSearchResultItem): RagPipelineHit {
  *   está listo, o léxico Top3 directo cuando está en `lexical_only`.
  *   El watchdog interno del cliente conmuta a MiniSearch local si el worker
  *   tarda demasiado (fallback).
- *   El searchMode hint (opcional) viene de routeIntent() y evita re-clasificar
+ *   El searchMode hint (opcional) viene de classifyIntent() y evita re-clasificar
  *   en el worker.
  * - Sin chunks: retorna lista vacía (el chat cae a contexto tabular/general).
  */

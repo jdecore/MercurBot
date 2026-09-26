@@ -38,10 +38,7 @@ export function EngineStatus({ compact = false }: { compact?: boolean }) {
 
   if (!pdfDoc) {
     // Show pre-warm status when no document is loaded
-    if (!prewarm.embeddingsReady || !prewarm.layaReady) {
-      const parts: string[] = []
-      if (!prewarm.embeddingsReady) parts.push('embeddings')
-      if (!prewarm.layaReady) parts.push('Laya')
+    if (!prewarm.embeddingsReady) {
       if (compact) {
         return (
           <span className="engine-status compact" title={t.esIdleTitle} aria-label={t.esIdleCompact} role="status">

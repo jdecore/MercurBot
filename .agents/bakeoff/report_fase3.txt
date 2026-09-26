@@ -1,0 +1,33 @@
+dataset sanity: OK
+
+── action ──
+baseline  all  acc=58.3% macroF1=12.3%
+baseline  es   acc=58.3% macroF1=12.3%
+baseline  en   acc=58.3% macroF1=12.3%
+rules     all  acc=100.0% macroF1=100.0%
+rules     es   acc=100.0% macroF1=100.0%
+rules     en   acc=100.0% macroF1=100.0%
+
+matriz confusión REGLAS (filas=gold):
+            rag direct  chart web_se    mcp  agent
+rag          70      0      0      0      0      0
+direct        0     10      0      0      0      0
+chart         0      0     12      0      0      0
+web_search      0      0      0     12      0      0
+mcp           0      0      0      0      8      0
+agent         0      0      0      0      0      8
+
+action errors (0):
+
+── guardrails (rules vs baseline-always-false) ──
+needsWeb   baseline acc=90.0% f1=47.4% | rules acc=100.0% f1=100.0%
+isPageRef  baseline acc=86.7% f1=46.4% | rules acc=100.0% f1=100.0%
+isSummary  baseline acc=90.0% f1=47.4% | rules acc=100.0% f1=100.0%
+
+── searchMode (subset action=rag, n=70) ──
+heuristic acc=100.0% macroF1=100.0%
+errores heuristic (0):
+
+── route-exact (los 5 campos) ──
+baseline=35.0% | rules=100.0%
+(referencia flat-q del bake-off=16.7%)

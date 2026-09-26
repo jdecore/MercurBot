@@ -4,8 +4,7 @@
 Modelo de embeddings en WASM para búsqueda vectorial en el browser.
 
 ## Archivos clave
-- `src/shared/lib/laya.ts` — descarga y carga del modelo ONNX
-- `src/shared/lib/preload.ts` — prewarm en background al startup
+- `src/shared/lib/preload.ts` — prewarm en background al startup (solo embeddings)
 - `src/entities/rag/worker.ts` — inferencia de embeddings en el worker
 
 ## Cómo probarlo

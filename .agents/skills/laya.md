@@ -1,19 +1,55 @@
 # Laya Skill
 
 ## Propósito
-Clasificador ONNX para decidir acción (rag/direct/chart) y modo de búsqueda (literal/semantic)
-antes de lanzar el pipeline RAG.
+Clasificador de intenciones para decidir acción (`rag/direct/chart/web_search/mcp/agent`) y modo
+de búsqueda (`literal/semantic`) antes de lanzar el pipeline RAG. **Hoy: 100% reglas (regex,
+0ms, sin modelo).**
 
-> **ESTADO FINAL (26/09): DECIDIDO — NO MIGRAR.** El bake-off completo (Fase 0→2) contra
-> `classifyHeuristic` concluyó que ningún candidato Laya supera al baseline en los campos que
-> importan. `routeIntent()` queda **descartado** como camino de routing: en producción manda el
-> heuristic + defaults (`agentRuntime` → `parseIntentResult(null)`). Números y contexto abajo
-> ("Veredicto del bake-off") y en `.agents/memory/memory.md` → "Fase 2".
+> **ESTADO (26/09): FASE 3 COMPLETA.** El bake-off (Fase 0→2) descartó la ruta ONNX de Laya
+> (**NO MIGRAR**) y en Fase 3 se hizo el cambio efectivo en `src/`: las reglas de `action` +
+> guardrails (validadas offline al 100% sobre los 120) reemplazan a `routeIntent()` — que **nunca
+> había funcionado en runtime** y dejaba `action='rag'` siempre (ramas direct/chart/web/mcp/agent
+> muertas). La ruta ONNX completa (descarga 424MB en prewarm, sesión, tokenizer, OPFS) fue
+> **eliminada**; queda `clearLegacyLayaCache()` que borra el caché legado. Números abajo
+> ("Veredicto del bake-off" + "Fase 3") y en `.agents/memory/memory.md`.
 
 ## Archivos clave
-- `src/shared/lib/laya.ts` — modelo ONNX + tokenizer BPE + prompt renderer + heuristic fallback
-  (**el ONNX está inoperante y descartado; el código útil que vive aquí es `classifyHeuristic`**)
-- `src/entities/robot/intentSchema.ts` — schema de preguntas (action, searchMode, needsWeb, isPageRef, isSummary)
+- `src/shared/lib/laya.ts` — **clasificador activo**: `classifyIntent()` (action+guardrails por
+  reglas), `classifyHeuristic()` (searchMode, heuristic v2), `classifyAction()`, `classifyQuery()`
+- `src/entities/robot/intentSchema.ts` — solo tipos (`IntentResult`, `ActionChoice`, `SearchModeChoice`)
+- `src/shared/lib/agentRuntime.ts` — consume `classifyIntent()` (2 sitios: executeAgent + loop agent)
+- `.agents/bakeoff/` — harness offline del bake-off + dataset de 120 + reportes (ver su README)
+
+---
+
+## Fase 3 (26/09): reglas en producción + ONNX eliminado ✅
+
+### Qué se implementó
+1. **`classifyAction()` + guardrails por regex (ES/EN)** en `laya.ts`, precedencia
+   `direct → chart → mcp → agent → web_search → rag`; `classifyIntent()` compone action +
+   `classifyHeuristic()` (v2) + `needsWeb = (action==='web_search')` + `isPageRef` + `isSummary`
+   (`&& action !== 'agent'`: "analiza … y resume" no es pedido de resumen).
+2. **Heuristic v2 (searchMode):** patrones sin anclar (`^\W*cuánto…`), `\b(artículo|…|point)\s*\d`,
+   `\b(porcentaje|percentage|VAT|IVA)\b` → 82.9% → **100%**.
+3. **Ruta ONNX eliminada:** de `laya.ts` se borraron tokenizer/BPE, prompt renderer, descarga/OPFS,
+   sesión ORT, `routeIntent()`, `parseIntentResult()`, `INTENT_SCHEMA`. `preload.ts` ya no
+   descarga Laya (solo embeddings); `EngineStatus`/`debug.ts` sin estado `laya*`.
+4. **Cache legado:** `prewarmModels()` llama `clearLegacyLayaCache()` (borra dir OPFS `copixi_laya`,
+   best-effort).
+
+### Resultado (mismo dataset de 120 — ver `.agents/bakeoff/report_fase3.txt`)
+| campo | baseline | **reglas** |
+|---|---|---|
+| action (acc / F1) | 58.3 / 12.3 | **100 / 100** (matriz limpia, 0 errores) |
+| searchMode (n=70 rag) | 82.9 | **100** |
+| needsWeb / isPageRef / isSummary | 90 / 86.7 / 90 | **100 / 100 / 100** |
+| route-exact (5 campos) | 35.0% | **100%** |
+
+- **Nota de método:** el dataset se usó también para ajustar las reglas (iteración sobre los
+  mismos 120) — validación fuera de muestra pendiente si se toca el clasificador. Robustez
+  ad-hoc: 16/18 queries nuevas (los 2 miss caen a `rag`, el default seguro).
+- **Port verificado:** `node --experimental-strip-types .agents/bakeoff/verify-port.mjs` →
+  0 diferencias src vs harness; `verify-debug-checks.mjs` → checks F2/F4 del debugger PASS.
 
 ---
 
@@ -52,15 +88,15 @@ antes de lanzar el pipeline RAG.
    (errores acumulados en cadena). Ambos descartados.
 
 ### Si algún día se retoma
-- Única excepción con ganancia clara: **`isSummary`** (evaluar si un regex compensa antes que cargar el modelo).
+- **NO retomar por `isSummary`:** Fase 3 lo resolvió con regex (`isSummary` 100% en los 120).
 - Requiere: state rico (historial de turnos), re-tuneo de criterios, y los fixes del adaptador:
-  **E1** tokenizer metaspace (el `bpeEncode` de `laya.ts` produce ids corruptos para BPE metaspace),
-  **E2** `qtype` dims `[n]` (hoy `[n,1]` → `routeIntent` siempre lanza),
-  **E3** CLS=`bos_token_id`, **E5** `marker_pos` fuera de rango congela el runtime.
-- Artefactos (harness, fuera del repo): `/tmp/opencode/intent-bakeoff/` —
-  `verify.mjs` (contrato ONNX), `smoke.mjs` (adaptador), `benchmark.mjs` + `metrics.mjs` →
-  `report_fase2.txt`, `results_fase2.json`, `hier.mjs`, `dataset.mjs`, `layaML.mjs`.
-  Modelo en `~/model-tests/killkli-laya/`.
+  **E1** tokenizer metaspace, **E2** `qtype` dims `[n]` (el código original emite `[n,1]` → siempre
+  lanza), **E3** CLS=`bos_token_id`, **E5** `marker_pos` fuera de rango congela el runtime.
+  **Estos fixes ya NO existen en `src/`** (la ruta ONNX se borró) — si se reabre, partir del harness.
+- Artefactos: **`.agents/bakeoff/`** (dentro del repo) — `verify.mjs`, `smoke.mjs`, `benchmark.mjs`,
+  `metrics.mjs` → `report_fase2.txt`/`results_fase2.json`, `rules.mjs`, `eval_rules.mjs` →
+  `report_fase3.txt`, `dataset.mjs`, `layaML.mjs`, `hier.mjs`. Ver su `README.md`.
+  Modelo en `~/model-tests/killkli-laya/` (fuera del repo).
 
 ---
 
@@ -85,16 +121,19 @@ Comparación de los dos exports disponibles, leída del protobuf ONNX:
   `render_options`, `confidence_from_probs`, `temp_bucket`) y `rl_agent_config.json` (temperaturas,
   `max_len=512`, `head_max_len=192`).
 
-## Bugs conocidos en `laya.ts`
+## Bugs históricos de la ruta ONNX (código eliminado en Fase 3)
 
-1. `qtype` se envía como `[n, 1]` (rank-2). El modelo exige rank-1 → `Invalid rank for input: qtype`.
+> Todo el código afectado por estos bugs fue **borrado de `src/`** (26/09). Se listan como
+> referencia si algún día se reabre la ruta ONNX.
+
+1. `qtype` se enviaba como `[n, 1]` (rank-2). El modelo exige rank-1 → `Invalid rank for input: qtype`.
 2. `INTENT_SCHEMA.action` tiene 6 opciones. **Imposible** con `Mattepiu` (K=2 máx.).
-3. `choice` usa `confidenceFromProbs` (entropía normalizada) contra `CONFIDENCE_THRESHOLD = 0.35`.
-   Para K=2 eso exige `p_max ≥ 0.835`. `noul` usa `max(p,1-p)` — métricas inconsistentes entre tipos.
-4. `renderOptions` ignora `crit` en el branch de `noul` (la referencia lo usa). Se mantiene genérico
+3. `choice` usaba `confidenceFromProbs` (entropía normalizada) contra `CONFIDENCE_THRESHOLD = 0.35`.
+   Para K=2 eso exige `p_max ≥ 0.835`. `noul` usaba `max(p,1-p)` — métricas inconsistentes entre tipos.
+4. `renderOptions` ignoraba `crit` en el branch de `noul` (la referencia lo usa). Se mantenía genérico
    a propósito: usar `crit` custom empeoró el sanity check del README (0.957 → 0.523).
 5. `ort.env.wasm.numThreads = 1` → 6 s por llamada de 4 preguntas. Con 4 hilos: 1.9 s.
-6. `parseIntentResult(null)` fuerza `action:'rag'` y `searchMode:'semantic'`, anulando el heuristic.
+6. `parseIntentResult(null)` forzaba `action:'rag'` y `searchMode:'semantic'`, anulando el heuristic.
 
 ## Evalúa un STATE, no una QUERY (confirmado a escala en Fase 2)
 Las preguntas tipo `noul` están formadas como "afirmación vs estado". Pasar la query del usuario
@@ -103,13 +142,14 @@ clasificados como `direct`. `state=doc+query` lo empeoró (guardrails y latencia
 (`tozp`) además es **English-only**; `killkli` es multilingüe (ES/EN ok), pero el mismatch de state
 persiste — por eso el veredicto es NO MIGRAR.
 
-## Cómo probarlo (histórico — hoy descartado)
-1. `pnpm dev` → DevTools → `__merucbot.testFlow({ laya: true })` (F3 descarga, F5 routeIntent).
-2. En la consola, revisar que `routeIntent` NO devuelve `null` y que los logits no están en ~[0.5, 0.5].
-3. Si devuelve `null` → fallback heuristic; el bug sigue presente (E2: `qtype` rank-2, siempre lanza).
-4. **Preferido:** vía offline sin navegador, ver "Test offline" y el harness del bake-off abajo.
+## Cómo probarlo
+1. **Online:** `pnpm dev` → DevTools → `__merucbot.testFlow()` → F2 (searchMode) y F4
+   (`classifyIntent`, 5 queries) deben dar PASS. `__merucbot.check()` muestra prewarm (embeddings).
+2. **Offline (regresión del port):** `node --experimental-strip-types .agents/bakeoff/verify-port.mjs`
+   → 0 mismatches sobre los 120; `verify-debug-checks.mjs` → PASS.
+3. **Eval completa:** `node .agents/bakeoff/eval_rules.mjs` → `report_fase3.txt`.
 
-## Test offline (sin navegador)
+## Test offline (histórico)
 En `/tmp/opencode/laya-verify/` con `onnxruntime-web` (build node: `dist/ort.node.min.js`),
 una copia de `laya.ts` con `export` añadidos, y `probe_onnx.py` para leer las dims del protobuf.
 Los scripts existentes: `inspect.mjs` (rank/K/batch probe), `sanity.mjs` (ejemplo del README),
