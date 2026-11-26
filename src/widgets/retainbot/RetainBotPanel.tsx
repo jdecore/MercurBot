@@ -1,15 +1,23 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 
 type Lang = 'en' | 'es' | 'jp';
 
-const CUSTOMERS = [
-  { id: '1000001', risk: '82%', eqpdays: 361, usageDrop: '-42%' },
-  { id: '1000412', risk: '76%', eqpdays: 490, usageDrop: '-38%' },
-  { id: '1000895', risk: '71%', eqpdays: 412, usageDrop: '-31%' },
+interface CustomerRow {
+  id: string;
+  risk: string;
+  eqpdays: string;
+  usageDrop: string;
+}
+
+const DEFAULT_CUSTOMERS: CustomerRow[] = [
+  { id: '1000001', risk: '82%', eqpdays: '361', usageDrop: '-42%' },
+  { id: '1000412', risk: '76%', eqpdays: '490', usageDrop: '-38%' },
+  { id: '1000895', risk: '71%', eqpdays: '412', usageDrop: '-31%' },
 ];
 
 const I18N: Record<Lang, {
   subtitle: string;
+  uploadLabel: string;
   step1: string;
   step2: string;
   pokaTitle: string;
@@ -20,6 +28,7 @@ const I18N: Record<Lang, {
   ready: string;
   sent: string;
   skipped: string;
+  loadedCsv: string;
   planTitle: string;
   planSteps: { phase: string; desc: string }[];
   risksTitle: string;
@@ -27,6 +36,7 @@ const I18N: Record<Lang, {
 }> = {
   en: {
     subtitle: 'Telecom Retention MVP • Poka-Yoke + Omotenashi',
+    uploadLabel: 'Upload Scored CSV (optional)',
     step1: '1. Top 20% Risk Queue (Model Output)',
     step2: '2. Opt-in WhatsApp Outreach',
     pokaTitle: 'Poka-Yoke Filter:',
@@ -37,6 +47,7 @@ const I18N: Record<Lang, {
     ready: 'Status: Ready for pilot dispatch.',
     sent: 'Logged: Opt-in offer sent to Customer ',
     skipped: 'Logged: Assigned to A/B Control Group for Customer ',
+    loadedCsv: 'Loaded CSV rows into RetainBot queue: ',
     planTitle: '3. Detailed Implementation Plan (Next Steps)',
     planSteps: [
       { phase: 'Month 1 — Scoring & Genba', desc: 'Batch score customers with LightGBM + Poka-Yoke filter; validate pain points with field interviews.' },
@@ -53,6 +64,7 @@ const I18N: Record<Lang, {
   },
   es: {
     subtitle: 'MVP de Retención Telecom • Poka-Yoke + Omotenashi',
+    uploadLabel: 'Subir CSV con Riesgo (opcional)',
     step1: '1. Cola Top 20% Riesgo (Salida del Modelo)',
     step2: '2. Envío Opt-in por WhatsApp',
     pokaTitle: 'Filtro Poka-Yoke:',
@@ -63,6 +75,7 @@ const I18N: Record<Lang, {
     ready: 'Estado: Listo para envío del piloto.',
     sent: 'Registrado: Oferta opt-in enviada al Cliente ',
     skipped: 'Registrado: Asignado a Grupo Control A/B para Cliente ',
+    loadedCsv: 'Filas CSV cargadas en RetainBot: ',
     planTitle: '3. Plan de Implementación Detallado (Next Steps)',
     planSteps: [
       { phase: 'Mes 1 — Scoring y Genba', desc: 'Scoring mensual con LightGBM + filtro Poka-Yoke; validación cualitativa en campo.' },
@@ -79,6 +92,7 @@ const I18N: Record<Lang, {
   },
   jp: {
     subtitle: '通信リテンションMVP • ポカヨケ + おもてなし',
+    uploadLabel: '予測CSVをアップロード（任意）',
     step1: '1. リスク上位20%顧客（モデル出力）',
     step2: '2. オプトインWhatsApp配信',
     pokaTitle: 'ポカヨケ判定:',
@@ -89,6 +103,7 @@ const I18N: Record<Lang, {
     ready: 'ステータス: パイロット配信準備完了',
     sent: '記録完了: オファー送信済み — 顧客ID ',
     skipped: '記録完了: A/B対照群に割当 — 顧客ID ',
+    loadedCsv: 'CSVデータを読み込みました: ',
     planTitle: '3. 詳細導入計画（Next Steps）',
     planSteps: [
       { phase: '1ヶ月目 — スコアリング & 現場検証', desc: 'LightGBM + ポカヨケ判定で対象抽出し、顧客ヒアリングを実施。' },
@@ -107,13 +122,40 @@ const I18N: Record<Lang, {
 
 export function RetainBotPanel() {
   const [lang, setLang] = useState<Lang>('en');
-  const [selectedId, setSelectedId] = useState<string>(CUSTOMERS[0].id);
+  const [customers, setCustomers] = useState<CustomerRow[]>(DEFAULT_CUSTOMERS);
+  const [selectedId, setSelectedId] = useState<string>(DEFAULT_CUSTOMERS[0].id);
   const [statusText, setStatusText] = useState<string>(I18N.en.ready);
   const t = I18N[lang];
 
+  const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) return;
+    const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
+    const idIdx = headers.findIndex((h) => h.includes('customer_id') || h === 'id');
+    const eqpIdx = headers.findIndex((h) => h.includes('eqpdays'));
+    const riskIdx = headers.findIndex((h) => h.includes('risk') || h.includes('prob') || h.includes('churn'));
+    const parsed: CustomerRow[] = lines.slice(1, 6).map((line, i) => {
+      const cols = line.split(',');
+      return {
+        id: idIdx >= 0 && cols[idIdx] ? cols[idIdx].trim() : `ROW-${i + 1}`,
+        risk: riskIdx >= 0 && cols[riskIdx] ? cols[riskIdx].trim() : 'Top 20%',
+        eqpdays: eqpIdx >= 0 && cols[eqpIdx] ? cols[eqpIdx].trim() : '-',
+        usageDrop: 'Filtered',
+      };
+    });
+    if (parsed.length > 0) {
+      setCustomers(parsed);
+      setSelectedId(parsed[0].id);
+      setStatusText(`${t.loadedCsv}${parsed.length}`);
+    }
+  };
+
   return (
     <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', padding: '32px', maxWidth: '1000px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '28px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
           <div>
@@ -121,32 +163,38 @@ export function RetainBotPanel() {
             <span style={{ fontSize: '12px', color: '#5A6780' }}>{t.subtitle}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {(['en', 'es', 'jp'] as Lang[]).map((l) => (
-            <button
-              key={l}
-              onClick={() => { setLang(l); setStatusText(I18N[l].ready); }}
-              style={{
-                border: `1px solid ${lang === l ? '#1A2A4A' : '#E8EAF0'}`,
-                background: lang === l ? '#1A2A4A' : '#FFFFFF',
-                color: lang === l ? '#FFFFFF' : '#1A2A4A',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 600,
-              }}
-            >
-              {l === 'jp' ? '日本語' : l.toUpperCase()}
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 600, padding: '6px 10px', border: '1px solid #E8EAF0', borderRadius: '6px', cursor: 'pointer', background: '#F7F9FC', color: '#1A2A4A' }}>
+            {t.uploadLabel}
+            <input type="file" accept=".csv" onChange={handleCsvUpload} style={{ display: 'none' }} />
+          </label>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {(['en', 'es', 'jp'] as Lang[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => { setLang(l); setStatusText(I18N[l].ready); }}
+                style={{
+                  border: `1px solid ${lang === l ? '#1A2A4A' : '#E8EAF0'}`,
+                  background: lang === l ? '#1A2A4A' : '#FFFFFF',
+                  color: lang === l ? '#FFFFFF' : '#1A2A4A',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                {l === 'jp' ? '日本語' : l.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#FFFFFF' }}>
           <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step1}</h2>
-          {CUSTOMERS.map((c) => {
+          {customers.map((c) => {
             const isSelected = c.id === selectedId;
             return (
               <div
