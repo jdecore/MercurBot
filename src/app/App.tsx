@@ -719,36 +719,13 @@ function MainDashboard() {
 }
 
 export function App() {
-  const [showPilot, setShowPilot] = useState(false)
-
   return (
     <LocaleProvider>
       <DashboardProvider>
-        <button
-          onClick={() => setShowPilot((v) => !v)}
-          style={{
-            position: 'fixed',
-            top: '14px',
-            right: '16px',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 14px',
-            borderRadius: '8px',
-            border: '1px solid #E8EAF0',
-            background: showPilot ? '#1A2A4A' : '#C73E1D',
-            color: '#FFFFFF',
-            fontWeight: 600,
-            fontSize: '13px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-          }}
-        >
-          <img src="/retainbot_logo.jpg" alt="RetainBot" style={{ height: '20px', width: '20px', borderRadius: '4px', objectFit: 'cover' }} />
-          {showPilot ? '← Back to Robot Dashboard' : 'RetainBot Pilot (Next Steps)'}
-        </button>
-        {showPilot ? <RetainBotPanel /> : <MainDashboard />}
+        <MainDashboard />
+        <div style={{ borderTop: '2px solid #E8EAF0', background: '#FFFFFF' }}>
+          <RetainBotPanel />
+        </div>
       </DashboardProvider>
     </LocaleProvider>
   )
