@@ -134,9 +134,7 @@ export function RetainBotPanel() {
   const [mood, setMood] = useState<MascotaMood>('neutro');
   const t = I18N[lang];
 
-  const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processCsvFile = async (file: File) => {
     setMood('pensando');
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter(Boolean);
@@ -162,6 +160,11 @@ export function RetainBotPanel() {
     }
   };
 
+  const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await processCsvFile(file);
+  };
+
   return (
     <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', width: '100%', boxSizing: 'border-box', padding: '24px 36px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
@@ -173,8 +176,28 @@ export function RetainBotPanel() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label style={{ fontSize: '12px', fontWeight: 600, padding: '7px 12px', border: '1px solid #E8EAF0', borderRadius: '6px', cursor: 'pointer', background: '#F7F9FC', color: '#1A2A4A' }}>
-            {t.uploadLabel}
+          <label
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const file = e.dataTransfer.files?.[0];
+              if (file) void processCsvFile(file);
+            }}
+            style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              padding: '8px 14px',
+              border: '2px dashed #C73E1D',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              background: '#1A2A4A',
+              color: '#FFFFFF',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>●</span> {t.uploadLabel} (Click / Drag CSV)
             <input type="file" accept=".csv" onChange={handleCsvUpload} style={{ display: 'none' }} />
           </label>
           <div style={{ display: 'flex', gap: '6px' }}>
