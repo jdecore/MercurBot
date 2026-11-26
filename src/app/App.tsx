@@ -164,7 +164,7 @@ function MainDashboard() {
 
       // Fase 24A: huella estable → mismo archivo, mismo docId, caché OPFS válida.
       const docId = await hashPdfFile(file)
-      if (import.meta.env.DEV) console.log('[MercurBot] docId', docId)
+      if (import.meta.env.DEV) console.log('[RetainBot] docId', docId)
 
       const parseResult = await parseAnyFile(file, {
         docId,
@@ -502,9 +502,9 @@ function MainDashboard() {
     <div className="canvas-wrapper">
       <div className={`app-shell${railCollapsed ? ' rail' : ''}`}>
         <aside className={`app-sidebar${railCollapsed ? ' rail' : ''}`} aria-label={t.navAria}>
-          <div className="sidebar-brand" aria-label="MercurBot AI">
+          <div className="sidebar-brand" aria-label="RetainBot AI">
             <div className="brand-mark" aria-hidden>MB</div>
-            <span className="brand-title">MercurBot</span>
+            <span className="brand-title">RetainBot</span>
             <span className="brand-sub">{t.brandSub}</span>
           </div>
           {sidebar}
@@ -533,7 +533,7 @@ function MainDashboard() {
       <main className={`main-canvas${showSplit ? ' wide' : ''}`} id="main-content">
         <section
           className={`hero-excel ${dragging ? 'dropping' : ''}`}
-          aria-label={hasDocument ? 'Escenario interactivo del Robot Analista' : 'MercurBot — AI document intelligence'}
+          aria-label={hasDocument ? 'Escenario interactivo del Robot Analista' : 'RetainBot — AI document intelligence'}
           onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
@@ -678,9 +678,9 @@ function MainDashboard() {
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <div className="sidebar-drawer-head">
-              <div className="sidebar-brand" aria-label="MercurBot AI">
+              <div className="sidebar-brand" aria-label="RetainBot AI">
                 <div className="brand-mark" aria-hidden>MB</div>
-                <span className="brand-title">MercurBot</span>
+                <span className="brand-title">RetainBot</span>
               </div>
               <Dialog.Close className="btn btn-secondary small" aria-label={t.closeNav}>
                 ✕ Cerrar
