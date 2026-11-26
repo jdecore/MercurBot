@@ -29,14 +29,14 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Capa 0 — paleta fuente MERCU ── */
-  --mercu-mineral: #E5E6E1;        /* piedra clara: texto y papel del visor */
-  --mercu-ocean: #0f172a;          /* mar medio: color de marca y fondo */
-  --mercu-ocean-surface: #131c31;  /* superficie del mar (gradiente 0%) */
-  --mercu-ocean-deep: #0b1120;     /* fondo abisal (gradiente 100%) */
-  --mercu-green: #9EE014;          /* biche: vegetación tropical, fruta verde */
-  --mercu-orange: #F0711D;         /* naranja tropical: acento cálido principal */
-  --mercu-red: #C92E0E;            /* rojo tropical: alerta / destructivo */
+  /* ── Capa 0 — paleta RetainBot (Minimalismo Japonés) ── */
+  --mercu-mineral: #1A2A4A;        /* azul oscuro: texto principal */
+  --mercu-ocean: #FFFFFF;          /* blanco puro: fondo principal */
+  --mercu-ocean-surface: #F7F9FC;  /* gris muy suave: tarjetas */
+  --mercu-ocean-deep: #E8EAF0;     /* gris claro: bordes y profundidad */
+  --mercu-green: #1A2A4A;          /* azul oscuro: selección y links */
+  --mercu-orange: #C73E1D;         /* rojo acento: acción principal */
+  --mercu-red: #C73E1D;            /* rojo acento: alerta */
 
   /* ── Capa 1 — derivados mínimos (accesibilidad; ratios medidos) ── */
   --mercu-orange-ink: #FF9D52;     /* naranja texto sobre mar: 5.00–5.92 ✅ */
