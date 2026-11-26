@@ -39,42 +39,42 @@
   --mercu-red: #C73E1D;            /* rojo acento: alerta */
 
   /* ── Capa 1 — derivados mínimos (accesibilidad; ratios medidos) ── */
-  --mercu-orange-ink: #FF9D52;     /* naranja texto sobre mar: 5.00–5.92 ✅ */
-  --mercu-red-ink: #FFA890;        /* rojo texto sobre mar:    5.52–6.53 ✅ */
-  --mercu-ink-on-warm: #062024;    /* tinta sobre naranja 5.71 / biche 10.59 ✅ */
+  --mercu-orange-ink: #C73E1D;     /* rojo texto sobre blanco */
+  --mercu-red-ink: #C73E1D;        /* rojo texto sobre blanco */
+  --mercu-ink-on-warm: #FFFFFF;    /* tinta blanca sobre rojo/azul */
 
   /* ── Capa 2 — semánticos ── */
-  /* fondos: gradiente monocromático de profundidad definido en `body` */
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;            /* card: un paso hacia la superficie */
-  --color-surface-2: #253347;          /* chip / hover elevado */
-  --color-surface-hover: #2d3a4e;
-  --color-card: #1e293b;
-  --color-border: color-mix(in srgb, var(--mercu-mineral) 20%, var(--mercu-ocean));
-  --color-border-strong: color-mix(in srgb, var(--mercu-mineral) 32%, var(--mercu-ocean));
+  /* fondos: blanco puro y gris suave */
+  --color-bg: #FFFFFF;
+  --color-surface: #F7F9FC;            /* card: gris muy suave */
+  --color-surface-2: #E8EAF0;          /* chip / hover elevado */
+  --color-surface-hover: #E8EAF0;
+  --color-card: #FFFFFF;
+  --color-border: #E8EAF0;
+  --color-border-strong: #CBD2E0;
   --surface-blur: 16px;
 
   /* texto */
-  --color-text: var(--mercu-mineral);
-  --color-foreground: var(--mercu-mineral);
-  --color-muted: #C0CDCE;              /* secundario: 6.31–7.47 sobre el mar ✅ */
-  --color-muted-foreground: #C0CDCE;
+  --color-text: #1A2A4A;
+  --color-foreground: #1A2A4A;
+  --color-muted: #5A6780;              /* secundario: alto contraste sobre blanco */
+  --color-muted-foreground: #5A6780;
 
   /* acentos */
-  --color-primary: var(--mercu-orange);
-  --color-primary-hover: #FF8A3D;
-  --color-on-primary: var(--mercu-ink-on-warm);
-  --color-action: var(--mercu-orange);
-  --color-action-hover: #FF8A3D;
-  --color-on-action: var(--mercu-ink-on-warm);
-  --color-accent: var(--mercu-green);
-  --color-accent-hover: #B6EE4A;
-  --color-on-accent: var(--mercu-ink-on-warm);
-  --color-accent-ink: var(--mercu-orange-ink);
-  --color-tropical: var(--mercu-green);
-  --color-tropical-hover: #B6EE4A;
-  --color-on-tropical: var(--mercu-ink-on-warm);
-  --color-ring: var(--mercu-orange);
+  --color-primary: #C73E1D;
+  --color-primary-hover: #A83215;
+  --color-on-primary: #FFFFFF;
+  --color-action: #C73E1D;
+  --color-action-hover: #A83215;
+  --color-on-action: #FFFFFF;
+  --color-accent: #1A2A4A;
+  --color-accent-hover: #2A3F6B;
+  --color-on-accent: #FFFFFF;
+  --color-accent-ink: #C73E1D;
+  --color-tropical: #1A2A4A;
+  --color-tropical-hover: #2A3F6B;
+  --color-on-tropical: #FFFFFF;
+  --color-ring: #C73E1D;
 
   /* nombres exigidos por el brief (alias documentales del tema mar) */
   --color-tropical-green: var(--mercu-green);
