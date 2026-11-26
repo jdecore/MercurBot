@@ -1,4 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
+import { Mascota } from '../../shared/ui/Mascota';
+import type { MascotaMood } from '../../entities/robot/types';
 
 type Lang = 'en' | 'es' | 'jp';
 
@@ -18,6 +20,7 @@ const DEFAULT_CUSTOMERS: CustomerRow[] = [
 const I18N: Record<Lang, {
   subtitle: string;
   uploadLabel: string;
+  robotIntro: string;
   step1: string;
   step2: string;
   pokaTitle: string;
@@ -35,8 +38,9 @@ const I18N: Record<Lang, {
   risks: { risk: string; mitigation: string }[];
 }> = {
   en: {
-    subtitle: 'Telecom Retention MVP • Poka-Yoke + Omotenashi',
-    uploadLabel: 'Upload Scored CSV (optional)',
+    subtitle: 'Telecom Retention AI • Poka-Yoke + Omotenashi',
+    uploadLabel: 'Upload Scored CSV',
+    robotIntro: 'Ready to analyze Company A churn risk. Select a customer or upload your scored CSV.',
     step1: '1. Top 20% Risk Queue (Model Output)',
     step2: '2. Opt-in WhatsApp Outreach',
     pokaTitle: 'Poka-Yoke Filter:',
@@ -45,9 +49,9 @@ const I18N: Record<Lang, {
     send: 'Send Opt-in Offer',
     skip: 'Skip (Control Group)',
     ready: 'Status: Ready for pilot dispatch.',
-    sent: 'Logged: Opt-in offer sent to Customer ',
-    skipped: 'Logged: Assigned to A/B Control Group for Customer ',
-    loadedCsv: 'Loaded CSV rows into RetainBot queue: ',
+    sent: 'Opt-in offer sent to Customer ',
+    skipped: 'Assigned to A/B Control Group for Customer ',
+    loadedCsv: 'Loaded CSV rows into RetainBot: ',
     planTitle: '3. Detailed Implementation Plan (Next Steps)',
     planSteps: [
       { phase: 'Month 1 — Scoring & Genba', desc: 'Batch score customers with LightGBM + Poka-Yoke filter; validate pain points with field interviews.' },
@@ -63,8 +67,9 @@ const I18N: Record<Lang, {
     ],
   },
   es: {
-    subtitle: 'MVP de Retención Telecom • Poka-Yoke + Omotenashi',
-    uploadLabel: 'Subir CSV con Riesgo (opcional)',
+    subtitle: 'IA de Retención Telecom • Poka-Yoke + Omotenashi',
+    uploadLabel: 'Subir CSV con Riesgo',
+    robotIntro: 'Listo para analizar el churn de Company A. Selecciona un cliente o sube tu CSV.',
     step1: '1. Cola Top 20% Riesgo (Salida del Modelo)',
     step2: '2. Envío Opt-in por WhatsApp',
     pokaTitle: 'Filtro Poka-Yoke:',
@@ -73,8 +78,8 @@ const I18N: Record<Lang, {
     send: 'Enviar Oferta Opt-in',
     skip: 'Omitir (Grupo Control)',
     ready: 'Estado: Listo para envío del piloto.',
-    sent: 'Registrado: Oferta opt-in enviada al Cliente ',
-    skipped: 'Registrado: Asignado a Grupo Control A/B para Cliente ',
+    sent: 'Oferta opt-in enviada al Cliente ',
+    skipped: 'Asignado a Grupo Control A/B para Cliente ',
     loadedCsv: 'Filas CSV cargadas en RetainBot: ',
     planTitle: '3. Plan de Implementación Detallado (Next Steps)',
     planSteps: [
@@ -91,8 +96,9 @@ const I18N: Record<Lang, {
     ],
   },
   jp: {
-    subtitle: '通信リテンションMVP • ポカヨケ + おもてなし',
-    uploadLabel: '予測CSVをアップロード（任意）',
+    subtitle: '通信リテンションAI • ポカヨケ + おもてなし',
+    uploadLabel: '予測CSVをアップロード',
+    robotIntro: 'Company Aの解約リスク分析の準備が完了しました。顧客を選択するかCSVをアップロードしてください。',
     step1: '1. リスク上位20%顧客（モデル出力）',
     step2: '2. オプトインWhatsApp配信',
     pokaTitle: 'ポカヨケ判定:',
@@ -101,8 +107,8 @@ const I18N: Record<Lang, {
     send: 'オファーを送信',
     skip: 'スキップ（対照群）',
     ready: 'ステータス: パイロット配信準備完了',
-    sent: '記録完了: オファー送信済み — 顧客ID ',
-    skipped: '記録完了: A/B対照群に割当 — 顧客ID ',
+    sent: 'オファー送信済み — 顧客ID ',
+    skipped: 'A/B対照群に割当 — 顧客ID ',
     loadedCsv: 'CSVデータを読み込みました: ',
     planTitle: '3. 詳細導入計画（Next Steps）',
     planSteps: [
@@ -124,12 +130,14 @@ export function RetainBotPanel() {
   const [lang, setLang] = useState<Lang>('en');
   const [customers, setCustomers] = useState<CustomerRow[]>(DEFAULT_CUSTOMERS);
   const [selectedId, setSelectedId] = useState<string>(DEFAULT_CUSTOMERS[0].id);
-  const [statusText, setStatusText] = useState<string>(I18N.en.ready);
+  const [statusText, setStatusText] = useState<string>(I18N.en.robotIntro);
+  const [mood, setMood] = useState<MascotaMood>('neutro');
   const t = I18N[lang];
 
   const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setMood('pensando');
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter(Boolean);
     if (lines.length < 2) return;
@@ -150,21 +158,22 @@ export function RetainBotPanel() {
       setCustomers(parsed);
       setSelectedId(parsed[0].id);
       setStatusText(`${t.loadedCsv}${parsed.length}`);
+      setMood('feliz');
     }
   };
 
   return (
-    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', padding: '32px', maxWidth: '1000px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
+    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', padding: '28px 32px', maxWidth: '1040px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
+          <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain', borderRadius: '8px' }} />
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>RetainBot</h1>
             <span style={{ fontSize: '12px', color: '#5A6780' }}>{t.subtitle}</span>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label style={{ fontSize: '12px', fontWeight: 600, padding: '6px 10px', border: '1px solid #E8EAF0', borderRadius: '6px', cursor: 'pointer', background: '#F7F9FC', color: '#1A2A4A' }}>
+          <label style={{ fontSize: '12px', fontWeight: 600, padding: '7px 12px', border: '1px solid #E8EAF0', borderRadius: '6px', cursor: 'pointer', background: '#F7F9FC', color: '#1A2A4A' }}>
             {t.uploadLabel}
             <input type="file" accept=".csv" onChange={handleCsvUpload} style={{ display: 'none' }} />
           </label>
@@ -172,7 +181,7 @@ export function RetainBotPanel() {
             {(['en', 'es', 'jp'] as Lang[]).map((l) => (
               <button
                 key={l}
-                onClick={() => { setLang(l); setStatusText(I18N[l].ready); }}
+                onClick={() => { setLang(l); setStatusText(I18N[l].robotIntro); setMood('neutro'); }}
                 style={{
                   border: `1px solid ${lang === l ? '#1A2A4A' : '#E8EAF0'}`,
                   background: lang === l ? '#1A2A4A' : '#FFFFFF',
@@ -191,6 +200,15 @@ export function RetainBotPanel() {
         </div>
       </header>
 
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '16px 20px', border: '1px solid #E8EAF0', borderRadius: '10px', background: '#F7F9FC', marginBottom: '24px' }}>
+        <div style={{ transform: 'scale(0.85)', transformOrigin: 'center' }}>
+          <Mascota mood={mood} />
+        </div>
+        <div style={{ fontSize: '14px', lineHeight: 1.5, color: '#1A2A4A', fontWeight: 500 }}>
+          {statusText}
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#FFFFFF' }}>
           <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step1}</h2>
@@ -199,7 +217,7 @@ export function RetainBotPanel() {
             return (
               <div
                 key={c.id}
-                onClick={() => { setSelectedId(c.id); setStatusText(t.ready); }}
+                onClick={() => { setSelectedId(c.id); setStatusText(t.ready); setMood('neutro'); }}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -234,19 +252,18 @@ export function RetainBotPanel() {
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
-              onClick={() => setStatusText(`${t.sent}${selectedId}`)}
+              onClick={() => { setStatusText(`${t.sent}${selectedId}`); setMood('feliz'); }}
               style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '13px', background: '#C73E1D', color: '#FFFFFF' }}
             >
               {t.send}
             </button>
             <button
-              onClick={() => setStatusText(`${t.skipped}${selectedId}`)}
+              onClick={() => { setStatusText(`${t.skipped}${selectedId}`); setMood('neutro'); }}
               style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '13px', background: '#E8EAF0', color: '#1A2A4A' }}
             >
               {t.skip}
             </button>
           </div>
-          <div style={{ marginTop: '14px', fontSize: '12px', color: '#5A6780' }}>{statusText}</div>
         </section>
       </div>
 

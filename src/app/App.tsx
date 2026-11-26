@@ -718,14 +718,13 @@ function MainDashboard() {
   )
 }
 
+void MainDashboard
+
 export function App() {
   return (
     <LocaleProvider>
       <DashboardProvider>
-        <MainDashboard />
-        <div style={{ borderTop: '2px solid #E8EAF0', background: '#FFFFFF' }}>
-          <RetainBotPanel />
-        </div>
+        <RetainBotPanel />
       </DashboardProvider>
     </LocaleProvider>
   )
