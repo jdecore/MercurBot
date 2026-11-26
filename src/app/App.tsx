@@ -718,27 +718,13 @@ function MainDashboard() {
   )
 }
 
-export function App() {
-  const [mode, setMode] = useState<'mercurbot' | 'retainbot'>('mercurbot')
+void MainDashboard
 
+export function App() {
   return (
     <LocaleProvider>
       <DashboardProvider>
-        <div style={{ position: 'fixed', bottom: '16px', right: '16px', zIndex: 9999, display: 'flex', gap: '6px', background: '#FFFFFF', padding: '4px', borderRadius: '8px', border: '1px solid #E8EAF0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-          <button
-            onClick={() => setMode('mercurbot')}
-            style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, background: mode === 'mercurbot' ? '#1A2A4A' : 'transparent', color: mode === 'mercurbot' ? '#FFFFFF' : '#1A2A4A' }}
-          >
-            MercurBot
-          </button>
-          <button
-            onClick={() => setMode('retainbot')}
-            style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, background: mode === 'retainbot' ? '#C73E1D' : 'transparent', color: mode === 'retainbot' ? '#FFFFFF' : '#1A2A4A' }}
-          >
-            RetainBot MVP
-          </button>
-        </div>
-        {mode === 'mercurbot' ? <MainDashboard /> : <RetainBotPanel />}
+        <RetainBotPanel />
       </DashboardProvider>
     </LocaleProvider>
   )

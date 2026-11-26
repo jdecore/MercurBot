@@ -20,6 +20,10 @@ const I18N: Record<Lang, {
   ready: string;
   sent: string;
   skipped: string;
+  planTitle: string;
+  planSteps: { phase: string; desc: string }[];
+  risksTitle: string;
+  risks: { risk: string; mitigation: string }[];
 }> = {
   en: {
     subtitle: 'Telecom Retention MVP • Poka-Yoke + Omotenashi',
@@ -33,6 +37,19 @@ const I18N: Record<Lang, {
     ready: 'Status: Ready for pilot dispatch.',
     sent: 'Logged: Opt-in offer sent to Customer ',
     skipped: 'Logged: Assigned to A/B Control Group for Customer ',
+    planTitle: '3. Detailed Implementation Plan (Next Steps)',
+    planSteps: [
+      { phase: 'Month 1 — Scoring & Genba', desc: 'Batch score customers with LightGBM + Poka-Yoke filter; validate pain points with field interviews.' },
+      { phase: 'Months 2–3 — Kaizen A/B Pilot', desc: 'Test 1,000 flagged customers (opt-in WhatsApp offer) vs. 1,000 control group.' },
+      { phase: 'Month 4 — ROI Gate & Scale', desc: 'Evaluate win-back rate vs. break-even; scale if net lift is positive and retrain quarterly.' },
+    ],
+    risksTitle: '4. Potential Risks & Mitigations',
+    risks: [
+      { risk: 'Paying offers to loyal customers', mitigation: 'Poka-Yoke double filter (Top 20% risk + usage drop).' },
+      { risk: 'Seasonality drift', mitigation: 'Automated quarterly retraining on recent usage data.' },
+      { risk: 'False positives / annoyance', mitigation: 'Soft opt-in WhatsApp message; customer can decline.' },
+      { risk: 'Data privacy', mitigation: 'Anonymized Customer_IDs only; no PII stored.' },
+    ],
   },
   es: {
     subtitle: 'MVP de Retención Telecom • Poka-Yoke + Omotenashi',
@@ -46,6 +63,19 @@ const I18N: Record<Lang, {
     ready: 'Estado: Listo para envío del piloto.',
     sent: 'Registrado: Oferta opt-in enviada al Cliente ',
     skipped: 'Registrado: Asignado a Grupo Control A/B para Cliente ',
+    planTitle: '3. Plan de Implementación Detallado (Next Steps)',
+    planSteps: [
+      { phase: 'Mes 1 — Scoring y Genba', desc: 'Scoring mensual con LightGBM + filtro Poka-Yoke; validación cualitativa en campo.' },
+      { phase: 'Meses 2–3 — Piloto Kaizen A/B', desc: '1,000 clientes en riesgo (oferta opt-in por WhatsApp) vs. 1,000 grupo control.' },
+      { phase: 'Mes 4 — Evaluación y Escala', desc: 'Medir tasa de retención vs. punto de equilibrio; escalar y reentrenar cada trimestre.' },
+    ],
+    risksTitle: '4. Riesgos Potenciales y Mitigación',
+    risks: [
+      { risk: 'Dar ofertas a clientes leales', mitigation: 'Doble filtro Poka-Yoke (Top 20% riesgo + caída de uso).' },
+      { risk: 'Estacionalidad', mitigation: 'Reentrenamiento trimestral automático con datos recientes.' },
+      { risk: 'Falsos positivos', mitigation: 'Mensaje opt-in suave; el cliente decide si acepta.' },
+      { risk: 'Privacidad de datos', mitigation: 'Solo Customer_ID anonimizado; sin datos personales.' },
+    ],
   },
   jp: {
     subtitle: '通信リテンションMVP • ポカヨケ + おもてなし',
@@ -59,6 +89,19 @@ const I18N: Record<Lang, {
     ready: 'ステータス: パイロット配信準備完了',
     sent: '記録完了: オファー送信済み — 顧客ID ',
     skipped: '記録完了: A/B対照群に割当 — 顧客ID ',
+    planTitle: '3. 詳細導入計画（Next Steps）',
+    planSteps: [
+      { phase: '1ヶ月目 — スコアリング & 現場検証', desc: 'LightGBM + ポカヨケ判定で対象抽出し、顧客ヒアリングを実施。' },
+      { phase: '2〜3ヶ月目 — カイゼンA/Bパイロット', desc: '対象1,000名（WhatsAppオファー）と対照群1,000名で効果検証。' },
+      { phase: '4ヶ月目 — ROI評価 & 展開', desc: '損益分岐点を超える場合のみ全体展開し、四半期ごとに再学習。' },
+    ],
+    risksTitle: '4. 想定リスクと対策',
+    risks: [
+      { risk: '継続顧客への過剰オファー', mitigation: 'ポカヨケ二重フィルタ（上位20% + 利用減少）。' },
+      { risk: '季節性による精度低下', mitigation: '四半期ごとの自動再学習を実施。' },
+      { risk: '誤検知による顧客離反', mitigation: 'オプトイン型のソフトな提案のみ実施。' },
+      { risk: 'プライバシー保護', mitigation: '匿名化IDのみ使用し、個人情報は保持しない。' },
+    ],
   },
 };
 
@@ -69,7 +112,7 @@ export function RetainBotPanel() {
   const t = I18N[lang];
 
   return (
-    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', padding: '32px', maxWidth: '960px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', padding: '32px', maxWidth: '1000px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
@@ -100,9 +143,9 @@ export function RetainBotPanel() {
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#FFFFFF' }}>
-          <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step1}</h2>
+          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step1}</h2>
           {CUSTOMERS.map((c) => {
             const isSelected = c.id === selectedId;
             return (
@@ -137,7 +180,7 @@ export function RetainBotPanel() {
         </section>
 
         <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#FFFFFF' }}>
-          <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step2}</h2>
+          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step2}</h2>
           <div style={{ border: '1px solid #E8EAF0', borderRadius: '8px', padding: '16px', background: '#FAFBFD', minHeight: '140px', fontSize: '14px', lineHeight: 1.5, marginBottom: '14px' }}>
             {t.msg}
           </div>
@@ -156,6 +199,28 @@ export function RetainBotPanel() {
             </button>
           </div>
           <div style={{ marginTop: '14px', fontSize: '12px', color: '#5A6780' }}>{statusText}</div>
+        </section>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+        <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#F7F9FC' }}>
+          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.planTitle}</h2>
+          {t.planSteps.map((s) => (
+            <div key={s.phase} style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2A4A' }}>{s.phase}</div>
+              <div style={{ fontSize: '13px', color: '#5A6780', lineHeight: 1.4 }}>{s.desc}</div>
+            </div>
+          ))}
+        </section>
+
+        <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#F7F9FC' }}>
+          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.risksTitle}</h2>
+          {t.risks.map((r) => (
+            <div key={r.risk} style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#C73E1D' }}>{r.risk}</div>
+              <div style={{ fontSize: '13px', color: '#5A6780', lineHeight: 1.4 }}>{r.mitigation}</div>
+            </div>
+          ))}
         </section>
       </div>
     </div>
