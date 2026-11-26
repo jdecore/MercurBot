@@ -163,7 +163,7 @@ export function RetainBotPanel() {
   };
 
   return (
-    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', padding: '28px 32px', maxWidth: '1040px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', width: '100%', boxSizing: 'border-box', padding: '24px 36px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain', borderRadius: '8px' }} />
