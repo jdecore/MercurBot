@@ -187,7 +187,7 @@ export function RetainBotPanel() {
               fontSize: '12px',
               fontWeight: 700,
               padding: '8px 14px',
-              border: '2px dashed #C73E1D',
+              border: '2px dashed #d11310',
               borderRadius: '8px',
               cursor: 'pointer',
               background: '#1A2A4A',
@@ -257,7 +257,7 @@ export function RetainBotPanel() {
                   <strong>ID: {c.id}</strong>
                   <div style={{ fontSize: '12px', color: '#5A6780' }}>eqpdays: {c.eqpdays} • mou: {c.usageDrop}</div>
                 </div>
-                <span style={{ fontSize: '12px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#FDECE8', color: '#C73E1D' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
                   Risk: {c.risk}
                 </span>
               </div>
@@ -276,7 +276,7 @@ export function RetainBotPanel() {
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               onClick={() => { setStatusText(`${t.sent}${selectedId}`); setMood('feliz'); }}
-              style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '13px', background: '#C73E1D', color: '#FFFFFF' }}
+              style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '13px', background: '#d11310', color: '#FFFFFF' }}
             >
               {t.send}
             </button>
@@ -305,7 +305,7 @@ export function RetainBotPanel() {
           <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.risksTitle}</h2>
           {t.risks.map((r) => (
             <div key={r.risk} style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#C73E1D' }}>{r.risk}</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#d11310' }}>{r.risk}</div>
               <div style={{ fontSize: '13px', color: '#5A6780', lineHeight: 1.4 }}>{r.mitigation}</div>
             </div>
           ))}
