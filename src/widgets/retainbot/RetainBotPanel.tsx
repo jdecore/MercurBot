@@ -54,9 +54,9 @@ const I18N: Record<Lang, {
     loadedCsv: 'Loaded CSV rows into RetainBot: ',
     planTitle: '3. Detailed Implementation Plan (Next Steps)',
     planSteps: [
-      { phase: 'Month 1 — Scoring & Genba', desc: 'Batch score customers with LightGBM + Poka-Yoke filter; validate pain points with field interviews.' },
-      { phase: 'Months 2–3 — Kaizen A/B Pilot', desc: 'Test 1,000 flagged customers (opt-in WhatsApp offer) vs. 1,000 control group.' },
-      { phase: 'Month 4 — ROI Gate & Scale', desc: 'Evaluate win-back rate vs. break-even; scale if net lift is positive and retrain quarterly.' },
+      { phase: 'Month 1 — Scoring & Genba', desc: 'Batch score customers with 5-Fold CV Ensemble (0.7000 ROC-AUC, 1.50x Lift) + Poka-Yoke filter; field interviews.' },
+      { phase: 'Months 2–3 — Kaizen A/B Pilot', desc: 'Split Top 20% flagged users: 90% opt-in WhatsApp offer vs. 10% control group.' },
+      { phase: 'Month 4 — ROI Gate & Scale', desc: 'Scale up only if win-back beats 3.7% break-even (+$87.1K USD illustrative net); retrain quarterly.' },
     ],
     risksTitle: '4. Potential Risks & Mitigations',
     risks: [
@@ -83,9 +83,9 @@ const I18N: Record<Lang, {
     loadedCsv: 'Filas CSV cargadas en RetainBot: ',
     planTitle: '3. Plan de Implementación Detallado (Next Steps)',
     planSteps: [
-      { phase: 'Mes 1 — Scoring y Genba', desc: 'Scoring mensual con LightGBM + filtro Poka-Yoke; validación cualitativa en campo.' },
-      { phase: 'Meses 2–3 — Piloto Kaizen A/B', desc: '1,000 clientes en riesgo (oferta opt-in por WhatsApp) vs. 1,000 grupo control.' },
-      { phase: 'Mes 4 — Evaluación y Escala', desc: 'Medir tasa de retención vs. punto de equilibrio; escalar y reentrenar cada trimestre.' },
+      { phase: 'Mes 1 — Scoring y Genba', desc: 'Scoring mensual con 5-Fold CV Ensemble (0.7000 ROC-AUC, 1.50x Lift) + filtro Poka-Yoke; entrevistas en campo.' },
+      { phase: 'Meses 2–3 — Piloto Kaizen A/B', desc: 'Dividir Top 20% en riesgo: 90% oferta opt-in por WhatsApp vs. 10% grupo control.' },
+      { phase: 'Mes 4 — Evaluación y Escala', desc: 'Escalar solo si retención supera 3.7% break-even (+$87.1K USD neto ilustrativo); reentrenar cada trimestre.' },
     ],
     risksTitle: '4. Riesgos Potenciales y Mitigación',
     risks: [
