@@ -3,138 +3,143 @@ import { Mascota } from '../../shared/ui/Mascota';
 import type { MascotaMood } from '../../entities/robot/types';
 
 type Lang = 'en' | 'es' | 'jp';
+type Step = 1 | 2 | 3;
 
 interface CustomerRow {
   id: string;
   risk: string;
   eqpdays: string;
-  usageDrop: string;
 }
 
-const DEFAULT_CUSTOMERS: CustomerRow[] = [
-  { id: '1000001', risk: '82%', eqpdays: '361', usageDrop: '-42%' },
-  { id: '1000412', risk: '76%', eqpdays: '490', usageDrop: '-38%' },
-  { id: '1000895', risk: '71%', eqpdays: '412', usageDrop: '-31%' },
+const REAL_COMPANY_A_DATA: CustomerRow[] = [
+  { id: '1057208', risk: '97.9%', eqpdays: '503' },
+  { id: '1094790', risk: '97.4%', eqpdays: '260' },
+  { id: '1042921', risk: '97.4%', eqpdays: '602' },
+  { id: '1011695', risk: '96.8%', eqpdays: '993' },
+  { id: '1070683', risk: '96.4%', eqpdays: '423' },
 ];
 
 const I18N: Record<Lang, {
   subtitle: string;
-  uploadLabel: string;
-  robotIntro: string;
-  step1: string;
-  step2: string;
-  pokaTitle: string;
-  pokaDesc: string;
+  steps: [string, string, string];
+  robotStep1: string;
+  robotStep2: string;
+  robotStep3: string;
+  useDefault: string;
+  uploadCsv: string;
+  poka: string;
   msg: string;
-  send: string;
   skip: string;
-  ready: string;
-  sent: string;
+  back: string;
+  sentVia: string;
   skipped: string;
-  loadedCsv: string;
+  togglePlan: string;
   planTitle: string;
-  planSteps: { phase: string; desc: string }[];
+  plan: string[];
   risksTitle: string;
-  risks: { risk: string; mitigation: string }[];
+  risks: string[];
 }> = {
   en: {
-    subtitle: 'Telecom Retention AI • Poka-Yoke + Omotenashi',
-    uploadLabel: 'Upload Scored CSV',
-    robotIntro: 'Ready to analyze Company A churn risk. Select a customer or upload your scored CSV.',
-    step1: '1. Top 20% Risk Queue (Model Output)',
-    step2: '2. Opt-in WhatsApp Outreach',
-    pokaTitle: 'Poka-Yoke Filter:',
-    pokaDesc: 'Passed (Top 20% Risk + Usage Drop). Eligible for soft opt-in outreach.',
-    msg: 'Hello! We noticed your recent usage changed. As a valued customer, reply YES to activate a 10% micro-recharge bonus this week.',
-    send: 'Send Opt-in Offer',
+    subtitle: 'Telecom Retention AI • 5-Fold CV Ensemble (0.7000 ROC-AUC)',
+    steps: ['1. Data', '2. Risk Queue', '3. Send Offer'],
+    robotStep1: 'Hi! Should we use Company A real Top-20% predictions or upload a new CSV?',
+    robotStep2: 'Select an at-risk customer below. Poka-Yoke filter is active.',
+    robotStep3: 'Ready! Choose WhatsApp, Telegram, or LINE to send the opt-in offer, or assign to Control.',
+    useDefault: 'Use Company A Data (5 Real Top-Risk)',
+    uploadCsv: 'Upload Another CSV',
+    poka: 'Poka-Yoke: Passed (Top 20% Risk + Usage Drop)',
+    msg: 'Hello! We noticed your recent usage changed. Reply YES to activate a 10% micro-recharge bonus this week.',
     skip: 'Skip (Control Group)',
-    ready: 'Status: Ready for pilot dispatch.',
-    sent: 'Opt-in offer sent to Customer ',
-    skipped: 'Assigned to A/B Control Group for Customer ',
-    loadedCsv: 'Loaded CSV rows into RetainBot: ',
-    planTitle: '3. Detailed Implementation Plan (Next Steps)',
-    planSteps: [
-      { phase: 'Month 1 — Scoring & Genba', desc: 'Batch score customers with 5-Fold CV Ensemble (0.7000 ROC-AUC, 1.50x Lift) + Poka-Yoke filter; field interviews.' },
-      { phase: 'Months 2–3 — Kaizen A/B Pilot', desc: 'Split Top 20% flagged users: 90% opt-in WhatsApp offer vs. 10% control group.' },
-      { phase: 'Month 4 — ROI Gate & Scale', desc: 'Scale up only if win-back beats 3.7% break-even (+$87.1K USD illustrative net); retrain quarterly.' },
+    back: '← Back',
+    sentVia: 'Offer opened in ',
+    skipped: 'Assigned to A/B Control Group: ID ',
+    togglePlan: 'View 4-Month Plan & Risks',
+    planTitle: 'Implementation Plan (Months 1–4)',
+    plan: [
+      'Month 1: Score users (0.7000 ROC-AUC) + Genba interviews',
+      'Months 2–3: A/B Pilot (90% opt-in / 10% control)',
+      'Month 4: Scale if win-back > 3.7% break-even (+$87.1K USD)',
     ],
-    risksTitle: '4. Potential Risks & Mitigations',
+    risksTitle: 'Risks & Mitigations',
     risks: [
-      { risk: 'Paying offers to loyal customers', mitigation: 'Poka-Yoke double filter (Top 20% risk + usage drop).' },
-      { risk: 'Seasonality drift', mitigation: 'Automated quarterly retraining on recent usage data.' },
-      { risk: 'False positives / annoyance', mitigation: 'Soft opt-in WhatsApp message; customer can decline.' },
-      { risk: 'Data privacy', mitigation: 'Anonymized Customer_IDs only; no PII stored.' },
+      'Loyal users → Poka-Yoke double filter + A/B',
+      'Seasonality → Quarterly retrain',
+      'Privacy → Anonymized Customer_IDs only',
     ],
   },
   es: {
-    subtitle: 'IA de Retención Telecom • Poka-Yoke + Omotenashi',
-    uploadLabel: 'Subir CSV con Riesgo',
-    robotIntro: 'Listo para analizar el churn de Company A. Selecciona un cliente o sube tu CSV.',
-    step1: '1. Cola Top 20% Riesgo (Salida del Modelo)',
-    step2: '2. Envío Opt-in por WhatsApp',
-    pokaTitle: 'Filtro Poka-Yoke:',
-    pokaDesc: 'Aprobado (Top 20% Riesgo + Caída de uso). Apto para oferta suave.',
+    subtitle: 'IA de Retención Telecom • 5-Fold CV Ensemble (0.7000 ROC-AUC)',
+    steps: ['1. Datos', '2. Cola Riesgo', '3. Enviar Oferta'],
+    robotStep1: '¡Hola! ¿Usamos los datos reales Top 20% de Company A o quieres subir otro CSV?',
+    robotStep2: 'Selecciona un cliente en riesgo. El filtro Poka-Yoke está activo.',
+    robotStep3: '¡Listo! Elige WhatsApp, Telegram o LINE para enviar la oferta opt-in, o pásalo a Control.',
+    useDefault: 'Usar Datos de Company A (5 Reales)',
+    uploadCsv: 'Subir Otro CSV',
+    poka: 'Poka-Yoke: Aprobado (Top 20% Riesgo + Caída de uso)',
     msg: '¡Hola! Notamos un cambio en tu uso reciente. Responde SÍ para activar un bono de 10% en tu próxima recarga.',
-    send: 'Enviar Oferta Opt-in',
     skip: 'Omitir (Grupo Control)',
-    ready: 'Estado: Listo para envío del piloto.',
-    sent: 'Oferta opt-in enviada al Cliente ',
-    skipped: 'Asignado a Grupo Control A/B para Cliente ',
-    loadedCsv: 'Filas CSV cargadas en RetainBot: ',
-    planTitle: '3. Plan de Implementación Detallado (Next Steps)',
-    planSteps: [
-      { phase: 'Mes 1 — Scoring y Genba', desc: 'Scoring mensual con 5-Fold CV Ensemble (0.7000 ROC-AUC, 1.50x Lift) + filtro Poka-Yoke; entrevistas en campo.' },
-      { phase: 'Meses 2–3 — Piloto Kaizen A/B', desc: 'Dividir Top 20% en riesgo: 90% oferta opt-in por WhatsApp vs. 10% grupo control.' },
-      { phase: 'Mes 4 — Evaluación y Escala', desc: 'Escalar solo si retención supera 3.7% break-even (+$87.1K USD neto ilustrativo); reentrenar cada trimestre.' },
+    back: '← Volver',
+    sentVia: 'Oferta abierta en ',
+    skipped: 'Asignado a Grupo Control A/B: ID ',
+    togglePlan: 'Ver Plan 4 Meses y Riesgos',
+    planTitle: 'Plan de Implementación (Meses 1–4)',
+    plan: [
+      'Mes 1: Scoring (0.7000 ROC-AUC) + Genba en campo',
+      'Meses 2–3: Piloto A/B (90% opt-in / 10% control)',
+      'Mes 4: Escalar si retención > 3.7% break-even (+$87.1K USD)',
     ],
-    risksTitle: '4. Riesgos Potenciales y Mitigación',
+    risksTitle: 'Riesgos y Mitigación',
     risks: [
-      { risk: 'Dar ofertas a clientes leales', mitigation: 'Doble filtro Poka-Yoke (Top 20% riesgo + caída de uso).' },
-      { risk: 'Estacionalidad', mitigation: 'Reentrenamiento trimestral automático con datos recientes.' },
-      { risk: 'Falsos positivos', mitigation: 'Mensaje opt-in suave; el cliente decide si acepta.' },
-      { risk: 'Privacidad de datos', mitigation: 'Solo Customer_ID anonimizado; sin datos personales.' },
+      'Clientes leales → Doble filtro Poka-Yoke + A/B',
+      'Estacionalidad → Reentrenar cada trimestre',
+      'Privacidad → Solo Customer_IDs anonimizados',
     ],
   },
   jp: {
-    subtitle: '通信リテンションAI • ポカヨケ + おもてなし',
-    uploadLabel: '予測CSVをアップロード',
-    robotIntro: 'Company Aの解約リスク分析の準備が完了しました。顧客を選択するかCSVをアップロードしてください。',
-    step1: '1. リスク上位20%顧客（モデル出力）',
-    step2: '2. オプトインWhatsApp配信',
-    pokaTitle: 'ポカヨケ判定:',
-    pokaDesc: '通過（リスク上位20% + 利用減少）。事前オファー対象。',
+    subtitle: '通信リテンションAI • 5-Fold CV Ensemble (0.7000 ROC-AUC)',
+    steps: ['1. データ', '2. リスク顧客', '3. 配信'],
+    robotStep1: 'Company Aの実予測データ（上位20%）を使用しますか？新しいCSVをアップロードしますか？',
+    robotStep2: 'リスク顧客を選択してください。ポカヨケ判定が有効です。',
+    robotStep3: '準備完了！WhatsApp / Telegram / LINEで送信するか、対照群に割り当ててください。',
+    useDefault: 'Company A データを使用',
+    uploadCsv: '別のCSVをアップロード',
+    poka: 'ポカヨケ: 通過（上位20% + 利用減少）',
     msg: 'いつもご利用ありがとうございます。YESと返信すると、今週の少額チャージ10%ボーナスが有効になります。',
-    send: 'オファーを送信',
     skip: 'スキップ（対照群）',
-    ready: 'ステータス: パイロット配信準備完了',
-    sent: 'オファー送信済み — 顧客ID ',
-    skipped: 'A/B対照群に割当 — 顧客ID ',
-    loadedCsv: 'CSVデータを読み込みました: ',
-    planTitle: '3. 詳細導入計画（Next Steps）',
-    planSteps: [
-      { phase: '1ヶ月目 — スコアリング & 現場検証', desc: 'LightGBM + ポカヨケ判定で対象抽出し、顧客ヒアリングを実施。' },
-      { phase: '2〜3ヶ月目 — カイゼンA/Bパイロット', desc: '対象1,000名（WhatsAppオファー）と対照群1,000名で効果検証。' },
-      { phase: '4ヶ月目 — ROI評価 & 展開', desc: '損益分岐点を超える場合のみ全体展開し、四半期ごとに再学習。' },
+    back: '← 戻る',
+    sentVia: '送信画面を開きました: ',
+    skipped: 'A/B対照群に割当: ID ',
+    togglePlan: '4ヶ月計画とリスクを表示',
+    planTitle: '導入計画（1〜4ヶ月目）',
+    plan: [
+      '1ヶ月目: スコアリング (0.7000 ROC-AUC) + 現場検証',
+      '2〜3ヶ月目: A/Bパイロット (90% 配信 / 10% 対照群)',
+      '4ヶ月目: 損益分岐点 3.7% 超で展開 (+$87.1K USD)',
     ],
-    risksTitle: '4. 想定リスクと対策',
+    risksTitle: 'リスクと対策',
     risks: [
-      { risk: '継続顧客への過剰オファー', mitigation: 'ポカヨケ二重フィルタ（上位20% + 利用減少）。' },
-      { risk: '季節性による精度低下', mitigation: '四半期ごとの自動再学習を実施。' },
-      { risk: '誤検知による顧客離反', mitigation: 'オプトイン型のソフトな提案のみ実施。' },
-      { risk: 'プライバシー保護', mitigation: '匿名化IDのみ使用し、個人情報は保持しない。' },
+      '継続顧客への誤配信 → ポカヨケ二重フィルタ',
+      '季節性 → 四半期ごとの再学習',
+      'プライバシー → 匿名化IDのみ使用',
     ],
   },
 };
 
 export function RetainBotPanel() {
   const [lang, setLang] = useState<Lang>('en');
-  const [customers, setCustomers] = useState<CustomerRow[]>(DEFAULT_CUSTOMERS);
-  const [selectedId, setSelectedId] = useState<string>(DEFAULT_CUSTOMERS[0].id);
-  const [statusText, setStatusText] = useState<string>(I18N.en.robotIntro);
+  const [step, setStep] = useState<Step>(1);
+  const [customers, setCustomers] = useState<CustomerRow[]>(REAL_COMPANY_A_DATA);
+  const [selectedId, setSelectedId] = useState<string>(REAL_COMPANY_A_DATA[0].id);
   const [mood, setMood] = useState<MascotaMood>('neutro');
-  const t = I18N[lang];
+  const [actionLog, setActionLog] = useState<string>('');
+  const [showPlan, setShowPlan] = useState<boolean>(false);
 
-  const processCsvFile = async (file: File) => {
+  const t = I18N[lang];
+  const robotText = actionLog || (step === 1 ? t.robotStep1 : step === 2 ? t.robotStep2 : t.robotStep3);
+
+  const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setMood('pensando');
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter(Boolean);
@@ -149,103 +154,133 @@ export function RetainBotPanel() {
         id: idIdx >= 0 && cols[idIdx] ? cols[idIdx].trim() : `ROW-${i + 1}`,
         risk: riskIdx >= 0 && cols[riskIdx] ? cols[riskIdx].trim() : 'Top 20%',
         eqpdays: eqpIdx >= 0 && cols[eqpIdx] ? cols[eqpIdx].trim() : '-',
-        usageDrop: 'Filtered',
       };
     });
     if (parsed.length > 0) {
       setCustomers(parsed);
       setSelectedId(parsed[0].id);
-      setStatusText(`${t.loadedCsv}${parsed.length}`);
       setMood('feliz');
+      setActionLog('');
+      setStep(2);
     }
   };
 
-  const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await processCsvFile(file);
+  const openChannel = (channel: 'WhatsApp' | 'Telegram' | 'LINE') => {
+    const encoded = encodeURIComponent(`[ID ${selectedId}] ${t.msg}`);
+    const url =
+      channel === 'WhatsApp'
+        ? `https://wa.me/?text=${encoded}`
+        : channel === 'Telegram'
+          ? `https://t.me/share/url?url=${encodeURIComponent('https://retain-bot.vercel.app')}&text=${encoded}`
+          : `https://line.me/R/msg/text/?${encoded}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setMood('feliz');
+    setActionLog(`${t.sentVia}${channel} (ID ${selectedId})`);
   };
 
   return (
     <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', width: '100%', boxSizing: 'border-box', padding: '24px 36px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '16px', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain', borderRadius: '8px' }} />
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '14px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '44px', width: '44px', objectFit: 'contain', borderRadius: '8px' }} />
           <div>
-            <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>RetainBot</h1>
+            <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>RetainBot</h1>
             <span style={{ fontSize: '12px', color: '#5A6780' }}>{t.subtitle}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const file = e.dataTransfer.files?.[0];
-              if (file) void processCsvFile(file);
-            }}
-            style={{
-              fontSize: '12px',
-              fontWeight: 700,
-              padding: '8px 14px',
-              border: '2px dashed #d11310',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              background: '#1A2A4A',
-              color: '#FFFFFF',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>●</span> {t.uploadLabel} (Click / Drag CSV)
-            <input type="file" accept=".csv" onChange={handleCsvUpload} style={{ display: 'none' }} />
-          </label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {(['en', 'es', 'jp'] as Lang[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => { setLang(l); setStatusText(I18N[l].robotIntro); setMood('neutro'); }}
-                style={{
-                  border: `1px solid ${lang === l ? '#1A2A4A' : '#E8EAF0'}`,
-                  background: lang === l ? '#1A2A4A' : '#FFFFFF',
-                  color: lang === l ? '#FFFFFF' : '#1A2A4A',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                {l === 'jp' ? '日本語' : l.toUpperCase()}
-              </button>
-            ))}
-          </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {(['en', 'es', 'jp'] as Lang[]).map((l) => (
+            <button
+              key={l}
+              onClick={() => { setLang(l); setActionLog(''); }}
+              style={{
+                border: `1px solid ${lang === l ? '#1A2A4A' : '#E8EAF0'}`,
+                background: lang === l ? '#1A2A4A' : '#FFFFFF',
+                color: lang === l ? '#FFFFFF' : '#1A2A4A',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
+            >
+              {l === 'jp' ? '日本語' : l.toUpperCase()}
+            </button>
+          ))}
         </div>
       </header>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '16px 20px', border: '1px solid #E8EAF0', borderRadius: '10px', background: '#F7F9FC', marginBottom: '24px' }}>
-        <div style={{ transform: 'scale(0.85)', transformOrigin: 'center' }}>
+      {/* Stepper */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        {t.steps.map((label, idx) => {
+          const s = (idx + 1) as Step;
+          const active = step === s;
+          return (
+            <button
+              key={label}
+              onClick={() => { setStep(s); setActionLog(''); }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '8px',
+                border: `1px solid ${active ? '#d11310' : '#E8EAF0'}`,
+                background: active ? '#d11310' : '#F7F9FC',
+                color: active ? '#FFFFFF' : '#1A2A4A',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Robot Guide */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 20px', border: '1px solid #E8EAF0', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
+        <div style={{ transform: 'scale(0.8)', flexShrink: 0 }}>
           <Mascota mood={mood} />
         </div>
-        <div style={{ fontSize: '14px', lineHeight: 1.5, color: '#1A2A4A', fontWeight: 500 }}>
-          {statusText}
+        <div style={{ fontSize: '15px', lineHeight: 1.4, color: '#1A2A4A', fontWeight: 600 }}>
+          {robotText}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-        <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#FFFFFF' }}>
-          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step1}</h2>
+      {/* Step 1: Data Selection */}
+      {step === 1 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <button
+            onClick={() => { setCustomers(REAL_COMPANY_A_DATA); setSelectedId(REAL_COMPANY_A_DATA[0].id); setMood('feliz'); setActionLog(''); setStep(2); }}
+            style={{ padding: '24px', borderRadius: '10px', border: '2px solid #1A2A4A', background: '#1A2A4A', color: '#FFFFFF', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            {t.useDefault}
+          </button>
+          <label
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) void handleCsvUpload({ target: { files: [f] } } as unknown as ChangeEvent<HTMLInputElement>); }}
+            style={{ padding: '24px', borderRadius: '10px', border: '2px dashed #d11310', background: '#FFFFFF', color: '#d11310', fontSize: '15px', fontWeight: 700, cursor: 'pointer', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            ● {t.uploadCsv}
+            <input type="file" accept=".csv" onChange={handleCsvUpload} style={{ display: 'none' }} />
+          </label>
+        </div>
+      )}
+
+      {/* Step 2: Risk Queue */}
+      {step === 2 && (
+        <div style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', marginBottom: '20px' }}>
           {customers.map((c) => {
             const isSelected = c.id === selectedId;
             return (
               <div
                 key={c.id}
-                onClick={() => { setSelectedId(c.id); setStatusText(t.ready); setMood('neutro'); }}
+                onClick={() => { setSelectedId(c.id); setActionLog(''); setStep(3); }}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '10px 12px',
+                  padding: '12px 14px',
                   border: `1px solid ${isSelected ? '#1A2A4A' : '#E8EAF0'}`,
                   borderRadius: '8px',
                   marginBottom: '10px',
@@ -255,62 +290,69 @@ export function RetainBotPanel() {
               >
                 <div>
                   <strong>ID: {c.id}</strong>
-                  <div style={{ fontSize: '12px', color: '#5A6780' }}>eqpdays: {c.eqpdays} • mou: {c.usageDrop}</div>
+                  <span style={{ fontSize: '12px', color: '#5A6780', marginLeft: '12px' }}>eqpdays: {c.eqpdays}</span>
                 </div>
-                <span style={{ fontSize: '12px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
                   Risk: {c.risk}
                 </span>
               </div>
             );
           })}
-          <div style={{ marginTop: '14px', padding: '12px', borderLeft: '3px solid #1A2A4A', background: '#F7F9FC', fontSize: '13px', lineHeight: 1.5 }}>
-            <strong>{t.pokaTitle}</strong> {t.pokaDesc}
+          <div style={{ marginTop: '10px', padding: '10px 12px', borderLeft: '3px solid #1A2A4A', background: '#F7F9FC', fontSize: '13px', fontWeight: 600 }}>
+            {t.poka}
           </div>
-        </section>
+        </div>
+      )}
 
-        <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#FFFFFF' }}>
-          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.step2}</h2>
-          <div style={{ border: '1px solid #E8EAF0', borderRadius: '8px', padding: '16px', background: '#FAFBFD', minHeight: '140px', fontSize: '14px', lineHeight: 1.5, marginBottom: '14px' }}>
+      {/* Step 3: Send Offer */}
+      {step === 3 && (
+        <div style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', color: '#5A6780', marginBottom: '8px' }}>
+            Customer ID: <strong>{selectedId}</strong>
+          </div>
+          <div style={{ border: '1px solid #E8EAF0', borderRadius: '8px', padding: '14px', background: '#FAFBFD', fontSize: '14px', marginBottom: '14px' }}>
             {t.msg}
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={() => { setStatusText(`${t.sent}${selectedId}`); setMood('feliz'); }}
-              style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '13px', background: '#d11310', color: '#FFFFFF' }}
-            >
-              {t.send}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button onClick={() => openChannel('WhatsApp')} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#25D366', color: '#FFFFFF' }}>
+              WhatsApp
             </button>
-            <button
-              onClick={() => { setStatusText(`${t.skipped}${selectedId}`); setMood('neutro'); }}
-              style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '13px', background: '#E8EAF0', color: '#1A2A4A' }}
-            >
+            <button onClick={() => openChannel('Telegram')} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#0088cc', color: '#FFFFFF' }}>
+              Telegram
+            </button>
+            <button onClick={() => openChannel('LINE')} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#06C755', color: '#FFFFFF' }}>
+              LINE
+            </button>
+            <button onClick={() => { setMood('neutro'); setActionLog(`${t.skipped}${selectedId}`); }} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#E8EAF0', color: '#1A2A4A' }}>
               {t.skip}
             </button>
           </div>
-        </section>
-      </div>
+          <button onClick={() => { setStep(2); setActionLog(''); }} style={{ marginTop: '12px', background: 'none', border: 'none', color: '#5A6780', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+            {t.back}
+          </button>
+        </div>
+      )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-        <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#F7F9FC' }}>
-          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.planTitle}</h2>
-          {t.planSteps.map((s) => (
-            <div key={s.phase} style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2A4A' }}>{s.phase}</div>
-              <div style={{ fontSize: '13px', color: '#5A6780', lineHeight: 1.4 }}>{s.desc}</div>
-            </div>
-          ))}
-        </section>
+      {/* Collapsible Plan & Risks */}
+      <button
+        onClick={() => setShowPlan((v) => !v)}
+        style={{ background: '#F7F9FC', border: '1px solid #E8EAF0', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, color: '#1A2A4A', cursor: 'pointer' }}
+      >
+        {t.togglePlan}
+      </button>
 
-        <section style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '20px', background: '#F7F9FC' }}>
-          <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#5A6780', marginBottom: '14px' }}>{t.risksTitle}</h2>
-          {t.risks.map((r) => (
-            <div key={r.risk} style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#d11310' }}>{r.risk}</div>
-              <div style={{ fontSize: '13px', color: '#5A6780', lineHeight: 1.4 }}>{r.mitigation}</div>
-            </div>
-          ))}
-        </section>
-      </div>
+      {showPlan && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '14px' }}>
+          <div style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '16px', background: '#F7F9FC' }}>
+            <h3 style={{ fontSize: '13px', color: '#1A2A4A', marginBottom: '10px' }}>{t.planTitle}</h3>
+            {t.plan.map((p) => <div key={p} style={{ fontSize: '13px', color: '#5A6780', marginBottom: '6px' }}>• {p}</div>)}
+          </div>
+          <div style={{ border: '1px solid #E8EAF0', borderRadius: '10px', padding: '16px', background: '#F7F9FC' }}>
+            <h3 style={{ fontSize: '13px', color: '#d11310', marginBottom: '10px' }}>{t.risksTitle}</h3>
+            {t.risks.map((r) => <div key={r} style={{ fontSize: '13px', color: '#5A6780', marginBottom: '6px' }}>• {r}</div>)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
