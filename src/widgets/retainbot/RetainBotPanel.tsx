@@ -126,73 +126,42 @@ const I18N: Record<Lang, {
 
 function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
   const [pupil, setPupil] = useState({ x: 0, y: 0 });
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      if (!svgRef.current) return;
-      const r = svgRef.current.getBoundingClientRect();
+      if (!wrapRef.current) return;
+      const r = wrapRef.current.getBoundingClientRect();
       const cx = r.left + r.width / 2;
-      const cy = r.top + r.height * 0.32;
+      const cy = r.top + r.height * 0.25;
       const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
-      setPupil({ x: Math.cos(angle) * 3.5, y: Math.sin(angle) * 2.5 });
+      setPupil({ x: Math.cos(angle) * 2.4, y: Math.sin(angle) * 1.8 });
     };
     window.addEventListener('mousemove', onMove);
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  const eyeScaleY = mood === 'feliz' ? 0.65 : mood === 'pensando' ? 0.85 : 1;
+  const eyeScaleY = mood === 'feliz' ? 0.6 : mood === 'pensando' ? 0.85 : 1;
 
   return (
-    <svg ref={svgRef} width="106" height="114" viewBox="0 0 120 132" fill="none" style={{ animation: 'retainFloat 3s ease-in-out infinite', flexShrink: 0 }}>
-      <defs>
-        <radialGradient id="rbBody" cx="38%" cy="32%" r="65%">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="65%" stopColor="#E8EEF5" />
-          <stop offset="100%" stopColor="#B8C7D9" />
-        </radialGradient>
-        <linearGradient id="rbLimb" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#CBD6E2" />
-        </linearGradient>
-      </defs>
-      {/* Dynamic shadow */}
-      <ellipse cx="60" cy="124" rx="34" ry="5" fill="#1A2A4A" opacity="0.16" />
-      {/* Legs & clawed feet */}
-      <rect x="44" y="86" width="10" height="24" rx="4" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
-      <rect x="66" y="86" width="10" height="24" rx="4" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
-      <circle cx="49" cy="96" r="3" fill="#1A2A4A" />
-      <circle cx="71" cy="96" r="3" fill="#1A2A4A" />
-      <path d="M36 110 L56 110 L52 119 L30 119 Z" fill="#1A2A4A" />
-      <path d="M64 110 L84 110 L90 119 L68 119 Z" fill="#1A2A4A" />
-      {/* Articulated Arms & Claws */}
-      <circle cx="22" cy="48" r="6" fill="#181C24" />
-      <circle cx="98" cy="48" r="6" fill="#181C24" />
-      <rect x="13" y="46" width="10" height="30" rx="5" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
-      <rect x="97" y="46" width="10" height="30" rx="5" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
-      <path d="M14 76 L11 86 L17 82 L21 87 L22 76 Z" fill="#1A2A4A" />
-      <path d="M98 76 L97 87 L101 82 L107 86 L106 76 Z" fill="#1A2A4A" />
-      {/* Spherical Armor Body */}
-      <circle cx="60" cy="54" r="36" fill="url(#rbBody)" stroke="#1A2A4A" strokeWidth="2.4" />
-      <path d="M25 56 Q60 66 95 56" stroke="#1A2A4A" strokeWidth="1.6" fill="none" opacity="0.45" />
-      <path d="M40 22 Q60 18 80 22" stroke="#1A2A4A" strokeWidth="1.4" fill="none" opacity="0.35" />
-      <line x1="60" y1="54" x2="60" y2="88" stroke="#1A2A4A" strokeWidth="1.2" opacity="0.25" />
-      {/* Visor with glass reflection */}
-      <rect x="34" y="24" width="52" height="28" rx="12" fill="#181C24" stroke="#1A2A4A" strokeWidth="2" />
-      <path d="M38 28 L52 28 L42 46 L36 46 Z" fill="#FFFFFF" opacity="0.08" />
-      {/* Tracking Eyes */}
-      <g transform={`translate(${pupil.x}, ${pupil.y})`}>
-        <ellipse cx="48" cy="38" rx="5.5" ry={6.5 * eyeScaleY} fill="#FFFFFF" />
-        <circle cx="48" cy="38" r="3" fill={mood === 'feliz' ? '#d11310' : '#1A2A4A'} />
-        <circle cx="49" cy="37" r="1" fill="#FFFFFF" />
-        <ellipse cx="72" cy="38" rx="5.5" ry={6.5 * eyeScaleY} fill="#FFFFFF" />
-        <circle cx="72" cy="38" r="3" fill={mood === 'feliz' ? '#d11310' : '#1A2A4A'} />
-        <circle cx="73" cy="37" r="1" fill="#FFFFFF" />
-      </g>
-      {/* Blush */}
-      <circle cx="40" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.7 : 0.25} />
-      <circle cx="80" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.7 : 0.25} />
-    </svg>
+    <div ref={wrapRef} style={{ position: 'relative', width: '104px', height: '104px', flexShrink: 0, animation: 'retainFloat 3s ease-in-out infinite' }}>
+      <img
+        src="/retainbot_mascot.jpg"
+        alt="RetainBot Mascot"
+        style={{ width: '104px', height: '104px', objectFit: 'contain', mixBlendMode: 'multiply', display: 'block' }}
+      />
+      <svg
+        width="104"
+        height="104"
+        viewBox="0 0 104 104"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      >
+        <g transform={`translate(${pupil.x}, ${pupil.y})`}>
+          <circle cx="43" cy="26" r={2.2 * eyeScaleY} fill={mood === 'feliz' ? '#d11310' : '#FFFFFF'} opacity="0.9" />
+          <circle cx="56" cy="26" r={2.2 * eyeScaleY} fill={mood === 'feliz' ? '#d11310' : '#FFFFFF'} opacity="0.9" />
+        </g>
+      </svg>
+    </div>
   );
 }
 
