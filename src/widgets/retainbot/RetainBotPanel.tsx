@@ -144,31 +144,54 @@ function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
   const eyeScaleY = mood === 'feliz' ? 0.65 : mood === 'pensando' ? 0.85 : 1;
 
   return (
-    <svg ref={svgRef} width="96" height="104" viewBox="0 0 120 130" fill="none" style={{ animation: 'retainFloat 3s ease-in-out infinite', flexShrink: 0 }}>
-      <ellipse cx="60" cy="122" rx="34" ry="5" fill="#1A2A4A" opacity="0.14" />
-      {/* Legs */}
-      <rect x="44" y="88" width="10" height="24" rx="4" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
-      <rect x="66" y="88" width="10" height="24" rx="4" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
-      <path d="M38 112 L56 112 L52 119 L34 119 Z" fill="#1A2A4A" />
-      <path d="M64 112 L82 112 L86 119 L68 119 Z" fill="#1A2A4A" />
-      {/* Arms */}
-      <rect x="14" y="46" width="11" height="34" rx="5" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
-      <rect x="95" y="46" width="11" height="34" rx="5" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
-      {/* Spherical Body */}
-      <circle cx="60" cy="54" r="36" fill="#FFFFFF" stroke="#1A2A4A" strokeWidth="2.5" />
-      <path d="M26 58 Q60 66 94 58" stroke="#1A2A4A" strokeWidth="1.8" fill="none" opacity="0.4" />
-      {/* Visor */}
-      <rect x="35" y="24" width="50" height="28" rx="12" fill="#181C24" stroke="#1A2A4A" strokeWidth="2" />
-      {/* Eyes */}
+    <svg ref={svgRef} width="106" height="114" viewBox="0 0 120 132" fill="none" style={{ animation: 'retainFloat 3s ease-in-out infinite', flexShrink: 0 }}>
+      <defs>
+        <radialGradient id="rbBody" cx="38%" cy="32%" r="65%">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="65%" stopColor="#E8EEF5" />
+          <stop offset="100%" stopColor="#B8C7D9" />
+        </radialGradient>
+        <linearGradient id="rbLimb" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#CBD6E2" />
+        </linearGradient>
+      </defs>
+      {/* Dynamic shadow */}
+      <ellipse cx="60" cy="124" rx="34" ry="5" fill="#1A2A4A" opacity="0.16" />
+      {/* Legs & clawed feet */}
+      <rect x="44" y="86" width="10" height="24" rx="4" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
+      <rect x="66" y="86" width="10" height="24" rx="4" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
+      <circle cx="49" cy="96" r="3" fill="#1A2A4A" />
+      <circle cx="71" cy="96" r="3" fill="#1A2A4A" />
+      <path d="M36 110 L56 110 L52 119 L30 119 Z" fill="#1A2A4A" />
+      <path d="M64 110 L84 110 L90 119 L68 119 Z" fill="#1A2A4A" />
+      {/* Articulated Arms & Claws */}
+      <circle cx="22" cy="48" r="6" fill="#181C24" />
+      <circle cx="98" cy="48" r="6" fill="#181C24" />
+      <rect x="13" y="46" width="10" height="30" rx="5" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
+      <rect x="97" y="46" width="10" height="30" rx="5" fill="url(#rbLimb)" stroke="#1A2A4A" strokeWidth="2" />
+      <path d="M14 76 L11 86 L17 82 L21 87 L22 76 Z" fill="#1A2A4A" />
+      <path d="M98 76 L97 87 L101 82 L107 86 L106 76 Z" fill="#1A2A4A" />
+      {/* Spherical Armor Body */}
+      <circle cx="60" cy="54" r="36" fill="url(#rbBody)" stroke="#1A2A4A" strokeWidth="2.4" />
+      <path d="M25 56 Q60 66 95 56" stroke="#1A2A4A" strokeWidth="1.6" fill="none" opacity="0.45" />
+      <path d="M40 22 Q60 18 80 22" stroke="#1A2A4A" strokeWidth="1.4" fill="none" opacity="0.35" />
+      <line x1="60" y1="54" x2="60" y2="88" stroke="#1A2A4A" strokeWidth="1.2" opacity="0.25" />
+      {/* Visor with glass reflection */}
+      <rect x="34" y="24" width="52" height="28" rx="12" fill="#181C24" stroke="#1A2A4A" strokeWidth="2" />
+      <path d="M38 28 L52 28 L42 46 L36 46 Z" fill="#FFFFFF" opacity="0.08" />
+      {/* Tracking Eyes */}
       <g transform={`translate(${pupil.x}, ${pupil.y})`}>
         <ellipse cx="48" cy="38" rx="5.5" ry={6.5 * eyeScaleY} fill="#FFFFFF" />
         <circle cx="48" cy="38" r="3" fill={mood === 'feliz' ? '#d11310' : '#1A2A4A'} />
+        <circle cx="49" cy="37" r="1" fill="#FFFFFF" />
         <ellipse cx="72" cy="38" rx="5.5" ry={6.5 * eyeScaleY} fill="#FFFFFF" />
         <circle cx="72" cy="38" r="3" fill={mood === 'feliz' ? '#d11310' : '#1A2A4A'} />
+        <circle cx="73" cy="37" r="1" fill="#FFFFFF" />
       </g>
       {/* Blush */}
-      <circle cx="40" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.65 : 0.25} />
-      <circle cx="80" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.65 : 0.25} />
+      <circle cx="40" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.7 : 0.25} />
+      <circle cx="80" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.7 : 0.25} />
     </svg>
   );
 }
