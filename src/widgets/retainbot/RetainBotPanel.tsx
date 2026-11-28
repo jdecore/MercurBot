@@ -240,11 +240,11 @@ function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
       <div className="ground-shadow" aria-hidden="true" />
       <div className="robot-rig">
         <div className="layer brazo-izq">
-          <img src="/brazo-izq.png" alt="Brazo izquierdo del robot" draggable={false} />
+          <img src="/brazo-izq.webp" alt="Brazo izquierdo del robot" draggable={false} />
         </div>
         <div className="torso-group">
           <div className="layer cuerpo">
-            <img src="/cuerpo.png" alt="Cuerpo del robot" draggable={false} />
+            <img src="/cuerpo.webp" alt="Cuerpo del robot" draggable={false} />
           </div>
           <div className="visor-screen" ref={visorRef} aria-hidden="true">
             <div className={`eyes-wrapper${isBlinking ? ' is-blinking' : ''}`} ref={eyesWrapperRef}>
@@ -258,7 +258,7 @@ function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
           </div>
         </div>
         <div className="layer brazo-der">
-          <img src="/brazo-der.png" alt="Brazo derecho del robot" draggable={false} />
+          <img src="/brazo-der.webp" alt="Brazo derecho del robot" draggable={false} />
         </div>
       </div>
     </div>
