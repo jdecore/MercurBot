@@ -355,34 +355,7 @@ export function RetainBotPanel() {
       </header>
 
       <div className="retainbot-workspace">
-        {/* Left Column: Robot Guide */}
-        <aside style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '20px', border: '1px solid #E8EAF0', borderTop: '4px solid #d11310', borderRadius: '12px', background: '#F7F9FC' }}>
-          <SphericalRobotSvg mood={mood} />
-          <div style={{ width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#1A2A4A', color: '#FFFFFF' }}>
-                  ID: {selectedCustomer?.id}
-                </span>
-                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
-                  Risk: {selectedCustomer?.risk}
-                </span>
-              </div>
-              <button
-                onClick={speakText}
-                title="Speak"
-                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #E8EAF0', background: '#FFFFFF', color: '#1A2A4A', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
-              >
-                🔊
-              </button>
-            </div>
-            <div style={{ fontSize: '14px', lineHeight: 1.45, color: '#1A2A4A', fontWeight: 600, background: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E8EAF0' }}>
-              {robotText}
-            </div>
-          </div>
-        </aside>
-
-        {/* Right Column: Stepper + Content */}
+        {/* Left Column: Stepper + Content */}
         <section style={{ minWidth: 0 }}>
           {/* Stepper */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
@@ -518,6 +491,33 @@ export function RetainBotPanel() {
         </div>
       )}
         </section>
+
+        {/* Right Column: Robot Guide */}
+        <aside style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '20px', border: '1px solid #E8EAF0', borderTop: '4px solid #d11310', borderRadius: '12px', background: '#F7F9FC' }}>
+          <SphericalRobotSvg mood={mood} />
+          <div style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#1A2A4A', color: '#FFFFFF' }}>
+                  ID: {selectedCustomer?.id}
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
+                  Risk: {selectedCustomer?.risk}
+                </span>
+              </div>
+              <button
+                onClick={speakText}
+                title="Speak"
+                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #E8EAF0', background: '#FFFFFF', color: '#1A2A4A', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
+              >
+                🔊
+              </button>
+            </div>
+            <div style={{ fontSize: '14px', lineHeight: 1.45, color: '#1A2A4A', fontWeight: 600, background: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E8EAF0' }}>
+              {robotText}
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
