@@ -1,8 +1,23 @@
+/* Layout principal de 2 columnas: robot a la izquierda, flujo a la derecha */
+.retainbot-workspace {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  align-items: start;
+  flex: 1;
+}
+
+@media (max-width: 860px) {
+  .retainbot-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Contenedor 1:1 que mantiene proporciones exactas de las 3 capas */
 .robot-stage {
   position: relative;
-  width: 118px;
-  height: 118px;
+  width: 210px;
+  height: 210px;
   flex-shrink: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;

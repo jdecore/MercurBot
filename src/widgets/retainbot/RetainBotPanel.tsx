@@ -354,60 +354,62 @@ export function RetainBotPanel() {
         </div>
       </header>
 
-      {/* Stepper */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        {t.steps.map((label, idx) => {
-          const s = (idx + 1) as Step;
-          const active = step === s;
-          return (
-            <button
-              key={label}
-              onClick={() => { setStep(s); setActionLog(''); }}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                border: `1px solid ${active ? '#d11310' : '#E8EAF0'}`,
-                background: active ? '#d11310' : '#F7F9FC',
-                color: active ? '#FFFFFF' : '#1A2A4A',
-                fontWeight: 700,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Robot Guide */}
-      <style>{`@keyframes retainFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }`}</style>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '16px 20px', border: '1px solid #E8EAF0', borderLeft: '4px solid #d11310', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 260px', minWidth: 0 }}>
+      <div className="retainbot-workspace">
+        {/* Left Column: Robot Guide */}
+        <aside style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '20px', border: '1px solid #E8EAF0', borderTop: '4px solid #d11310', borderRadius: '12px', background: '#F7F9FC' }}>
           <SphericalRobotSvg mood={mood} />
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#1A2A4A', color: '#FFFFFF' }}>
-                ID: {selectedCustomer?.id}
-              </span>
-              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
-                Risk: {selectedCustomer?.risk}
-              </span>
+          <div style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#1A2A4A', color: '#FFFFFF' }}>
+                  ID: {selectedCustomer?.id}
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
+                  Risk: {selectedCustomer?.risk}
+                </span>
+              </div>
+              <button
+                onClick={speakText}
+                title="Speak"
+                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #E8EAF0', background: '#FFFFFF', color: '#1A2A4A', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
+              >
+                🔊
+              </button>
             </div>
-            <div style={{ fontSize: '15px', lineHeight: 1.4, color: '#1A2A4A', fontWeight: 600 }}>
+            <div style={{ fontSize: '14px', lineHeight: 1.45, color: '#1A2A4A', fontWeight: 600, background: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #E8EAF0' }}>
               {robotText}
             </div>
           </div>
-        </div>
-        <button
-          onClick={speakText}
-          title="Speak"
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #E8EAF0', background: '#FFFFFF', color: '#1A2A4A', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
-        >
-          🔊
-        </button>
-      </div>
+        </aside>
+
+        {/* Right Column: Stepper + Content */}
+        <section style={{ minWidth: 0 }}>
+          {/* Stepper */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            {t.steps.map((label, idx) => {
+              const s = (idx + 1) as Step;
+              const active = step === s;
+              return (
+                <button
+                  key={label}
+                  onClick={() => { setStep(s); setActionLog(''); }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: `1px solid ${active ? '#d11310' : '#E8EAF0'}`,
+                    background: active ? '#d11310' : '#F7F9FC',
+                    color: active ? '#FFFFFF' : '#1A2A4A',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
 
       {/* Step 1: Data Selection */}
       {step === 1 && (
@@ -515,6 +517,8 @@ export function RetainBotPanel() {
           </div>
         </div>
       )}
+        </section>
+      </div>
     </div>
   );
 }
