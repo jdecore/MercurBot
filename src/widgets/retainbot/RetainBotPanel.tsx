@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { MascotaMood } from '../../entities/robot/types';
 
 type Lang = 'en' | 'es' | 'jp';
@@ -124,6 +124,55 @@ const I18N: Record<Lang, {
   },
 };
 
+function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
+  const [pupil, setPupil] = useState({ x: 0, y: 0 });
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const r = svgRef.current.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height * 0.32;
+      const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
+      setPupil({ x: Math.cos(angle) * 3.5, y: Math.sin(angle) * 2.5 });
+    };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
+
+  const eyeScaleY = mood === 'feliz' ? 0.65 : mood === 'pensando' ? 0.85 : 1;
+
+  return (
+    <svg ref={svgRef} width="96" height="104" viewBox="0 0 120 130" fill="none" style={{ animation: 'retainFloat 3s ease-in-out infinite', flexShrink: 0 }}>
+      <ellipse cx="60" cy="122" rx="34" ry="5" fill="#1A2A4A" opacity="0.14" />
+      {/* Legs */}
+      <rect x="44" y="88" width="10" height="24" rx="4" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
+      <rect x="66" y="88" width="10" height="24" rx="4" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
+      <path d="M38 112 L56 112 L52 119 L34 119 Z" fill="#1A2A4A" />
+      <path d="M64 112 L82 112 L86 119 L68 119 Z" fill="#1A2A4A" />
+      {/* Arms */}
+      <rect x="14" y="46" width="11" height="34" rx="5" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
+      <rect x="95" y="46" width="11" height="34" rx="5" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="2" />
+      {/* Spherical Body */}
+      <circle cx="60" cy="54" r="36" fill="#FFFFFF" stroke="#1A2A4A" strokeWidth="2.5" />
+      <path d="M26 58 Q60 66 94 58" stroke="#1A2A4A" strokeWidth="1.8" fill="none" opacity="0.4" />
+      {/* Visor */}
+      <rect x="35" y="24" width="50" height="28" rx="12" fill="#181C24" stroke="#1A2A4A" strokeWidth="2" />
+      {/* Eyes */}
+      <g transform={`translate(${pupil.x}, ${pupil.y})`}>
+        <ellipse cx="48" cy="38" rx="5.5" ry={6.5 * eyeScaleY} fill="#FFFFFF" />
+        <circle cx="48" cy="38" r="3" fill={mood === 'feliz' ? '#d11310' : '#1A2A4A'} />
+        <ellipse cx="72" cy="38" rx="5.5" ry={6.5 * eyeScaleY} fill="#FFFFFF" />
+        <circle cx="72" cy="38" r="3" fill={mood === 'feliz' ? '#d11310' : '#1A2A4A'} />
+      </g>
+      {/* Blush */}
+      <circle cx="40" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.65 : 0.25} />
+      <circle cx="80" cy="45" r="3" fill="#d11310" opacity={mood === 'feliz' ? 0.65 : 0.25} />
+    </svg>
+  );
+}
+
 export function RetainBotPanel() {
   const [lang, setLang] = useState<Lang>('en');
   const [step, setStep] = useState<Step>(1);
@@ -244,11 +293,7 @@ export function RetainBotPanel() {
       <style>{`@keyframes retainFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }`}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '16px 20px', border: '1px solid #E8EAF0', borderLeft: '4px solid #d11310', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 260px', minWidth: 0 }}>
-          <img
-            src="/retainbot_mascot.jpg"
-            alt="RetainBot Mascot"
-            style={{ width: '88px', height: '88px', objectFit: 'contain', flexShrink: 0, mixBlendMode: 'multiply', animation: 'retainFloat 3s ease-in-out infinite' }}
-          />
+          <SphericalRobotSvg mood={mood} />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#1A2A4A', color: '#FFFFFF' }}>
