@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { MascotaMood } from '../../entities/robot/types';
+import './robot.css';
 
 type Lang = 'en' | 'es' | 'jp';
 type Step = 1 | 2 | 3;
@@ -125,42 +126,141 @@ const I18N: Record<Lang, {
 };
 
 function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
-  const [pupil, setPupil] = useState({ x: 0, y: 0 });
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const visorRef = useRef<HTMLDivElement | null>(null);
+  const eyesWrapperRef = useRef<HTMLDivElement | null>(null);
+  const irisLeftRef = useRef<HTMLDivElement | null>(null);
+  const irisRightRef = useRef<HTMLDivElement | null>(null);
+  const [isJumping, setIsJumping] = useState(false);
+  const [isBlinking, setIsBlinking] = useState(false);
+  const jumpTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!wrapRef.current) return;
-      const r = wrapRef.current.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height * 0.25;
-      const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
-      setPupil({ x: Math.cos(angle) * 2.4, y: Math.sin(angle) * 1.8 });
+    const target = { x: 0, y: 0 };
+    const current = { x: 0, y: 0 };
+    let rafId = 0;
+
+    const updateTargetFromPoint = (clientX: number, clientY: number) => {
+      if (!visorRef.current) return;
+      const rect = visorRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const dx = clientX - centerX;
+      const dy = clientY - centerY;
+      const maxRadius = Math.max(window.innerWidth, window.innerHeight) * 0.35;
+      const dist = Math.hypot(dx, dy);
+      const clamped = Math.min(dist / maxRadius, 1);
+      const angle = Math.atan2(dy, dx);
+      target.x = Math.cos(angle) * clamped;
+      target.y = Math.sin(angle) * clamped;
     };
-    window.addEventListener('mousemove', onMove);
-    return () => window.removeEventListener('mousemove', onMove);
+
+    const onMouseMove = (e: MouseEvent) => updateTargetFromPoint(e.clientX, e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 0) {
+        updateTargetFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+    const onMouseLeave = () => {
+      target.x = 0;
+      target.y = 0;
+    };
+
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('mouseleave', onMouseLeave);
+
+    const animateEyes = () => {
+      current.x += (target.x - current.x) * 0.18;
+      current.y += (target.y - current.y) * 0.18;
+
+      if (eyesWrapperRef.current) {
+        const socketX = current.x * 9;
+        const socketY = current.y * 6;
+        eyesWrapperRef.current.style.transform = `translate(${socketX.toFixed(2)}%, ${socketY.toFixed(2)}%)`;
+      }
+      const irisX = current.x * 26;
+      const irisY = current.y * 22;
+      const irisTransform = `translate(${irisX.toFixed(2)}%, ${irisY.toFixed(2)}%)`;
+      if (irisLeftRef.current) irisLeftRef.current.style.transform = irisTransform;
+      if (irisRightRef.current) irisRightRef.current.style.transform = irisTransform;
+
+      rafId = requestAnimationFrame(animateEyes);
+    };
+    rafId = requestAnimationFrame(animateEyes);
+
+    let blinkTimer: number | undefined;
+    const triggerBlink = () => {
+      setIsBlinking(true);
+      window.setTimeout(() => {
+        setIsBlinking(false);
+        if (Math.random() < 0.22) {
+          window.setTimeout(() => {
+            setIsBlinking(true);
+            window.setTimeout(() => setIsBlinking(false), 115);
+          }, 140);
+        }
+      }, 125);
+      blinkTimer = window.setTimeout(triggerBlink, 2400 + Math.random() * 3400);
+    };
+    blinkTimer = window.setTimeout(triggerBlink, 1800 + Math.random() * 1500);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('mouseleave', onMouseLeave);
+      cancelAnimationFrame(rafId);
+      if (blinkTimer) clearTimeout(blinkTimer);
+    };
   }, []);
 
-  const eyeScaleY = mood === 'feliz' ? 0.6 : mood === 'pensando' ? 0.85 : 1;
+  const triggerJump = () => {
+    setIsJumping(false);
+    void stageRef.current?.offsetWidth;
+    setIsJumping(true);
+    if (jumpTimeoutRef.current) clearTimeout(jumpTimeoutRef.current);
+    jumpTimeoutRef.current = window.setTimeout(() => setIsJumping(false), 870);
+  };
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', width: '104px', height: '104px', flexShrink: 0, animation: 'retainFloat 3s ease-in-out infinite' }}>
-      <img
-        src="/retainbot_mascot.jpg"
-        alt="RetainBot Mascot"
-        style={{ width: '104px', height: '104px', objectFit: 'contain', mixBlendMode: 'multiply', display: 'block' }}
-      />
-      <svg
-        width="104"
-        height="104"
-        viewBox="0 0 104 104"
-        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-      >
-        <g transform={`translate(${pupil.x}, ${pupil.y})`}>
-          <circle cx="43" cy="26" r={2.2 * eyeScaleY} fill={mood === 'feliz' ? '#d11310' : '#FFFFFF'} opacity="0.9" />
-          <circle cx="56" cy="26" r={2.2 * eyeScaleY} fill={mood === 'feliz' ? '#d11310' : '#FFFFFF'} opacity="0.9" />
-        </g>
-      </svg>
+    <div
+      ref={stageRef}
+      className={`robot-stage${isJumping || mood === 'feliz' ? ' is-jumping' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label="RetainBot interactivo: haz clic para hacerlo saltar"
+      onClick={triggerJump}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          triggerJump();
+        }
+      }}
+    >
+      <div className="ground-shadow" aria-hidden="true" />
+      <div className="robot-rig">
+        <div className="layer brazo-izq">
+          <img src="/brazo-izq.png" alt="Brazo izquierdo del robot" draggable={false} />
+        </div>
+        <div className="torso-group">
+          <div className="layer cuerpo">
+            <img src="/cuerpo.png" alt="Cuerpo del robot" draggable={false} />
+          </div>
+          <div className="visor-screen" ref={visorRef} aria-hidden="true">
+            <div className={`eyes-wrapper${isBlinking ? ' is-blinking' : ''}`} ref={eyesWrapperRef}>
+              <div className="eye">
+                <div className="iris" ref={irisLeftRef}><div className="pupil" /></div>
+              </div>
+              <div className="eye">
+                <div className="iris" ref={irisRightRef}><div className="pupil" /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="layer brazo-der">
+          <img src="/brazo-der.png" alt="Brazo derecho del robot" draggable={false} />
+        </div>
+      </div>
     </div>
   );
 }
