@@ -258,7 +258,7 @@ function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
           </div>
         </div>
         <div className="layer brazo-der">
-          <img src="/brazo-der.svg" alt="Brazo derecho del robot" draggable={false} />
+          <img src="/brazo-der.svg" alt="Brazo derecho del robot" draggable={false} fetchPriority="high" />
         </div>
       </div>
     </div>
@@ -354,7 +354,7 @@ export function RetainBotPanel() {
         </div>
       </header>
 
-      <div className="retainbot-workspace">
+      <main className="retainbot-workspace">
         {/* Left Column: Stepper + Content */}
         <section style={{ minWidth: 0 }}>
           {/* Stepper */}
@@ -518,7 +518,7 @@ export function RetainBotPanel() {
             </div>
           </div>
         </aside>
-      </div>
+      </main>
     </div>
   );
 }
