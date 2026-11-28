@@ -326,11 +326,8 @@ export function RetainBotPanel() {
     <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', width: '100%', boxSizing: 'border-box', padding: 'clamp(14px, 3vw, 32px)', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '14px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/nuevo_logo.svg" alt="RetainBot Logo" loading="eager" decoding="sync" fetchPriority="high" style={{ height: '44px', width: '44px', objectFit: 'contain', borderRadius: '8px' }} />
-          <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>RetainBot</h1>
-            <span style={{ fontSize: '12px', color: '#5A6780' }}>{t.subtitle}</span>
-          </div>
+          <img src="/nuevo_logo.svg" alt="RetainBot Logo" loading="eager" decoding="sync" fetchPriority="high" style={{ height: '56px', width: '56px', objectFit: 'contain', borderRadius: '8px' }} />
+          <span style={{ fontSize: '13px', color: '#5A6780', fontWeight: 600 }}>{t.subtitle}</span>
         </div>
         <div style={{ display: 'flex', gap: '6px' }}>
           {(['en', 'es', 'jp'] as Lang[]).map((l) => (
