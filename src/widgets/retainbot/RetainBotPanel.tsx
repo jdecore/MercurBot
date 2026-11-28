@@ -182,7 +182,7 @@ export function RetainBotPanel() {
   };
 
   return (
-    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', width: '100%', boxSizing: 'border-box', padding: '24px 36px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', width: '100%', boxSizing: 'border-box', padding: 'clamp(14px, 3vw, 32px)', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '14px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src="/retainbot_logo.jpg" alt="RetainBot Logo" style={{ height: '44px', width: '44px', objectFit: 'contain', borderRadius: '8px' }} />
@@ -242,20 +242,10 @@ export function RetainBotPanel() {
 
       {/* Robot Guide */}
       <style>{`@keyframes retainFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }`}</style>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '14px 20px', border: '1px solid #E8EAF0', borderLeft: '4px solid #d11310', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, animation: 'retainFloat 3s ease-in-out infinite' }}>
-            <div style={{ transform: 'scale(0.75)', marginBottom: '-22px', zIndex: 2 }}>
-              <Mascota mood={mood} />
-            </div>
-            {/* Humanoid Torso (Kengoro / UTokyo inspired) */}
-            <svg width="88" height="44" viewBox="0 0 88 44" fill="none" aria-hidden="true">
-              <rect x="22" y="2" width="44" height="36" rx="8" fill="#F1F4F9" stroke="#1A2A4A" strokeWidth="2" />
-              <path d="M28 10 L40 10 L36 22 Z M60 10 L48 10 L52 22 Z" fill="#1A2A4A" opacity="0.15" />
-              <circle cx="44" cy="20" r="4" fill="#d11310" />
-              <rect x="6" y="4" width="12" height="26" rx="6" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="1.5" />
-              <rect x="70" y="4" width="12" height="26" rx="6" fill="#E8EAF0" stroke="#1A2A4A" strokeWidth="1.5" />
-            </svg>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '16px 20px', border: '1px solid #E8EAF0', borderLeft: '4px solid #d11310', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 260px', minWidth: 0 }}>
+          <div style={{ transform: 'scale(0.85)', flexShrink: 0, animation: 'retainFloat 3s ease-in-out infinite' }}>
+            <Mascota mood={mood} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
