@@ -240,11 +240,11 @@ function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
       <div className="ground-shadow" aria-hidden="true" />
       <div className="robot-rig">
         <div className="layer brazo-izq">
-          <img src="/brazo-izq.svg" alt="Brazo izquierdo del robot" draggable={false} />
+          <img src="/brazo-izq.svg" alt="Brazo izquierdo del robot" draggable={false} loading="eager" decoding="sync" fetchPriority="high" />
         </div>
         <div className="torso-group">
           <div className="layer cuerpo">
-            <img src="/cuerpo.svg" alt="Cuerpo del robot" draggable={false} />
+            <img src="/cuerpo.svg" alt="Cuerpo del robot" draggable={false} loading="eager" decoding="sync" fetchPriority="high" />
           </div>
           <div className="visor-screen" ref={visorRef} aria-hidden="true">
             <div className={`eyes-wrapper${isBlinking ? ' is-blinking' : ''}`} ref={eyesWrapperRef}>
@@ -258,7 +258,7 @@ function SphericalRobotSvg({ mood }: { mood: MascotaMood }) {
           </div>
         </div>
         <div className="layer brazo-der">
-          <img src="/brazo-der.svg" alt="Brazo derecho del robot" draggable={false} fetchPriority="high" />
+          <img src="/brazo-der.svg" alt="Brazo derecho del robot" draggable={false} loading="eager" decoding="sync" fetchPriority="high" />
         </div>
       </div>
     </div>
@@ -326,7 +326,7 @@ export function RetainBotPanel() {
     <div style={{ background: '#FFFFFF', color: '#1A2A4A', minHeight: '100vh', width: '100%', boxSizing: 'border-box', padding: 'clamp(14px, 3vw, 32px)', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E8EAF0', paddingBottom: '14px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/nuevo_logo.svg" alt="RetainBot Logo" style={{ height: '44px', width: '44px', objectFit: 'contain', borderRadius: '8px' }} />
+          <img src="/nuevo_logo.svg" alt="RetainBot Logo" loading="eager" decoding="sync" fetchPriority="high" style={{ height: '44px', width: '44px', objectFit: 'contain', borderRadius: '8px' }} />
           <div>
             <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>RetainBot</h1>
             <span style={{ fontSize: '12px', color: '#5A6780' }}>{t.subtitle}</span>
