@@ -165,17 +165,11 @@ export function RetainBotPanel() {
     }
   };
 
-  const openChannel = (channel: 'WhatsApp' | 'Telegram' | 'LINE') => {
+  const getChannelUrl = (channel: 'WhatsApp' | 'Telegram' | 'LINE') => {
     const encoded = encodeURIComponent(`[ID ${selectedId}] ${t.msg}`);
-    const url =
-      channel === 'WhatsApp'
-        ? `https://wa.me/?text=${encoded}`
-        : channel === 'Telegram'
-          ? `https://t.me/share/url?url=${encodeURIComponent('https://retain-bot.vercel.app')}&text=${encoded}`
-          : `https://line.me/R/msg/text/?${encoded}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-    setMood('feliz');
-    setActionLog(`${t.sentVia}${channel} (ID ${selectedId})`);
+    if (channel === 'WhatsApp') return `https://wa.me/?text=${encoded}`;
+    if (channel === 'Telegram') return `https://t.me/share/url?url=${encodeURIComponent('https://retain-bot.vercel.app')}&text=${encoded}`;
+    return `https://line.me/R/msg/text/?${encoded}`;
   };
 
   return (
@@ -314,15 +308,15 @@ export function RetainBotPanel() {
             {t.msg}
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button onClick={() => openChannel('WhatsApp')} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#25D366', color: '#FFFFFF' }}>
+            <a href={getChannelUrl('WhatsApp')} target="_blank" rel="noopener noreferrer" onClick={() => { setMood('feliz'); setActionLog(`${t.sentVia}WhatsApp (ID ${selectedId})`); }} style={{ flex: 1, padding: '10px', borderRadius: '6px', textDecoration: 'none', textAlign: 'center', fontWeight: 700, cursor: 'pointer', background: '#25D366', color: '#FFFFFF' }}>
               WhatsApp
-            </button>
-            <button onClick={() => openChannel('Telegram')} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#0088cc', color: '#FFFFFF' }}>
+            </a>
+            <a href={getChannelUrl('Telegram')} target="_blank" rel="noopener noreferrer" onClick={() => { setMood('feliz'); setActionLog(`${t.sentVia}Telegram (ID ${selectedId})`); }} style={{ flex: 1, padding: '10px', borderRadius: '6px', textDecoration: 'none', textAlign: 'center', fontWeight: 700, cursor: 'pointer', background: '#0088cc', color: '#FFFFFF' }}>
               Telegram
-            </button>
-            <button onClick={() => openChannel('LINE')} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#06C755', color: '#FFFFFF' }}>
+            </a>
+            <a href={getChannelUrl('LINE')} target="_blank" rel="noopener noreferrer" onClick={() => { setMood('feliz'); setActionLog(`${t.sentVia}LINE (ID ${selectedId})`); }} style={{ flex: 1, padding: '10px', borderRadius: '6px', textDecoration: 'none', textAlign: 'center', fontWeight: 700, cursor: 'pointer', background: '#06C755', color: '#FFFFFF' }}>
               LINE
-            </button>
+            </a>
             <button onClick={() => { setMood('neutro'); setActionLog(`${t.skipped}${selectedId}`); }} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer', background: '#E8EAF0', color: '#1A2A4A' }}>
               {t.skip}
             </button>
