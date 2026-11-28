@@ -356,7 +356,7 @@ export function RetainBotPanel() {
 
       <main className="retainbot-workspace">
         {/* Left Column: Stepper + Content */}
-        <section style={{ minWidth: 0 }}>
+        <section style={{ minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Stepper */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             {t.steps.map((label, idx) => {
@@ -493,7 +493,7 @@ export function RetainBotPanel() {
         </section>
 
         {/* Right Column: Robot Guide */}
-        <aside style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '20px', border: '1px solid #E8EAF0', borderTop: '4px solid #d11310', borderRadius: '12px', background: '#F7F9FC' }}>
+        <aside style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '18px', padding: '24px', border: '1px solid #E8EAF0', borderTop: '4px solid #d11310', borderRadius: '12px', background: '#F7F9FC', height: '100%', boxSizing: 'border-box' }}>
           <SphericalRobotSvg mood={mood} />
           <div style={{ width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
