@@ -1,67 +1,27 @@
-# MercurBot — Analista de PDF con IA
+# RetainBot — Telecom Retention AI MVP
 
-**Sube un PDF → se vectoriza en tu navegador → pregunta lo que quieras con citas verificables `[Pág. N]`.**
+**Live Demo:** [https://retain-bot.vercel.app/](https://retain-bot.vercel.app/)  
+**Program:** GCI World 2026 September — Matsuo-Iwasawa Lab, The University of Tokyo  
+**Author:** Juan Diego Enriquez Ramos (Colombia)
 
-> Tu equipo tiene PDFs (manuales, reportes, contratos). MercurBot los convierte en respuestas verificables **sin subir el documento a ningún servidor**.
+## Overview
+**RetainBot** is the delivery MVP for the *Company A* Telecom Churn Final Assignment (`5-Fold CV Ensemble: 0.7000 ROC-AUC, 74.40% Precision@20%, 1.50x Lift`). It turns model predictions (`top20_risk_customers.csv`) into actionable, opt-in retention outreach (*Omotenashi* + *Poka-Yoke*).
 
-| | |
-|---|---|
-| **0$ de infraestructura** | Despliegas en Vercel en 2 minutos, sin servidores ni DB. |
-| **Privacidad por diseño** | El PDF nunca sale del navegador; la IA solo recibe 3 fragmentos. |
-| **Costo mínimo** | RAG local híbrido (vectorial + léxico). Free tier viable en producción. |
-| **Citas verificables** | Cada dato viene con `[Pág. N]` — nada de alucinaciones, todo trazable. |
-| **Sin registro** | Sube un PDF y pregunta. Tus usuarios llegan al "wow" sin fricción. |
+## Features
+- **3-Step Guided Flow:**
+  1. **Data:** Load real Company A Top-20% risk predictions or upload any scored `.csv`.
+  2. **Risk Queue + Poka-Yoke:** Inspect `Customer_ID`, churn probability, and `eqpdays`.
+  3. **Multi-Channel Opt-in Outreach:** Dispatch pre-filled opt-in offers via **WhatsApp**, **Telegram**, or **LINE**, or assign to the **A/B Control Group**.
+- **Trilingual UI:** Instant switching between **English (EN)**, **Spanish (ES)**, and **Japanese (日本語)**.
+- **4-Month Kaizen Roadmap & Risks:** Built-in implementation plan (`3.7%` break-even) and risk mitigations.
 
----
+## Tech Stack
+- React 19 + TypeScript + Vite
+- Deployed on Vercel
 
-## Desarrollo
-
+## Local Development
 ```bash
-pnpm install && pnpm dev     # http://localhost:5173
+pnpm install
+pnpm dev
+pnpm build
 ```
-
-Requisitos: Node 20+, pnpm. Copia `.env.example` → `.env.local` y agrega `GEMINI_API_KEY=`.
-
-**Deploy Vercel:** importa repo → Framework Vite → env vars → listo.
-
-### Variables de entorno (solo server)
-
-| Variable | Requerida | Default | Descripción |
-|----------|-----------|---------|-------------|
-| `GEMINI_API_KEY` | Sí | — | API key de Google AI Studio |
-| `GROQ_API_KEY` | No | — | Fallback Groq (gratuito) |
-| `OPENROUTER_API_KEY` | No | — | Fallback OpenRouter |
-| `GEMINI_MODEL` | No | `gemini-3.5-flash-lite` | Modelo Gemini |
-| `GROQ_MODEL` | No | `qwen/qwen3.8-27b` | Modelo Groq |
-| `OPENROUTER_MODEL` | No | `z-ai/glm-5.2:free` | Modelo OpenRouter |
-| `ALLOWED_ORIGINS` | No | `copixi.vercel.app,localhost:5173,localhost:3000` | CORS whitelist (comma-separated) |
-| `SITE_URL` | No | `https://copixi.vercel.app` | HTTP-Referer para OpenRouter |
-| `SITE_NAME` | No | `MercurBot` | X-Title para OpenRouter |
-
-### Stack
-
-| | |
-|---|---|
-| Framework | React 19 · TypeScript · Vite · pnpm |
-| UI | CSS nativo + tokens · Radix UI · Pixelarticons |
-| PDF/RAG | pdfjs-dist · MiniSearch · MiniLM (Web Worker + OPFS) |
-| IA | Gemini → Groq → OpenRouter (fallback chain, SSE streaming) |
-| Backend | 1 Vercel Function (`api/chat/index.ts`) |
-
-### Arquitectura
-
-```
-Browser: React + pdfjs → RAG local (MiniSearch + MiniLM)
-    → /api/chat (Vercel Function) → Gemini/Groq/OpenRouter
-    → streaming con citas [Pág. N] verificables
-```
-
-El PDF, la extracción, el chunking, los embeddings y la fusión RRF corren 100% en el navegador. La Function solo protege la API key y valida input.
-
-### Seguridad
-
-- PDF nunca subido al servidor; la IA recibe solo 3 fragmentos con página
-- API keys solo en server env vars, nunca en frontend ni logs
-- Solo se aceptan PDFs (30 MB); rate-limit 20 req/min
-- Excepción documentada: "Generar gráfica" envía texto completo (máx. 250 KB) bajo consentimiento explícito del usuario
-- Headers hardened en Vercel: CSP, Permissions-Policy (geolocation, camera, ad-related features deshabilitados), X-Frame-Options, X-Content-Type-Options, Referrer-Policy
