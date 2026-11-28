@@ -244,12 +244,8 @@ export function RetainBotPanel() {
       <style>{`@keyframes retainFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }`}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '16px 20px', border: '1px solid #E8EAF0', borderLeft: '4px solid #d11310', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 260px', minWidth: 0 }}>
-          <div style={{ position: 'relative', width: '96px', height: '96px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <div style={{ position: 'absolute', inset: '4px', borderRadius: '50%', border: '2px dashed #d11310', opacity: 0.35 }} />
-            <div style={{ position: 'absolute', inset: '10px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,42,74,0.08) 0%, rgba(255,255,255,0) 70%)' }} />
-            <div style={{ transform: 'scale(0.85)', animation: 'retainFloat 3s ease-in-out infinite' }}>
-              <Mascota mood={mood} />
-            </div>
+          <div style={{ transform: 'scale(0.85)', flexShrink: 0, animation: 'retainFloat 3s ease-in-out infinite' }}>
+            <Mascota mood={mood} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
