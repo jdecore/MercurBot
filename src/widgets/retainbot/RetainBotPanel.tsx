@@ -282,8 +282,13 @@ export function RetainBotPanel() {
   const speakText = () => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
+    const targetLang = lang === 'jp' ? 'ja-JP' : lang === 'es' ? 'es-ES' : 'en-US';
+    const langPrefix = lang === 'jp' ? 'ja' : lang;
     const utter = new SpeechSynthesisUtterance(robotText);
-    utter.lang = lang === 'jp' ? 'ja-JP' : lang === 'es' ? 'es-ES' : 'en-US';
+    utter.lang = targetLang;
+    const voices = window.speechSynthesis.getVoices();
+    const matched = voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix));
+    if (matched) utter.voice = matched;
     window.speechSynthesis.speak(utter);
   };
 
