@@ -136,6 +136,15 @@ export function RetainBotPanel() {
 
   const t = I18N[lang];
   const robotText = actionLog || (step === 1 ? t.robotStep1 : step === 2 ? t.robotStep2 : t.robotStep3);
+  const selectedCustomer = customers.find((c) => c.id === selectedId) || customers[0];
+
+  const speakText = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(robotText);
+    utter.lang = lang === 'jp' ? 'ja-JP' : lang === 'es' ? 'es-ES' : 'en-US';
+    window.speechSynthesis.speak(utter);
+  };
 
   const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -232,13 +241,33 @@ export function RetainBotPanel() {
       </div>
 
       {/* Robot Guide */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 20px', border: '1px solid #E8EAF0', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
-        <div style={{ transform: 'scale(0.8)', flexShrink: 0 }}>
-          <Mascota mood={mood} />
+      <style>{`@keyframes retainFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }`}</style>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '14px 20px', border: '1px solid #E8EAF0', borderLeft: '4px solid #d11310', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ transform: 'scale(0.8)', flexShrink: 0, animation: 'retainFloat 3s ease-in-out infinite' }}>
+            <Mascota mood={mood} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#1A2A4A', color: '#FFFFFF' }}>
+                ID: {selectedCustomer?.id}
+              </span>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#FDECE8', color: '#d11310' }}>
+                Risk: {selectedCustomer?.risk}
+              </span>
+            </div>
+            <div style={{ fontSize: '15px', lineHeight: 1.4, color: '#1A2A4A', fontWeight: 600 }}>
+              {robotText}
+            </div>
+          </div>
         </div>
-        <div style={{ fontSize: '15px', lineHeight: 1.4, color: '#1A2A4A', fontWeight: 600 }}>
-          {robotText}
-        </div>
+        <button
+          onClick={speakText}
+          title="Speak"
+          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #E8EAF0', background: '#FFFFFF', color: '#1A2A4A', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
+        >
+          🔊
+        </button>
       </div>
 
       {/* Step 1: Data Selection */}
