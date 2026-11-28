@@ -386,19 +386,21 @@ export function RetainBotPanel() {
 
       {/* Step 1: Data Selection */}
       {step === 1 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', marginBottom: '20px', flex: 1 }}>
           <button
             onClick={() => { setCustomers(REAL_COMPANY_A_DATA); setSelectedId(REAL_COMPANY_A_DATA[0].id); setMood('feliz'); setActionLog(''); setStep(2); }}
-            style={{ padding: '24px', borderRadius: '10px', border: '2px solid #1A2A4A', background: '#1A2A4A', color: '#FFFFFF', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
+            style={{ minHeight: '260px', padding: '36px 28px', borderRadius: '14px', border: '2px solid #1A2A4A', background: '#1A2A4A', color: '#FFFFFF', fontSize: '18px', fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
           >
-            {t.useDefault}
+            <span style={{ fontSize: '32px' }}>📊</span>
+            <span>{t.useDefault}</span>
           </button>
           <label
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) void handleCsvUpload({ target: { files: [f] } } as unknown as ChangeEvent<HTMLInputElement>); }}
-            style={{ padding: '24px', borderRadius: '10px', border: '2px dashed #d11310', background: '#FFFFFF', color: '#d11310', fontSize: '15px', fontWeight: 700, cursor: 'pointer', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ minHeight: '260px', padding: '36px 28px', borderRadius: '14px', border: '2px dashed #d11310', background: '#FFFFFF', color: '#d11310', fontSize: '18px', fontWeight: 700, cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
           >
-            ● {t.uploadCsv}
+            <span style={{ fontSize: '32px' }}>📁</span>
+            <span>{t.uploadCsv}</span>
             <input type="file" accept=".csv" onChange={handleCsvUpload} style={{ display: 'none' }} />
           </label>
         </div>
