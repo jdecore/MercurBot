@@ -1,5 +1,4 @@
 import { useState, type ChangeEvent } from 'react';
-import { Mascota } from '../../shared/ui/Mascota';
 import type { MascotaMood } from '../../entities/robot/types';
 
 type Lang = 'en' | 'es' | 'jp';
@@ -131,6 +130,7 @@ export function RetainBotPanel() {
   const [customers, setCustomers] = useState<CustomerRow[]>(REAL_COMPANY_A_DATA);
   const [selectedId, setSelectedId] = useState<string>(REAL_COMPANY_A_DATA[0].id);
   const [mood, setMood] = useState<MascotaMood>('neutro');
+  void mood;
   const [actionLog, setActionLog] = useState<string>('');
   const [showPlan, setShowPlan] = useState<boolean>(false);
 
@@ -244,9 +244,11 @@ export function RetainBotPanel() {
       <style>{`@keyframes retainFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }`}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', padding: '16px 20px', border: '1px solid #E8EAF0', borderLeft: '4px solid #d11310', borderRadius: '10px', background: '#F7F9FC', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 260px', minWidth: 0 }}>
-          <div style={{ transform: 'scale(0.85)', flexShrink: 0, animation: 'retainFloat 3s ease-in-out infinite' }}>
-            <Mascota mood={mood} />
-          </div>
+          <img
+            src="/retainbot_mascot.jpg"
+            alt="RetainBot Mascot"
+            style={{ width: '88px', height: '88px', objectFit: 'contain', flexShrink: 0, mixBlendMode: 'multiply', animation: 'retainFloat 3s ease-in-out infinite' }}
+          />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#1A2A4A', color: '#FFFFFF' }}>
